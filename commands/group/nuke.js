@@ -4,22 +4,37 @@
  * Comando: .nuke
  * Descripción: Destruye el grupo — expulsa a todos (salvo bot y ejecutor),
  *              renombra el grupo y cambia su descripción.
- * Requiere: el bot y el ejecutor deben ser administradores del grupo.
+ * Requiere: el bot Y el ejecutor deben ser administradores del grupo.
  *
- * NOTA: Los metadatos se consultan en TIEMPO REAL para evitar falsos
- *       negativos por el caché de 30s del handler.
+ * NOTAS TÉCNICAS:
+ * - Los metadatos se consultan en TIEMPO REAL (ignora el caché del handler).
+ * - La detección de admin usa comparación por DÍGITOS PUROS del número para
+ *   ser 100% inmune a variantes de JID: @s.whatsapp.net, @lid, sufijos :N.
  */
 
-const DELAY_MS = 500; // ms entre expulsiones (evitar rate-limit de WA)
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const DELAY_MS = 500;
+const sleep    = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Normaliza un JID eliminando el sufijo de dispositivo (:X)
- * y unifica en minúsculas para comparaciones seguras.
+ * Extrae solo los dígitos de un JID de cualquier formato:
+ *   "5491134567890:1@s.whatsapp.net" → "5491134567890"
+ *   "5491134567890@lid"              → "5491134567890"
+ *   "5491134567890@s.whatsapp.net"   → "5491134567890"
  */
-const normalizeJid = (jid = '') =>
-    jid.replace(/:\d+@/, '@').toLowerCase().trim();
+const jidToNumber = (jid = '') => jid.split('@')[0].split(':')[0].replace(/\D/g, '');
+
+/**
+ * Busca un participante comparando SOLO los dígitos del número.
+ * Esto es inmune a cualquier variante de dominio o sufijo de dispositivo.
+ */
+const findByNumber = (participants, rawJid) => {
+    const target = jidToNumber(rawJid);
+    if (!target) return null;
+    return participants.find(p => jidToNumber(p.id) === target) || null;
+};
+
+const isGroupAdmin = (member) =>
+    member?.admin === 'admin' || member?.admin === 'superadmin';
 
 module.exports = {
     name: 'nuke',
@@ -28,13 +43,13 @@ module.exports = {
     desc: 'Expulsa a todos los miembros, renombra y cambia la descripción del grupo',
     usage: '.nuke',
     groupOnly: true,
-    adminOnly: false,   // Verificación manual con metadatos frescos
-    botAdminRequired: false, // Ídem
+    adminOnly: false,
+    botAdminRequired: false,
 
     execute: async ({ sock, m, isOwner }) => {
         const jid = m.chat;
 
-        // ── 1. Consulta FRESCA de metadatos (ignora el caché del handler) ────
+        // ── 1. Metadatos FRESCOS del grupo ───────────────────────────────────
         let meta;
         try {
             meta = await sock.groupMetadata(jid);
@@ -46,23 +61,22 @@ module.exports = {
 
         const participants = meta.participants || [];
 
-        const botJid    = normalizeJid(sock.user?.id || '');
-        const senderJid = normalizeJid(m.sender || '');
+        // JIDs en crudo (sin normalizar — findByNumber lo maneja)
+        const botRawJid    = sock.user?.id || '';
+        const senderRawJid = m.sender || '';
 
-        // Función de búsqueda robusta (tolera @lid y @s.whatsapp.net)
-        const findParticipant = (targetJid) =>
-            participants.find(p =>
-                normalizeJid(p.id) === targetJid ||
-                (p.lid && normalizeJid(p.lid) === targetJid)
-            );
+        // Buscar por número puro (robusto contra @lid, @s.whatsapp.net, :N)
+        const botMember    = findByNumber(participants, botRawJid);
+        const senderMember = findByNumber(participants, senderRawJid);
 
-        const botMember    = findParticipant(botJid);
-        const senderMember = findParticipant(senderJid);
+        // Debug silencioso en consola (ayuda a diagnosticar en producción)
+        console.log('[nuke] botJid:', botRawJid, '→ encontrado:', botMember?.id, '| admin:', botMember?.admin);
+        console.log('[nuke] senderJid:', senderRawJid, '→ encontrado:', senderMember?.id, '| admin:', senderMember?.admin);
 
-        const isBotAdmin    = botMember?.admin === 'admin' || botMember?.admin === 'superadmin';
-        const isSenderAdmin = senderMember?.admin === 'admin' || senderMember?.admin === 'superadmin';
+        const isBotAdmin    = isGroupAdmin(botMember);
+        const isSenderAdmin = isGroupAdmin(senderMember);
 
-        // ── 2. Verificar permisos ────────────────────────────────────────────
+        // ── 2. Verificar permisos ─────────────────────────────────────────────
         if (!isBotAdmin) {
             return await sock.sendMessage(jid, {
                 text: '⚠️ El bot no es administrador del grupo.\nOtórgale permisos de *admin* para usar este comando.'
@@ -75,51 +89,46 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // ── 3. Calcular a quién expulsar ─────────────────────────────────────
+        // ── 3. Lista de expulsión (excluye bot y ejecutor) ────────────────────
+        const botNum    = jidToNumber(botRawJid);
+        const senderNum = jidToNumber(senderRawJid);
+
         const toRemove = participants
             .filter(p => {
-                const pid = normalizeJid(p.id);
-                // Conservar: bot y quien ejecuta el comando
-                return pid !== botJid && pid !== senderJid;
+                const num = jidToNumber(p.id);
+                return num !== botNum && num !== senderNum;
             })
             .map(p => p.id);
 
-        // ── 4. Confirmar inicio ──────────────────────────────────────────────
+        // ── 4. Confirmar inicio ───────────────────────────────────────────────
         await m.react('💣');
         await sock.sendMessage(jid, {
             text: `☢️ *NUKE ACTIVADO*\n👥 Expulsando *${toRemove.length}* miembros...`
         }, { quoted: m });
 
-        // ── 5. Expulsar uno a uno ────────────────────────────────────────────
+        // ── 5. Expulsar uno a uno con delay ───────────────────────────────────
         let expelled = 0;
-        for (const participantJid of toRemove) {
+        for (const pJid of toRemove) {
             try {
-                await sock.groupParticipantsUpdate(jid, [participantJid], 'remove');
+                await sock.groupParticipantsUpdate(jid, [pJid], 'remove');
                 expelled++;
             } catch (err) {
-                // Ignorar errores individuales (ya expulsado, es admin, etc.)
-                console.warn(`[nuke] No se pudo expulsar ${participantJid}: ${err.message}`);
+                console.warn(`[nuke] No se pudo expulsar ${pJid}: ${err.message}`);
             }
             await sleep(DELAY_MS);
         }
 
-        // ── 6. Renombrar grupo y cambiar descripción ─────────────────────────
+        // ── 6. Renombrar y cambiar descripción ────────────────────────────────
         const newName = 'Unknown Codexツ</>';
         const newDesc  = 'Unknown Codexツ</>';
 
-        try {
-            await sock.groupUpdateSubject(jid, newName);
-        } catch (err) {
-            console.warn('[nuke] No se pudo cambiar el nombre:', err.message);
-        }
+        try { await sock.groupUpdateSubject(jid, newName); }
+        catch (err) { console.warn('[nuke] Nombre no cambiado:', err.message); }
 
-        try {
-            await sock.groupUpdateDescription(jid, newDesc);
-        } catch (err) {
-            console.warn('[nuke] No se pudo cambiar la descripción:', err.message);
-        }
+        try { await sock.groupUpdateDescription(jid, newDesc); }
+        catch (err) { console.warn('[nuke] Descripción no cambiada:', err.message); }
 
-        // ── 7. Resumen final ─────────────────────────────────────────────────
+        // ── 7. Resumen final ──────────────────────────────────────────────────
         await m.react('✅');
         await sock.sendMessage(jid, {
             text: `💀 *NUKE completado.*\n👥 Expulsados: *${expelled}/${toRemove.length}*\n✏️ Grupo: *${newName}*`
