@@ -39,6 +39,9 @@
   "devDependencies": {
     "nodemon": "^3.1.9"
   },
+  "overrides": {
+    "libsignal": "6.0.0"
+  },
   "engines": {
     "node": ">=18.0.0"
   }
