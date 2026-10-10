@@ -20,6 +20,7 @@ const { startCleanerInterval } = require('./lib/cleaner');
 const { loadCommands } = require('./handlers/commandLoader');
 const { handleMessage } = require('./handlers/messageHandler');
 const { handleGroupUpdate } = require('./handlers/groupHandler');
+const antispamMiddleware = require('./middlewares/antispam');
 
 /**
  * Renderiza el banner cyberpunk con cfonts y la caja de información neón
@@ -92,8 +93,9 @@ const startBot = async () => {
     // 1. Cargar catálogo modular de comandos
     loadCommands();
 
-    // 2. Inicializar almacenamiento global en memoria para sesiones
+    // 2. Inicializar almacenamiento global en memoria para sesiones y moderación
     global.akinatorSessions = global.akinatorSessions || new Map();
+    global.spamTracker = global.spamTracker || new Map();
 
     // 3. Comprobación explícita de configuración de Groq Cloud
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
@@ -217,6 +219,10 @@ const startBot = async () => {
         try {
             if (chatUpdate.type !== 'notify') return;
             for (const rawMsg of chatUpdate.messages) {
+                // Middleware Anti-Spam: Regla estricta de 3 mensajes en 10s con advertencia y expulsión
+                const isSpam = await antispamMiddleware(sock, rawMsg);
+                if (isSpam) continue;
+
                 await handleMessage(sock, rawMsg);
             }
         } catch (err) {

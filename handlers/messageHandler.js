@@ -28,9 +28,6 @@ const getCachedGroupMetadata = async (sock, jid) => {
     }
 };
 
-// Ventanas en memoria para detección de ráfagas de spam
-const spamWindow = new Map(); // `${chat}:${sender}` => [timestamps]
-const spamWarnCooldown = new Map(); // `${chat}:${sender}` => timestamp
 
 /**
  * Manejador principal de mensajes entrantes
@@ -89,44 +86,6 @@ const handleMessage = async (sock, rawMsg) => {
                 }
             }
 
-            // --- 2. FILTRO ANTI-SPAM (MODO ADVERTENCIA Y MODO ESTRICTO KICK) ---
-            const isSpamWarn = groupSettings.isAntispamEnabled(m.chat);
-            const isSpamKick = groupSettings.isAntispamKickEnabled(m.chat);
-
-            if ((isSpamWarn || isSpamKick) && !isAdmin && !isOwner) {
-                const spamKey = `${m.chat}:${m.sender}`;
-                const now = Date.now();
-                const timestamps = (spamWindow.get(spamKey) || []).filter(t => now - t < 3000);
-                timestamps.push(now);
-                spamWindow.set(spamKey, timestamps);
-
-                if (timestamps.length >= 5) {
-                    // Borrar mensaje repetido
-                    await sock.sendMessage(m.chat, { delete: m.key });
-
-                    if (isSpamKick) {
-                        try {
-                            await sock.groupParticipantsUpdate(m.chat, [m.sender], 'remove');
-                        } catch (_) {}
-                        await sock.sendMessage(m.chat, {
-                            text: `🚨 @${m.sender.split('@')[0]} fue expulsado del grupo por generar spam excesivo.`,
-                            mentions: [m.sender]
-                        });
-                        spamWindow.delete(spamKey);
-                        return;
-                    } else if (isSpamWarn) {
-                        const lastWarn = spamWarnCooldown.get(spamKey) || 0;
-                        if (now - lastWarn > 5000) {
-                            spamWarnCooldown.set(spamKey, now);
-                            await sock.sendMessage(m.chat, {
-                                text: `⚠️ @${m.sender.split('@')[0]}, por favor no hagas spam de mensajes tan rápido.`,
-                                mentions: [m.sender]
-                            });
-                        }
-                        return;
-                    }
-                }
-            }
         }
 
         // --- COMPROBACIÓN DE JUEGOS ACTIVOS Y COMANDOS ---
