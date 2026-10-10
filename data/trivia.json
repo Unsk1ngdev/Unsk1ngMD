@@ -1,0 +1,352 @@
+[
+  {
+    "id": 1,
+    "categoria": "Tecnología",
+    "pregunta": "¿En qué año lanzó Linus Torvalds la primera versión oficial del kernel de Linux?",
+    "opciones": ["A) 1989", "B) 1991", "C) 1995", "D) 1998"],
+    "correcta": "B"
+  },
+  {
+    "id": 2,
+    "categoria": "Tecnología",
+    "pregunta": "¿Qué protocolo de red se utiliza para asignar direcciones IP de forma dinámica y automática?",
+    "opciones": ["A) DNS", "B) DHCP", "C) SNMP", "D) ARP"],
+    "correcta": "B"
+  },
+  {
+    "id": 3,
+    "categoria": "Tecnología",
+    "pregunta": "¿Cuál es la complejidad temporal promedio del algoritmo de ordenamiento Quicksort?",
+    "opciones": ["A) O(n)", "B) O(n log n)", "C) O(n^2)", "D) O(log n)"],
+    "correcta": "B"
+  },
+  {
+    "id": 4,
+    "categoria": "Tecnología",
+    "pregunta": "¿Qué empresa tecnológica desarrolló originalmente el lenguaje de programación TypeScript?",
+    "opciones": ["A) Google", "B) Apple", "C) Microsoft", "D) Meta"],
+    "correcta": "C"
+  },
+  {
+    "id": 5,
+    "categoria": "Tecnología",
+    "pregunta": "¿Qué puerto estándar por defecto utiliza el protocolo de transferencia segura HTTPS?",
+    "opciones": ["A) 80", "B) 8080", "C) 443", "D) 22"],
+    "correcta": "C"
+  },
+  {
+    "id": 6,
+    "categoria": "Tecnología",
+    "pregunta": "¿Quién es considerado el padre de la computación teórica y pionero en descifrar la máquina Enigma?",
+    "opciones": ["A) Alan Turing", "B) John von Neumann", "C) Charles Babbage", "D) Ada Lovelace"],
+    "correcta": "A"
+  },
+  {
+    "id": 7,
+    "categoria": "Tecnología",
+    "pregunta": "¿Qué estructura de datos opera bajo el principio LIFO (Last In, First Out)?",
+    "opciones": ["A) Cola (Queue)", "B) Pila (Stack)", "C) Árbol binario", "D) Grafo"],
+    "correcta": "B"
+  },
+  {
+    "id": 8,
+    "categoria": "Tecnología",
+    "pregunta": "¿Cuál es el motor de JavaScript desarrollado por Google sobre el que corre Node.js?",
+    "opciones": ["A) SpiderMonkey", "B) JavaScriptCore", "C) V8", "D) Chakra"],
+    "correcta": "C"
+  },
+  {
+    "id": 9,
+    "categoria": "Tecnología",
+    "pregunta": "¿En qué año se fundó la plataforma de código colaborativo GitHub?",
+    "opciones": ["A) 2004", "B) 2008", "C) 2011", "D) 2015"],
+    "correcta": "B"
+  },
+  {
+    "id": 10,
+    "categoria": "Tecnología",
+    "pregunta": "¿Qué tipo de base de datos es Redis por su arquitectura primordial?",
+    "opciones": ["A) Relacional SQL", "B) Clave-Valor en memoria", "C) Orientada a Documentos", "D) Base de datos gráfica"],
+    "correcta": "B"
+  },
+  {
+    "id": 11,
+    "categoria": "Ciencia",
+    "pregunta": "¿Cuál es el elemento químico más abundante en masa en el cuerpo humano?",
+    "opciones": ["A) Carbono", "B) Hidrógeno", "C) Oxígeno", "D) Nitrógeno"],
+    "correcta": "C"
+  },
+  {
+    "id": 12,
+    "categoria": "Ciencia",
+    "pregunta": "¿A cuántos kilómetros por segundo viaja aproximadamente la luz en el vacío?",
+    "opciones": ["A) 150.000 km/s", "B) 300.000 km/s", "C) 450.000 km/s", "D) 1.000.000 km/s"],
+    "correcta": "B"
+  },
+  {
+    "id": 13,
+    "categoria": "Ciencia",
+    "pregunta": "¿Qué partícula subatómica posee carga eléctrica negativa?",
+    "opciones": ["A) Protón", "B) Neutrón", "C) Electrón", "D) Quark arriba"],
+    "correcta": "C"
+  },
+  {
+    "id": 14,
+    "categoria": "Ciencia",
+    "pregunta": "¿Cuál es la unidad del Sistema Internacional para medir la fuerza?",
+    "opciones": ["A) Julio (J)", "B) Vatio (W)", "C) Pascal (Pa)", "D) Newton (N)"],
+    "correcta": "D"
+  },
+  {
+    "id": 15,
+    "categoria": "Ciencia",
+    "pregunta": "¿Cuál es el planeta más caliente de todo el sistema solar debido a su densa atmósfera de efecto invernadero?",
+    "opciones": ["A) Mercurio", "B) Venus", "C) Marte", "D) Júpiter"],
+    "correcta": "B"
+  },
+  {
+    "id": 16,
+    "categoria": "Ciencia",
+    "pregunta": "¿Qué orgánulo celular es responsable de sintetizar proteínas mediante la lectura del ARN mensajero?",
+    "opciones": ["A) Lisosoma", "B) Ribosoma", "C) Mitocondria", "D) Vacuola"],
+    "correcta": "B"
+  },
+  {
+    "id": 17,
+    "categoria": "Ciencia",
+    "pregunta": "¿Qué gas compone aproximadamente el 78% de la atmósfera de la Tierra?",
+    "opciones": ["A) Oxígeno", "B) Dióxido de carbono", "C) Nitrógeno", "D) Argón"],
+    "correcta": "C"
+  },
+  {
+    "id": 18,
+    "categoria": "Ciencia",
+    "pregunta": "¿Cuál es la velocidad de escape aproximada para salir del campo gravitatorio de la Tierra?",
+    "opciones": ["A) 7.9 km/s", "B) 11.2 km/s", "C) 16.7 km/s", "D) 25.4 km/s"],
+    "correcta": "B"
+  },
+  {
+    "id": 19,
+    "categoria": "Ciencia",
+    "pregunta": "¿Qué científico propuso la Teoría de la Selección Natural en su obra 'El origen de las especies'?",
+    "opciones": ["A) Gregor Mendel", "B) Charles Darwin", "C) Louis Pasteur", "D) Jean-Baptiste Lamarck"],
+    "correcta": "B"
+  },
+  {
+    "id": 20,
+    "categoria": "Ciencia",
+    "pregunta": "¿Cuál es el metal más denso y pesado de la tabla periódica?",
+    "opciones": ["A) Plomo", "B) Oro", "C) Osmio", "D) Platino"],
+    "correcta": "C"
+  },
+  {
+    "id": 21,
+    "categoria": "Historia",
+    "pregunta": "¿En qué año cayó el Imperio Romano de Occidente marcando el inicio de la Edad Media?",
+    "opciones": ["A) 395 d.C.", "B) 476 d.C.", "C) 529 d.C.", "D) 610 d.C."],
+    "correcta": "B"
+  },
+  {
+    "id": 22,
+    "categoria": "Historia",
+    "pregunta": "¿Qué batalla naval de 1805 consolidó la supremacía marítima de Gran Bretaña durante las guerras napoleónicas?",
+    "opciones": ["A) Batalla de Trafalgar", "B) Batalla de Waterloo", "C) Batalla de Lepanto", "D) Batalla de Jutlandia"],
+    "correcta": "A"
+  },
+  {
+    "id": 23,
+    "categoria": "Historia",
+    "pregunta": "¿Qué acontecimiento histórico provocó el inicio de la Primera Guerra Mundial en 1914?",
+    "opciones": ["A) La invasión de Polonia", "B) El magnicidio del archiduque Francisco Fernando en Sarajevo", "C) El hundimiento del Lusitania", "D) La Revolución Rusa"],
+    "correcta": "B"
+  },
+  {
+    "id": 24,
+    "categoria": "Historia",
+    "pregunta": "¿En qué año se firmó la Declaración de Independencia de los Estados Unidos?",
+    "opciones": ["A) 1774", "B) 1776", "C) 1783", "D) 1789"],
+    "correcta": "B"
+  },
+  {
+    "id": 25,
+    "categoria": "Historia",
+    "pregunta": "¿Quién fue el primer emperador de la antigua Roma tras la caída de la República?",
+    "opciones": ["A) Julio César", "B) Nerón", "C) César Augusto", "D) Trajano"],
+    "correcta": "C"
+  },
+  {
+    "id": 26,
+    "categoria": "Historia",
+    "pregunta": "¿Qué tratado puso fin oficialmente a la Primera Guerra Mundial en 1919?",
+    "opciones": ["A) Tratado de Versalles", "B) Paz de Westfalia", "C) Tratado de Utrecht", "D) Tratado de Ginebra"],
+    "correcta": "A"
+  },
+  {
+    "id": 27,
+    "categoria": "Historia",
+    "pregunta": "¿En qué año se produjo la caída del Muro de Berlín?",
+    "opciones": ["A) 1985", "B) 1987", "C) 1989", "D) 1991"],
+    "correcta": "C"
+  },
+  {
+    "id": 28,
+    "categoria": "Historia",
+    "pregunta": "¿Cuál civilización mesoamericana construyó la majestuosa ciudadela de Chichén Itzá?",
+    "opciones": ["A) Azteca", "B) Maya", "C) Tolteca", "D) Olmeca"],
+    "correcta": "B"
+  },
+  {
+    "id": 29,
+    "categoria": "Historia",
+    "pregunta": "¿Quién lideró la expedición marítima que completó por primera vez la circunnavegación del planeta Tierra?",
+    "opciones": ["A) Cristóbal Colón", "B) Juan Sebastián Elcano", "C) Vasco da Gama", "D) Américo Vespucio"],
+    "correcta": "B"
+  },
+  {
+    "id": 30,
+    "categoria": "Historia",
+    "pregunta": "¿En qué año se disolvió formalmente la Unión Soviética (URSS)?",
+    "opciones": ["A) 1989", "B) 1990", "C) 1991", "D) 1993"],
+    "correcta": "C"
+  },
+  {
+    "id": 31,
+    "categoria": "Cine/Series",
+    "pregunta": "¿Quién dirigió la obra maestra de ciencia ficción 'Interstellar' (2014)?",
+    "opciones": ["A) Denis Villeneuve", "B) Christopher Nolan", "C) Steven Spielberg", "D) Ridley Scott"],
+    "correcta": "B"
+  },
+  {
+    "id": 32,
+    "categoria": "Cine/Series",
+    "pregunta": "¿Cuál es la película más taquillera de la historia del cine a nivel mundial sin ajustar por inflación?",
+    "opciones": ["A) Titanic", "B) Avengers: Endgame", "C) Avatar (2009)", "D) Star Wars: El despertar de la fuerza"],
+    "correcta": "C"
+  },
+  {
+    "id": 33,
+    "categoria": "Cine/Series",
+    "pregunta": "¿En la serie 'Breaking Bad', con qué alias criminal es conocido Walter White en el bajo mundo?",
+    "opciones": ["A) Saul Goodman", "B) Heisenberg", "C) Scarface", "D) Gus Fring"],
+    "correcta": "B"
+  },
+  {
+    "id": 34,
+    "categoria": "Cine/Series",
+    "pregunta": "¿Qué actor interpretó al Joker en la película 'El caballero de la noche' (2008) ganando un Óscar póstumo?",
+    "opciones": ["A) Joaquin Phoenix", "B) Jack Nicholson", "C) Heath Ledger", "D) Jared Leto"],
+    "correcta": "C"
+  },
+  {
+    "id": 35,
+    "categoria": "Cine/Series",
+    "pregunta": "¿Cómo se llama el reino ficticio donde transcurre la trama principal de la saga 'El Señor de los Anillos'?",
+    "opciones": ["A) Narnia", "B) Poniente (Westeros)", "C) La Tierra Media", "D) Azeroth"],
+    "correcta": "C"
+  },
+  {
+    "id": 36,
+    "categoria": "Cine/Series",
+    "pregunta": "¿Qué película animada de Pixar fue la primera en ser producida enteramente por computadora en 1995?",
+    "opciones": ["A) Bichos", "B) Toy Story", "C) Monsters, Inc.", "D) Buscando a Nemo"],
+    "correcta": "B"
+  },
+  {
+    "id": 37,
+    "categoria": "Cine/Series",
+    "pregunta": "¿En qué serie de HBO se disputa el simbólico Trono de Hierro?",
+    "opciones": ["A) Westworld", "B) The Sopranos", "C) Game of Thrones", "D) Succession"],
+    "correcta": "C"
+  },
+  {
+    "id": 38,
+    "categoria": "Cine/Series",
+    "pregunta": "¿Quién compuso la icónica banda sonora de sagas como 'Star Wars', 'Indiana Jones' y 'Jurassic Park'?",
+    "opciones": ["A) Hans Zimmer", "B) Ennio Morricone", "C) John Williams", "D) Howard Shore"],
+    "correcta": "C"
+  },
+  {
+    "id": 39,
+    "categoria": "Videojuegos",
+    "pregunta": "¿En qué año se lanzó originalmente al mercado el videojuego Minecraft creado por Markus Persson (Notch)?",
+    "opciones": ["A) 2007", "B) 2009", "C) 2011", "D) 2013"],
+    "correcta": "C"
+  },
+  {
+    "id": 40,
+    "categoria": "Videojuegos",
+    "pregunta": "¿Cuál es el videojuego que ostenta el récord de ser el producto de entretenimiento más rentable de la historia?",
+    "opciones": ["A) Grand Theft Auto V", "B) World of Warcraft", "C) Fortnite", "D) Tetris"],
+    "correcta": "A"
+  },
+  {
+    "id": 41,
+    "categoria": "Videojuegos",
+    "pregunta": "¿Cómo se llama la princesa que el héroe Link debe rescatar en la legendaria franquicia de Nintendo?",
+    "opciones": ["A) Peach", "B) Daisy", "C) Zelda", "D) Samus"],
+    "correcta": "C"
+  },
+  {
+    "id": 42,
+    "categoria": "Videojuegos",
+    "pregunta": "¿Qué estudio de videojuegos desarrolló la galardonada saga de rol postapocalíptico 'The Witcher 3: Wild Hunt'?",
+    "opciones": ["A) Bethesda", "B) BioWare", "C) CD Projekt RED", "D) Ubisoft"],
+    "correcta": "C"
+  },
+  {
+    "id": 43,
+    "categoria": "Videojuegos",
+    "pregunta": "¿Cuál fue la primera consola de videojuegos doméstica en utilizar discos compactos (CD-ROM) como soporte principal?",
+    "opciones": ["A) Nintendo 64", "B) PlayStation (PS1)", "C) Sega Saturn", "D) PC Engine CD-ROM²"],
+    "correcta": "D"
+  },
+  {
+    "id": 44,
+    "categoria": "Videojuegos",
+    "pregunta": "¿Quién es el protagonista principal de la franquicia de acción 'God of War'?",
+    "opciones": ["A) Dante", "B) Kratos", "C) Arthur Morgan", "D) Geralt de Rivia"],
+    "correcta": "B"
+  },
+  {
+    "id": 45,
+    "categoria": "Cultura General",
+    "pregunta": "¿Cuál es el libro más vendido y traducido de toda la historia de la humanidad?",
+    "opciones": ["A) El Corán", "B) Don Quijote de la Mancha", "C) La Biblia", "D) El Principito"],
+    "correcta": "C"
+  },
+  {
+    "id": 46,
+    "categoria": "Cultura General",
+    "pregunta": "¿Cuál es la montaña más alta del planeta Tierra medida desde el nivel del mar?",
+    "opciones": ["A) K2", "B) Kangchenjunga", "C) Monte Everest", "D) Aconcagua"],
+    "correcta": "C"
+  },
+  {
+    "id": 47,
+    "categoria": "Cultura General",
+    "pregunta": "¿Qué país tiene la mayor cantidad de husos horarios en su territorio incluyendo provincias y ultramar?",
+    "opciones": ["A) Rusia", "B) Estados Unidos", "C) Francia", "D) China"],
+    "correcta": "C"
+  },
+  {
+    "id": 48,
+    "categoria": "Cultura General",
+    "pregunta": "¿En qué museo de París se encuentra resguardada la célebre pintura de la Mona Lisa?",
+    "opciones": ["A) Museo de Orsay", "B) Museo del Louvre", "C) Centro Pompidou", "D) Museo Rodin"],
+    "correcta": "B"
+  },
+  {
+    "id": 49,
+    "categoria": "Cultura General",
+    "pregunta": "¿Cuál es el desierto cálido más grande del mundo?",
+    "opciones": ["A) Desierto de Gobi", "B) Desierto de Arabia", "C) Desierto del Sahara", "D) Desierto de Kalahari"],
+    "correcta": "C"
+  },
+  {
+    "id": 50,
+    "categoria": "Cultura General",
+    "pregunta": "¿Cuántos corazones posee un pulpo?",
+    "opciones": ["A) 1", "B) 2", "C) 3", "D) 4"],
+    "correcta": "C"
+  }
+]

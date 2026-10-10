@@ -1,0 +1,88 @@
+# =============================================================================
+# BLINDAJE DE SEGURIDAD PARA GIT (.gitignore) - Unsk1ngMD
+# =============================================================================
+
+# 1. Variables de entorno y secretos
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+!.env.example
+
+# 2. Sesiones y credenciales de WhatsApp (Baileys & Sub-Bots)
+auth_info/
+auth_info*/
+auth_info_baileys/
+baileys_auth_info/
+session/
+sessions/
+session_*/
+subbots/
+subbots*/
+sesion_whatsapp/
+*creds*.json
+baileys_store*.json
+*.json.bak
+*.bak
+
+# 3. Datos locales en caliente y registros de grupos privados
+database/groups.json
+database/settings.json
+database/backups/
+data/settings.json
+data/antilink.json
+# Preservar colecciones de juegos estáticos
+!data/acertijos.json
+!data/trivia.json
+
+# 4. Dependencias y empaquetados
+node_modules/
+jspm_packages/
+package-lock.json.bak
+
+# 5. Logs y depuración
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pino.log
+pino*.log
+
+# 6. Archivos temporales, descargas de medios y copias de seguridad
+temp/
+tmp/
+cache/
+.cache/
+*.tmp
+*.zip
+*.tar.gz
+Backup-*.zip
+auth_backup_*.zip
+
+# Excluir descargas de audio y video en raíz/temporales
+*.mp4
+*.mp3
+*.m4a
+*.wav
+*.opus
+*.webm
+
+# Excepción: Conservar archivos multimedia oficiales del bot en assets/
+!assets/
+!assets/**
+
+# 7. Archivos de sistema operativo y entornos de desarrollo (IDE)
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*~

@@ -1,0 +1,646 @@
+[
+  {
+    "pregunta": "Oro parece, plata no es. Quien no lo adivine, bien tonto es.",
+    "respuestas": [
+      "platano",
+      "el platano",
+      "banana",
+      "la banana",
+      "cambur",
+      "el cambur"
+    ],
+    "displayRespuesta": "El plátano 🍌"
+  },
+  {
+    "pregunta": "Blanca por dentro, verde por fuera. Si quieres que te lo diga, espera.",
+    "respuestas": [
+      "pera",
+      "la pera",
+      "una pera"
+    ],
+    "displayRespuesta": "La pera 🍐"
+  },
+  {
+    "pregunta": "Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?",
+    "respuestas": [
+      "reloj",
+      "el reloj"
+    ],
+    "displayRespuesta": "El reloj ⌚"
+  },
+  {
+    "pregunta": "Vuelo de noche, duermo de día y nunca verás plumas en el ala mía. ¿Qué soy?",
+    "respuestas": [
+      "murcielago",
+      "el murcielago",
+      "un murciélago"
+    ],
+    "displayRespuesta": "El murciélago 🦇"
+  },
+  {
+    "pregunta": "Chiquito como un ratón, cuida la casa como un león. ¿Qué es?",
+    "respuestas": [
+      "candado",
+      "el candado",
+      "cerrojo",
+      "el cerrojo"
+    ],
+    "displayRespuesta": "El candado 🔒"
+  },
+  {
+    "pregunta": "Tiene dientes y no come, tiene cabeza y no es hombre. ¿Qué es?",
+    "respuestas": [
+      "ajo",
+      "el ajo"
+    ],
+    "displayRespuesta": "El ajo 🧄"
+  },
+  {
+    "pregunta": "Subo llena y bajo vacía, si no me apuro la sopa se enfría. ¿Qué soy?",
+    "respuestas": [
+      "cuchara",
+      "la cuchara",
+      "una cuchara"
+    ],
+    "displayRespuesta": "La cuchara 🥄"
+  },
+  {
+    "pregunta": "Cuanto más caliente está, más fresco se le llama. ¿Qué es?",
+    "respuestas": [
+      "pan",
+      "el pan"
+    ],
+    "displayRespuesta": "El pan 🍞"
+  },
+  {
+    "pregunta": "Tiene ojos y no ve, tiene agua y no la bebe, tiene carne y no la come, tiene barba y no es un hombre. ¿Qué es?",
+    "respuestas": [
+      "coco",
+      "el coco"
+    ],
+    "displayRespuesta": "El coco 🥥"
+  },
+  {
+    "pregunta": "Pasa por el agua y no se moja, pasa por el fuego y no se quema. ¿Qué es?",
+    "respuestas": [
+      "sombra",
+      "la sombra"
+    ],
+    "displayRespuesta": "La sombra 👤"
+  },
+  {
+    "pregunta": "Si me nombras, desaparezco. ¿Qué soy?",
+    "respuestas": [
+      "silencio",
+      "el silencio"
+    ],
+    "displayRespuesta": "El silencio 🤫"
+  },
+  {
+    "pregunta": "Tengo hojas pero no soy árbol, tengo lomo pero no soy animal. ¿Qué soy?",
+    "respuestas": [
+      "libro",
+      "el libro",
+      "cuaderno",
+      "el cuaderno"
+    ],
+    "displayRespuesta": "El libro 📖"
+  },
+  {
+    "pregunta": "Una caja redondita, blanca como el azahar, todos la saben abrir, nadie la sabe cerrar. ¿Qué es?",
+    "respuestas": [
+      "huevo",
+      "el huevo"
+    ],
+    "displayRespuesta": "El huevo 🥚"
+  },
+  {
+    "pregunta": "Te la digo y no me entiendes, te la repito y no me comprendes. ¿Qué es?",
+    "respuestas": [
+      "tela",
+      "la tela"
+    ],
+    "displayRespuesta": "La tela 🧵"
+  },
+  {
+    "pregunta": "No muerde ni ladra, pero tiene dientes y la casa guarda. ¿Qué es?",
+    "respuestas": [
+      "llave",
+      "la llave"
+    ],
+    "displayRespuesta": "La llave 🔑"
+  },
+  {
+    "pregunta": "Lana sube, lana baja. ¿Qué es?",
+    "respuestas": [
+      "navaja",
+      "la navaja"
+    ],
+    "displayRespuesta": "La navaja 🗡️"
+  },
+  {
+    "pregunta": "Redondo, redondo como un pandero, si me tocas con baquetas pierdo el soniquete. ¿Qué soy?",
+    "respuestas": [
+      "tambor",
+      "el tambor"
+    ],
+    "displayRespuesta": "El tambor 🥁"
+  },
+  {
+    "pregunta": "Sube llena de agua y baja vacía, si no te das prisa se derrama la vida. ¿Qué es?",
+    "respuestas": [
+      "nube",
+      "la nube"
+    ],
+    "displayRespuesta": "La nube ☁️"
+  },
+  {
+    "pregunta": "Todos me pisan a mí, pero yo no piso a nadie; todos preguntan por mí, yo no pregunto por nadie. ¿Qué soy?",
+    "respuestas": [
+      "camino",
+      "el camino",
+      "calle",
+      "la calle",
+      "sendero"
+    ],
+    "displayRespuesta": "El camino 🛤️"
+  },
+  {
+    "pregunta": "Cuanto más le quitas, más grande se hace. ¿Qué es?",
+    "respuestas": [
+      "agujero",
+      "el agujero",
+      "hoyo",
+      "el hoyo",
+      "hueco",
+      "el hueco",
+      "un agujero",
+      "un hoyo"
+    ],
+    "displayRespuesta": "El agujero 🕳️"
+  },
+  {
+    "pregunta": "Tiene capa sobre capa, y si se la vas quitando, te va haciendo llorar. ¿Qué es?",
+    "respuestas": [
+      "cebolla",
+      "la cebolla"
+    ],
+    "displayRespuesta": "La cebolla 🧅"
+  },
+  {
+    "pregunta": "Se enciende cuando nace y se apaga cuando muere, llora derramando lágrimas. ¿Qué es?",
+    "respuestas": [
+      "vela",
+      "la vela",
+      "candela"
+    ],
+    "displayRespuesta": "La vela 🕯️"
+  },
+  {
+    "pregunta": "No tengo voz y te hablo, no tengo cuerpo y me miras, reproduzco tus gestos pero no tengo vida. ¿Qué soy?",
+    "respuestas": [
+      "espejo",
+      "el espejo"
+    ],
+    "displayRespuesta": "El espejo 🪞"
+  },
+  {
+    "pregunta": "Si me das de comer vivo, pero si me das de beber muero. ¿Qué soy?",
+    "respuestas": [
+      "fuego",
+      "el fuego",
+      "lumbre",
+      "la fogata"
+    ],
+    "displayRespuesta": "El fuego 🔥"
+  },
+  {
+    "pregunta": "Tiene tres ojos pero no puede ver, y con sus colores a todos hace detener o correr. ¿Qué es?",
+    "respuestas": [
+      "semaforo",
+      "el semaforo"
+    ],
+    "displayRespuesta": "El semáforo 🚦"
+  },
+  {
+    "pregunta": "Tiene lengua pero no habla, tiene cordones pero no ata zapatos ajenos. ¿Qué es?",
+    "respuestas": [
+      "zapato",
+      "el zapato",
+      "zapatilla",
+      "la zapatilla",
+      "tenis"
+    ],
+    "displayRespuesta": "El zapato 👟"
+  },
+  {
+    "pregunta": "Cuanto más seca, más mojada está. ¿Qué es?",
+    "respuestas": [
+      "toalla",
+      "la toalla",
+      "una toalla"
+    ],
+    "displayRespuesta": "La toalla 🧖"
+  },
+  {
+    "pregunta": "Cae de lo alto y no se rompe, pero cae al agua y desaparece. ¿Qué es?",
+    "respuestas": [
+      "lluvia",
+      "la lluvia",
+      "nieve",
+      "la nieve",
+      "papel",
+      "el papel"
+    ],
+    "displayRespuesta": "La lluvia / El papel 🌧️"
+  },
+  {
+    "pregunta": "Al principio de amor estoy, y al final del mar también. En el medio del barco me encuentro. ¿Qué soy?",
+    "respuestas": [
+      "la letra a",
+      "letra a",
+      "a"
+    ],
+    "displayRespuesta": "La letra A 🅰️"
+  },
+  {
+    "pregunta": "Tengo cerdas pero no soy cerdo, me pongo pasta pero no soy italiano. ¿Qué soy?",
+    "respuestas": [
+      "cepillo de dientes",
+      "el cepillo de dientes",
+      "cepillo dental",
+      "cepillo"
+    ],
+    "displayRespuesta": "El cepillo de dientes 🪥"
+  },
+  {
+    "pregunta": "Se tira cuando se necesita y se recoge cuando no se necesita. ¿Qué es?",
+    "respuestas": [
+      "ancla",
+      "el ancla"
+    ],
+    "displayRespuesta": "El ancla ⚓"
+  },
+  {
+    "pregunta": "Solo salgo cuando llueve o cuando el sol quema fuerte, me abres para taparte y me cierras al volver. ¿Qué es?",
+    "respuestas": [
+      "paraguas",
+      "el paraguas",
+      "sombrilla",
+      "la sombrilla"
+    ],
+    "displayRespuesta": "El paraguas / La sombrilla ☂️"
+  },
+  {
+    "pregunta": "Tiene un solo ojo pero no ve nada, y un hilo le pasa por el centro del alma. ¿Qué es?",
+    "respuestas": [
+      "aguja",
+      "la aguja"
+    ],
+    "displayRespuesta": "La aguja 🪡"
+  },
+  {
+    "pregunta": "Tengo peldaños para subir y bajar, pero no me puedo mover de mi lugar. ¿Qué soy?",
+    "respuestas": [
+      "escalera",
+      "la escalera"
+    ],
+    "displayRespuesta": "La escalera 🪜"
+  },
+  {
+    "pregunta": "Dos compañeras que van al compás, con los pies delante y los ojos detrás. ¿Qué son?",
+    "respuestas": [
+      "tijeras",
+      "las tijeras"
+    ],
+    "displayRespuesta": "Las tijeras ✂️"
+  },
+  {
+    "pregunta": "Llevo mi casa a cuestas, camino sin tener patas y voy dejando mi huella con un hilito de plata. ¿Quién soy?",
+    "respuestas": [
+      "caracol",
+      "el caracol",
+      "babosa",
+      "la babosa"
+    ],
+    "displayRespuesta": "El caracol 🐌"
+  },
+  {
+    "pregunta": "Cuanto más das de ellas, más dejas atrás. ¿Qué son?",
+    "respuestas": [
+      "huellas",
+      "las huellas",
+      "pisadas",
+      "las pisadas",
+      "pasos",
+      "los pasos"
+    ],
+    "displayRespuesta": "Las huellas / pisadas 👣"
+  },
+  {
+    "pregunta": "Tengo cuerdas pero no soy cometa, tengo boca pero no como, vibro al tocarme. ¿Qué soy?",
+    "respuestas": [
+      "guitarra",
+      "la guitarra"
+    ],
+    "displayRespuesta": "La guitarra 🎸"
+  },
+  {
+    "pregunta": "Tengo ciudades pero no casas, montañas pero no árboles, y agua pero no peces. ¿Qué soy?",
+    "respuestas": [
+      "un mapa",
+      "el mapa",
+      "mapa"
+    ],
+    "displayRespuesta": "El mapa 🗺️"
+  },
+  {
+    "pregunta": "Pobre de mí: si me nombras, desaparezco. ¿Qué soy?",
+    "respuestas": [
+      "el silencio",
+      "silencio",
+      "un silencio"
+    ],
+    "displayRespuesta": "El silencio 🤫"
+  },
+  {
+    "pregunta": "¿Qué sube y baja constantemente, pero siempre se queda en el mismo lugar?",
+    "respuestas": [
+      "la escalera",
+      "escalera",
+      "las escaleras",
+      "una escalera"
+    ],
+    "displayRespuesta": "La escalera 🪜"
+  },
+  {
+    "pregunta": "Tengo un ojo pero no puedo ver nada con él. ¿Qué soy?",
+    "respuestas": [
+      "una aguja",
+      "aguja",
+      "la aguja",
+      "el huracán",
+      "un huracán",
+      "huracan"
+    ],
+    "displayRespuesta": "La aguja / El huracán 🪡"
+  },
+  {
+    "pregunta": "¿Qué pertenece únicamente a ti, pero todas las demás personas lo usan mucho más que tú?",
+    "respuestas": [
+      "tu nombre",
+      "el nombre",
+      "mi nombre",
+      "nombre"
+    ],
+    "displayRespuesta": "Tu nombre 🏷️"
+  },
+  {
+    "pregunta": "Siempre estoy hambriento; si me das de comer vivo, pero si me das agua muero al instante. ¿Qué soy?",
+    "respuestas": [
+      "el fuego",
+      "fuego",
+      "un fuego",
+      "la fogata",
+      "lumbre"
+    ],
+    "displayRespuesta": "El fuego 🔥"
+  },
+  {
+    "pregunta": "¿Qué tiene un cuello largo pero no tiene cabeza?",
+    "respuestas": [
+      "la botella",
+      "botella",
+      "una botella"
+    ],
+    "displayRespuesta": "La botella 🍾"
+  },
+  {
+    "pregunta": "Tengo teclas pero no cerraduras; tengo espacio pero no habitaciones; puedes entrar pero no salir. ¿Qué soy?",
+    "respuestas": [
+      "el teclado",
+      "teclado",
+      "un teclado"
+    ],
+    "displayRespuesta": "El teclado ⌨️"
+  },
+  {
+    "pregunta": "¿Qué mes del año tiene 28 días?",
+    "respuestas": [
+      "todos",
+      "todos los meses",
+      "todos ellos"
+    ],
+    "displayRespuesta": "Todos los meses 📅"
+  },
+  {
+    "pregunta": "Si me tienes, quieres compartirme. Si me compartes, ya no me tienes. ¿Qué soy?",
+    "respuestas": [
+      "un secreto",
+      "el secreto",
+      "secreto"
+    ],
+    "displayRespuesta": "Un secreto 🤫"
+  },
+  {
+    "pregunta": "¿Qué pesa más: un kilo de hierro o un kilo de plumas?",
+    "respuestas": [
+      "pesan lo mismo",
+      "lo mismo",
+      "igual",
+      "pesan igual"
+    ],
+    "displayRespuesta": "Pesan lo mismo ⚖️"
+  },
+  {
+    "pregunta": "Paso por el agua y no me mojo, paso por el fuego y no me quemo. ¿Qué soy?",
+    "respuestas": [
+      "la sombra",
+      "sombra",
+      "una sombra"
+    ],
+    "displayRespuesta": "la sombra"
+  },
+  {
+    "pregunta": "¿Qué cosa se puede romper sin siquiera tocarla ni dejarla caer?",
+    "respuestas": [
+      "una promesa",
+      "la promesa",
+      "el silencio",
+      "promesa",
+      "silencio"
+    ],
+    "displayRespuesta": "Una promesa / El silencio 🤝"
+  },
+  {
+    "pregunta": "Una persona sale a pasear bajo la lluvia sin paraguas ni sombrero, pero no se le moja ni un solo pelo de la cabeza. ¿Por qué?",
+    "respuestas": [
+      "es calvo",
+      "calvo",
+      "era calvo",
+      "no tiene pelo",
+      "es calva"
+    ],
+    "displayRespuesta": "Porque es calvo 👨‍🦲"
+  },
+  {
+    "pregunta": "Tengo ramas pero no hojas, ni tronco, ni flores. ¿Qué soy?",
+    "respuestas": [
+      "un banco",
+      "el banco",
+      "banco"
+    ],
+    "displayRespuesta": "Un banco 🏦"
+  },
+  {
+    "pregunta": "Si un tren eléctrico va de norte a sur a 100 km/h y el viento sopla hacia el oeste, ¿hacia dónde va el humo?",
+    "respuestas": [
+      "no tiene humo",
+      "ningun lado",
+      "hacia ningun lado",
+      "es electrico",
+      "no echa humo"
+    ],
+    "displayRespuesta": "Hacia ningún lado (es eléctrico) 🚂"
+  },
+  {
+    "pregunta": "¿Qué corre por colinas y valles pero nunca se mueve?",
+    "respuestas": [
+      "el camino",
+      "camino",
+      "la carretera",
+      "carretera",
+      "un camino"
+    ],
+    "displayRespuesta": "El camino / La carretera 🛣️"
+  },
+  {
+    "pregunta": "Tengo agujeros por todos lados, arriba y abajo, pero aún así retengo el agua. ¿Qué soy?",
+    "respuestas": [
+      "una esponja",
+      "esponja",
+      "la esponja"
+    ],
+    "displayRespuesta": "La esponja 🧽"
+  },
+  {
+    "pregunta": "Me compras para comer, pero nunca me comes a mí. ¿Qué soy?",
+    "respuestas": [
+      "el plato",
+      "plato",
+      "la cuchara",
+      "cuchara",
+      "el tenedor",
+      "los cubiertos"
+    ],
+    "displayRespuesta": "El plato / Los cubiertos 🍽️"
+  },
+  {
+    "pregunta": "¿Qué tiene muchas palabras escritas pero nunca dice ni una sola?",
+    "respuestas": [
+      "un libro",
+      "el libro",
+      "libro",
+      "el diccionario"
+    ],
+    "displayRespuesta": "El libro / Diccionario 📚"
+  },
+  {
+    "pregunta": "¿Qué invento te permite mirar directamente a través de una pared sólida?",
+    "respuestas": [
+      "la ventana",
+      "ventana",
+      "una ventana"
+    ],
+    "displayRespuesta": "La ventana 🪟"
+  },
+  {
+    "pregunta": "Dos personas nacieron el mismo día, del mismo año, de la misma madre, pero no son gemelos. ¿Qué son?",
+    "respuestas": [
+      "trillizos",
+      "mellizos",
+      "eran trillizos",
+      "son trillizos"
+    ],
+    "displayRespuesta": "Trillizos (o más) 👶👶👶"
+  },
+  {
+    "pregunta": "Siempre estoy frente a ti, pero nunca me puedes ver. ¿Qué soy?",
+    "respuestas": [
+      "el futuro",
+      "futuro",
+      "el manana",
+      "el mañana"
+    ],
+    "displayRespuesta": "El futuro 🔮"
+  },
+  {
+    "pregunta": "¿Qué tiene dientes afilados pero nunca puede morder?",
+    "respuestas": [
+      "el peine",
+      "peine",
+      "un peine",
+      "la sierra",
+      "el serrucho"
+    ],
+    "displayRespuesta": "El peine / El serrucho 🪮"
+  },
+  {
+    "pregunta": "Te sigo a todas partes a la luz del sol, pero en la oscuridad desaparezco por completo. ¿Qué soy?",
+    "respuestas": [
+      "tu sombra",
+      "la sombra",
+      "sombra",
+      "mi sombra"
+    ],
+    "displayRespuesta": "Tu sombra 👤"
+  },
+  {
+    "pregunta": "¿Qué se llena con la mano abierta y se vacía cuando cierras el puño?",
+    "respuestas": [
+      "un guante",
+      "el guante",
+      "guante"
+    ],
+    "displayRespuesta": "El guante 🧤"
+  },
+  {
+    "pregunta": "Nace grande y muere chiquita; brilla en la mesa cuando no hay bombilla. ¿Qué es?",
+    "respuestas": [
+      "la vela",
+      "vela",
+      "una vela"
+    ],
+    "displayRespuesta": "La vela 🕯️"
+  },
+  {
+    "pregunta": "¿Qué cosa es redonda como una moneda, tiene cola y no tiene patas?",
+    "respuestas": [
+      "la sarten",
+      "sartén",
+      "el sartén",
+      "una sartén"
+    ],
+    "displayRespuesta": "La sartén 🍳"
+  },
+  {
+    "pregunta": "Vengo al mundo sin hacer ruido, cambio de forma y desaparezco cuando sale el sol. ¿Qué soy?",
+    "respuestas": [
+      "el rocío",
+      "rocio",
+      "el rocio",
+      "la niebla",
+      "niebla"
+    ],
+    "displayRespuesta": "El rocío / La niebla 🌫️"
+  },
+  {
+    "pregunta": "Tengo 88 teclas pero no puedo abrir una sola puerta. ¿Qué soy?",
+    "respuestas": [
+      "el piano",
+      "piano",
+      "un piano"
+    ],
+    "displayRespuesta": "El piano 🎹"
+  }
+]
