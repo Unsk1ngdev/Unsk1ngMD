@@ -25,7 +25,7 @@ module.exports = {
 
         if (!apiKey || apiKey.trim() === '') {
             return await sock.sendMessage(m.chat, {
-                text: '❌ No se ha configurado la clave de API de Groq Cloud (`GROQ_API_KEY`). Por favor configúrala en el archivo `.env`.'
+                text: '❌ La clave de IA no está configurada o es inválida.'
             }, { quoted: m });
         }
 
@@ -37,11 +37,11 @@ module.exports = {
             // Lista de modelos con fallback automático de alta disponibilidad
             const candidateModels = [
                 process.env.GROQ_MODEL,
-                'llama-3.3-70b-versatile',
-                'llama-3.1-8b-instant',
                 'openai/gpt-oss-120b',
+                'qwen/qwen3.8-27b',
                 'openai/gpt-oss-20b',
-                'qwen/qwen3.8-27b'
+                'llama-3.3-70b-versatile',
+                'llama-3.1-8b-instant'
             ].filter(Boolean);
 
             const uniqueModels = [...new Set(candidateModels)];
@@ -82,9 +82,12 @@ module.exports = {
 
             if (!explanation) {
                 await m.react('❌');
-                return await sock.sendMessage(m.chat, {
-                    text: `❌ No fue posible obtener la explicación enciclopédica para "*${query}*". Detalle: ${lastError?.response?.data?.error?.message || lastError?.message || 'Error de servicio'}`
-                }, { quoted: m });
+                const isAuthError = lastError?.response?.status === 401;
+                const errorMsg = isAuthError
+                    ? '❌ La clave de IA no está configurada o es inválida.'
+                    : `❌ No fue posible obtener la explicación enciclopédica para "*${query}*". Detalle: ${lastError?.response?.data?.error?.message || lastError?.message || 'Error de servicio'}`;
+
+                return await sock.sendMessage(m.chat, { text: errorMsg }, { quoted: m });
             }
 
             // 2. Estructura visual de respuesta

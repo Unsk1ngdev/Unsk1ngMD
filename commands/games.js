@@ -1,7 +1,10 @@
 const triviaManager = require('../lib/trivia');
-const akinatorManager = require('../lib/akinator');
-const database = require('../lib/database');
-const { cleanJid } = require('../lib/groupPermissions');
+const logger = require('../lib/logger');
+
+/**
+ * Normaliza cualquier JID eliminando sufijos de dispositivo (:1, :2) y caracteres no numéricos
+ */
+const cleanPhone = (id) => (id ? id.replace(/:.*@/, '@').split('@')[0].replace(/[^0-9]/g, '') : '');
 
 module.exports = [
     // 1. .ruleta (Ruleta Rusa de Grupo)
@@ -15,53 +18,87 @@ module.exports = [
         execute: async ({ sock, m }) => {
             await m.react('🎲');
 
-            const shooterJid = m.sender;
-            const userTag = cleanJid(shooterJid).split('@')[0];
+            const jid = m.chat;
+            const senderJid = m.sender;
+            const userPhone = cleanPhone(senderJid) || 'participante';
+            const targetJid = `${userPhone}@s.whatsapp.net`;
 
-            // Simulación de 6 recámaras con 1 bala
-            const chamber = Math.floor(Math.random() * 6) + 1;
-            const bullet = 1;
+            // Tambor de 6 recámaras, 1 sola bala (probabilidad exacta 1/6)
+            const isShot = Math.floor(Math.random() * 6) === 0;
 
-            if (chamber !== bullet) {
-                // Se salva
-                await sock.sendMessage(m.chat, {
+            if (!isShot) {
+                // Caso: Sobrevive (Clic)
+                return await sock.sendMessage(jid, {
                     text:
                         `🎰 *[RULETA RUSA - UNSK1NGMD]*\n\n` +
-                        `*¡CLIC!* 😅 Te salvaste esta ronda, @${userTag}.\n` +
-                        `_El percutor golpeó una recámara vacía (${chamber}/6). Respiras aliviado._`,
-                    mentions: [shooterJid]
+                        `*¡Clic! La recámara estaba vacía. Te has salvado.* 😅\n` +
+                        `_El tambor giró y el percutor no encontró bala. @${userPhone} respira aliviado._`,
+                    mentions: [senderJid, targetJid]
                 }, { quoted: m });
-            } else {
-                // ¡BANG! Disparo letal
-                let expelled = false;
+            }
 
-                // Si no es el Owner, intentar expulsar
-                if (!database.isOwner(shooterJid)) {
-                    try {
-                        await sock.groupParticipantsUpdate(m.chat, [shooterJid], 'remove');
-                        expelled = true;
-                    } catch (_) {
-                        expelled = false;
-                    }
-                }
+            // Caso: Disparo letal (¡BANG! 💥)
+            await m.react('💥');
 
-                if (expelled) {
-                    await sock.sendMessage(m.chat, {
-                        text:
-                            `🎰 *[RULETA RUSA - UNSK1NGMD]*\n\n` +
-                            `*¡BANG!* 💥 Has perdido el juego.\n\n` +
-                            `☠️ @${userTag} jaló del gatillo y la bala estaba en la recámara.\n` +
-                            `El participante ha sido expulsado del grupo. ¡Que descanse en paz! ⚰️`,
-                        mentions: [shooterJid]
-                    }, { quoted: m });
-                } else {
-                    await sock.sendMessage(m.chat, {
-                        text:
-                            `🎰 *[RULETA RUSA - UNSK1NGMD]*\n\n` +
-                            `*¡BANG!* 💥 Has perdido la ronda.\n\n` +
-                            `☠️ @${userTag} ha caído abatido por la bala en la ruleta rusa... ⚰️\n` +
-                            `_(Aviso: El usuario es administrador/owner o el bot no cuenta con permisos para expulsarlo)._`,
-                        mentions: [shooterJid]
+            // 1. Obtener metadata del grupo para verificar permisos de administrador
+            let groupMetadata = null;
+            try {
+                groupMetadata = await sock.groupMetadata(jid);
+            } catch (err) {
+                logger.error('Error al obtener groupMetadata en .ruleta:', err.message);
+            }
+
+            const participants = groupMetadata?.participants || [];
+            const botPhone = cleanPhone(sock.user?.id || sock.user?.jid);
+            const botLid = cleanPhone(sock.user?.lid);
+
+            // Búsqueda robusta del bot entre participantes (por número o por LID)
+            const botParticipant = participants.find(p => {
+                const pPhone = cleanPhone(p.id);
+                const pLid = cleanPhone(p.lid);
+                return (botPhone && (pPhone === botPhone || pLid === botPhone)) ||
+                       (botLid && (pPhone === botLid || pLid === botLid));
+            });
+
+            const isBotAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
+
+            if (!isBotAdmin) {
+                // Si el bot NO es admin: mensaje lúdico indicando falta de permisos
+                return await sock.sendMessage(jid, {
+                    text:
+                        `🎰 *[RULETA RUSA - UNSK1NGMD]*\n\n` +
+                        `💥 *¡BANG!* Recibiste el disparo en pleno rostro, @${userPhone}... 🩸\n\n` +
+                        `_Has perdido la ronda, pero te salvaste de la expulsión porque el bot no cuenta con permisos de Administrador en este grupo._`,
+                    mentions: [senderJid, targetJid]
+                }, { quoted: m });
+            }
+
+            // 2. Si el bot ES admin: primero poner el mensaje de eliminación en el chat
+            await sock.sendMessage(jid, {
+                text:
+                    `🎰 *[RULETA RUSA - UNSK1NGMD]*\n\n` +
+                    `💥 *¡BANG! La bala estaba en la recámara. Adiós...* @${userPhone} ⚰️\n\n` +
+                    `_Jalaste del gatillo y el disparo fue letal. Has sido eliminado del grupo._`,
+                mentions: [senderJid, targetJid]
+            }, { quoted: m });
+
+            // 3. Pausa breve (1.5s) para garantizar que el mensaje se transmita y visualice antes de expulsar
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+
+            // 4. Expulsar inmediatamente al participante del grupo
+            try {
+                // Resolver el JID exacto que tiene registrado el grupo
+                const matchedParticipant = participants.find(p => cleanPhone(p.id) === userPhone);
+                const expelJid = matchedParticipant?.id || targetJid;
+
+                await sock.groupParticipantsUpdate(jid, [expelJid], 'remove');
+            } catch (expelErr) {
+                logger.error('Error al expulsar usuario en ruleta:', expelErr.message);
+                const errStr = String(expelErr?.message || expelErr);
+                if (errStr.includes('403') || errStr.toLowerCase().includes('admin')) {
+                    await sock.sendMessage(jid, {
+                        text: `⚠️ No se pudo expulsar a @${userPhone} porque también es Administrador del grupo (WhatsApp prohíbe que un admin expulse a otro).`,
+                        mentions: [senderJid, targetJid]
                     }, { quoted: m });
                 }
             }
@@ -77,35 +114,6 @@ module.exports = [
         usage: '.trivia',
         execute: async ({ sock, m }) => {
             await triviaManager.startGame(sock, m);
-        }
-    },
-
-    // 3. .akinator
-    {
-        name: 'akinator',
-        alias: ['aki', 'adivina'],
-        category: 'juegos',
-        desc: 'El genio Akinator intenta adivinar el personaje real o ficticio en el que estás pensando',
-        usage: '.akinator',
-        execute: async ({ sock, m }) => {
-            await akinatorManager.startGame(sock, m);
-        }
-    },
-
-    // 4. .cancelakinator
-    {
-        name: 'cancelakinator',
-        alias: ['stopaki', 'cancelaki'],
-        category: 'juegos',
-        desc: 'Cancela la sesión activa de Akinator en el chat',
-        usage: '.cancelakinator',
-        execute: async ({ m }) => {
-            const cancelled = akinatorManager.cancelGame(m.chat);
-            if (cancelled) {
-                await m.reply('🧞‍♂️ La partida de Akinator ha sido cancelada.');
-            } else {
-                await m.reply('ℹ️ No hay ninguna partida de Akinator activa en este chat.');
-            }
         }
     }
 ];

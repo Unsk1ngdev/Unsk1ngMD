@@ -21,7 +21,7 @@ module.exports = {
 
         // Comprobar configuración de la API Key
         if (!apiKey || apiKey.trim() === '') {
-            return await m.reply('❌ No se ha configurado la clave de API de Groq.\nPor favor, añade `GROQ_API_KEY=tu_clave_aqui` en el archivo `.env`. Puedes obtener una clave gratuita en: https://console.groq.com/keys');
+            return await m.reply('❌ La clave de IA no está configurada o es inválida.');
         }
 
         await m.react('⚡');
@@ -46,15 +46,13 @@ module.exports = {
         const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
         
         // Modelos candidatos en orden de prioridad:
-        // 1. Modelo especificado en variable de entorno (si existe)
-        // 2. llama-3.3-70b-versatile (Requerido por defecto)
-        // 3. Fallbacks de alta disponibilidad en caso de 404 (tier/acceso) o 429/503 (sobrecarga)
         const candidateModels = [
             process.env.GROQ_MODEL,
-            'llama-3.3-70b-versatile',
-            'llama-3.1-8b-instant',
             'openai/gpt-oss-120b',
-            'openai/gpt-oss-20b'
+            'qwen/qwen3.8-27b',
+            'openai/gpt-oss-20b',
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant'
         ].filter(Boolean);
 
         // Deduplicar lista de modelos
@@ -122,7 +120,7 @@ module.exports = {
         const statusCode = lastError?.response?.status;
 
         if (statusCode === 401) {
-            return await m.reply('❌ *Error de autenticación (401):* La clave `GROQ_API_KEY` es inválida o ha expirado. Por favor, revísala en https://console.groq.com/keys');
+            return await m.reply('❌ La clave de IA no está configurada o es inválida.');
         }
 
         if (statusCode === 429) {

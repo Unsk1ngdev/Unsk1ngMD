@@ -92,14 +92,17 @@ const startBot = async () => {
     // 1. Cargar catálogo modular de comandos
     loadCommands();
 
-    // 2. Comprobación explícita de configuración de Groq Cloud
-    if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== '') {
-        logger.success('API de Groq Cloud configurada correctamente (Llama 3.3).');
+    // 2. Inicializar almacenamiento global en memoria para sesiones
+    global.akinatorSessions = global.akinatorSessions || new Map();
+
+    // 3. Comprobación explícita de configuración de Groq Cloud
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
+        console.warn('⚠️ [AVISO]: GROQ_API_KEY no detectada en .env. Comandos de IA deshabilitados.');
     } else {
-        logger.warn('GROQ_API_KEY no detectada en .env. El comando .ia requerirá esta clave para responder.');
+        console.log('✅ [GROQ]: API Key detectada correctamente.');
     }
 
-    // 3. Iniciar limpieza periódica de /tmp y optimización de memoria
+    // 4. Iniciar limpieza periódica de /tmp y optimización de memoria
     startCleanerInterval(config.tempFileMaxAgeMs);
 
     // 3. Preparar estado de autenticación multi-archivo
