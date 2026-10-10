@@ -179,14 +179,6 @@ pm2 stop unsk1ng-md
 
 ---
 
-## 🔒 Privacidad y Buenas Prácticas de Seguridad
-
-- **`.env` Blindado:** Las claves de API privadas (`GROQ_API_KEY`), tokens y configuraciones sensibles nunca son subidas a GitHub.
-- **Sesiones Protegidas:** Las credenciales de WhatsApp (`auth_info/` y `subbots/`) se encuentran excluidas por [`.gitignore`](file:///c:/Users/unkno/OneDrive/Desktop/Whatsapp-Bot/.gitignore).
-- **Limpieza Automática:** El sistema en [lib/cleaner.js](file:///c:/Users/unkno/OneDrive/Desktop/Whatsapp-Bot/lib/cleaner.js) depura periódicamente los archivos residuales en `tmp/` para evitar acumulación de espacio en disco y fugas de memoria.
-
----
-
 ## 📄 Licencia
 
 Este proyecto está bajo la Licencia **MIT**. Desarrollado con dedicación por **Castrodev**.  
