@@ -17,7 +17,6 @@
   "author": "Antigravity Dev",
   "license": "MIT",
   "dependencies": {
-    "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^6.7.24",
     "archiver": "^7.0.1",
     "axios": "^1.7.9",
@@ -25,6 +24,7 @@
     "chalk": "^4.1.2",
     "dotenv": "^16.4.7",
     "ffmpeg-static": "^5.3.0",
+    "form-data": "^4.0.1",
     "fs-extra": "^11.2.0",
     "google-libphonenumber": "^3.2.47",
     "jsqr": "^1.4.0",
@@ -36,9 +36,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
-  },
-  "overrides": {
-    "libsignal": "6.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

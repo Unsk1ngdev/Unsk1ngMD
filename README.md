@@ -26,19 +26,44 @@ Un asistente multifuncional para WhatsApp enfocado en alto rendimiento, dinamism
 * ❌ **Sin compilación nativa:** Cero dependencias `node-gyp`.
 * ❌ **Sin paquetes de sistema:** No requiere `apt-get install ffmpeg` ni `apk add`. El binario de FFmpeg está autocontenido (`ffmpeg-static`) y `yt-dlp` se descarga y actualiza de forma autónoma en `./bin/`.
 
-### 🎮 Despliegue en Pterodactyl Panel (Docker Node.js)
+### 🎮 Despliegue en Contenedores Docker / Pterodactyl Panel
 
-1. En tu servidor de Pterodactyl, asegúrate de utilizar un Egg estándar de **Node.js 18** o **Node.js 20**.
-2. Sube o clona los archivos del proyecto directamente en la raíz del contenedor (`/home/container/`).
-3. En la sección **Startup (Configuración de arranque)** del panel, define el comando:
-   ```bash
-   node index.js
-   ```
-4. En la consola o pestaña de archivos, ejecuta la instalación de dependencias:
-   ```bash
-   npm install
-   ```
-5. Enciende el servidor desde el panel. ¡El bot creará automáticamente las carpetas necesarias (`tmp/`, `bin/`, `auth_info/`) y estará listo para vincular!
+1. **Configuración del Egg en Pterodactyl:**
+   - Selecciona un Egg oficial o estándar de **Node.js** (versión **18**, **20** o **22**). Totalmente compatible tanto con imágenes basadas en Debian/Ubuntu (`glibc`) como en Alpine Linux (`musl`).
+   - En la sección **Startup (Configuración de arranque)** del panel:
+     - **Main File (Archivo Principal):** `index.js`
+     - **Startup Command (Comando de inicio):**
+       ```bash
+       node index.js
+       ```
+
+2. **Estructura de Archivos en el Contenedor:**
+   - Asegúrate de que todos los archivos del bot se encuentren directamente en la raíz `/home/container/` (ej: `/home/container/index.js`, `/home/container/package.json`) y **NO** dentro de una subcarpeta como `/home/container/Unsk1ngMD/`.
+
+3. **Instalación Limpia de Dependencias:**
+   - En la consola o terminal del contenedor, ejecuta:
+     ```bash
+     npm install
+     ```
+   *(El archivo `package-lock.json` provisto resuelve todas las librerías 100% desde el registro oficial de npmjs.org, garantizando cero bloqueos por `EALLOWGIT` o Git SSH).*
+
+4. **Variables de Entorno (.env):**
+   - Configura tus credenciales (`GROQ_API_KEY`, `OWNER_NUMBER`, etc.) en el archivo `.env`. Si no lo creas manualmente, el módulo de inicio rápido creará uno automáticamente basado en `.env.example`.
+
+5. **Arranque e Inicio:**
+   - Enciende el servidor desde el panel. Durante el primer arranque, selecciona en la consola el método de vinculación (Código QR o Pairing Code de 8 dígitos).
+
+---
+
+### 🔧 Solución de Problemas Frecuentes (Troubleshooting)
+
+| Error en Consola | Causa Probable | Solución Definitiva |
+| :--- | :--- | :--- |
+| `Cannot find module './index.js'` | Los archivos del bot se subieron en una subcarpeta (ej: `/home/container/Unsk1ngMD/`) en lugar de la raíz. | Mueve todos los archivos a `/home/container/` para que `index.js` quede exactamente en la raíz del contenedor. |
+| `npm error code EALLOWGIT` | Intentar instalar Baileys sin el `package-lock.json` saneado en un entorno donde Git está bloqueado. | Usa el archivo `package-lock.json` oficial del repositorio y ejecuta `npm install`. Resuelve el 100% de paquetes desde npmjs.org. |
+| `node-gyp / Python / gcc not found` | Dependencias obsoletas que requerían compilar binarios C++ localmente. | Solucionado de raíz. El bot no requiere Python ni compiladores nativos; usa `ffmpeg-static` y JS puro. |
+| `Permission denied: ./bin/yt-dlp` | El sistema de archivos del contenedor restringió los permisos del binario descargado. | Ejecuta en terminal: `chmod +x bin/yt-dlp` (el bot intenta autoasignar `0o755` de manera automática). |
+| `Error: Cannot find module 'dotenv'` | Omitir la instalación de paquetes antes de iniciar el bot. | Ejecuta `npm install` antes de `node index.js`. |
 
 ---
 

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./lib/preflight')();
 const {
     default: makeWASocket,
     useMultiFileAuthState,
