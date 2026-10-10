@@ -1,130 +1,139 @@
-const youtubedl = require('yt-dlp-exec');
 const path = require('path');
 const fs = require('fs-extra');
+const logger = require('../../lib/logger');
+const { runFfmpeg, isFfmpegAvailable } = require('../../lib/ffmpeg');
+const {
+    execYtdlp,
+    getYtMetadata,
+    extractYouTubeId,
+    formatDuration,
+    sanitizeTitle,
+    ensureYtdlp
+} = require('../../lib/ytdlp');
 
-const tempDir = path.join(process.cwd(), 'temp');
-fs.ensureDirSync(tempDir);
+const tmpDir = path.join(process.cwd(), 'tmp');
+fs.ensureDirSync(tmpDir);
 
-const MAX_DURATION_SECONDS = 15 * 60; // 15 minutos
-
-/**
- * Extrae el ID de 11 caracteres de un enlace de YouTube
- */
-const extractYouTubeId = (url) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i);
-    return match ? match[1] : null;
-};
-
-/**
- * Limpia el título para usarlo como nombre de archivo seguro
- */
-const sanitizeTitle = (title) => {
-    if (!title) return 'audio';
-    return title.replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 60) || 'audio';
-};
-
-/**
- * Formatea duración en segundos a mm:ss o hh:mm:ss
- */
-const formatDuration = (seconds) => {
-    if (!seconds && seconds !== 0) return 'Desconocida';
-    const s = Math.round(Number(seconds));
-    const hrs = Math.floor(s / 3600);
-    const mins = Math.floor((s % 3600) / 60);
-    const secs = Math.floor(s % 60);
-    if (hrs > 0) {
-        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
+const MAX_DURATION_SECONDS = 15 * 60; // Límite máximo: 15 minutos
 
 module.exports = {
     name: 'ytmp3',
-    alias: ['yta', 'audioyt', 'mp3yt'],
+    alias: ['yta', 'audioyt', 'mp3yt', 'playaudio'],
     category: 'descargas',
-    desc: 'Descarga y convierte audio de YouTube a MP3 real de 128K con yt-dlp y FFmpeg',
+    desc: 'Descarga y recodifica audio de YouTube a MP3 estándar (128kbps/44.1kHz) con yt-dlp y FFmpeg',
     usage: '.ytmp3 [enlace de YouTube o Shorts]',
     execute: async ({ sock, m, text }) => {
-        if (!text) {
-            return await m.reply('❌ Por favor, proporciona el enlace de YouTube.\nEjemplo: *.ytmp3 https://youtu.be/...*');
+        const inputUrl = text?.trim() || m.quoted?.body?.trim();
+        if (!inputUrl) {
+            return await m.reply('❌ Por favor, proporciona un enlace de YouTube.\nEjemplo: *.ytmp3 https://youtu.be/...*');
         }
 
-        const videoId = extractYouTubeId(text);
+        const videoId = extractYouTubeId(inputUrl);
         if (!videoId) {
-            return await m.reply('❌ Enlace no válido. Asegúrate de incluir un link de youtube.com o youtu.be.');
+            return await m.reply('❌ Enlace de YouTube no válido. Asegúrate de incluir un link de youtube.com o youtu.be.');
+        }
+
+        // Comprobar disponibilidad de dependencias
+        if (!isFfmpegAvailable()) {
+            return await m.reply('⚠️ El conversor multimedia (FFmpeg) no está disponible en este momento en el servidor.');
         }
 
         const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        const tempPath = path.join(tempDir, `yt_audio_${Date.now()}.mp3`);
-
         await m.react('⏳');
 
+        // Aviso preliminar al usuario
+        await m.reply('⏳ Procesando y descargando audio...');
+
+        const timestamp = Date.now();
+        const rawPrefix = `ytdl_audio_${timestamp}_${Math.random().toString(36).substring(7)}`;
+        const rawOutputTemplate = path.join(tmpDir, `${rawPrefix}.%(ext)s`);
+        const finalMp3Path = path.join(tmpDir, `${rawPrefix}_final.mp3`);
+
+        let downloadedRawFile = null;
+
         try {
-            // 1. Obtener metadatos previos y validar duración máxima permitida (15 minutos)
-            let title = `audio_${videoId}`;
-            let duration = 0;
+            // 1. Validación previa de metadatos (duración máxima 15 minutos)
+            const metadata = await getYtMetadata(ytUrl);
+            const duration = Number(metadata?.duration) || 0;
+            const title = sanitizeTitle(metadata?.title || `audio_${videoId}`);
 
-            try {
-                const meta = await youtubedl(ytUrl, {
-                    dumpSingleJson: true,
-                    noWarnings: true,
-                    noCheckCertificates: true
-                });
-                if (meta?.title) title = meta.title;
-                if (meta?.duration) duration = meta.duration;
-
-                if (duration > MAX_DURATION_SECONDS) {
-                    await m.react('❌');
-                    return await m.reply(`❌ El video dura ${formatDuration(duration)} y supera el límite máximo permitido de 15 minutos.`);
-                }
-            } catch (metaErr) {
-                // Si falla dumpSingleJson, continuar con la descarga
+            if (duration > MAX_DURATION_SECONDS) {
+                await m.react('❌');
+                return await m.reply(`❌ El video excede el límite máximo de 15 minutos (Duración: ${formatDuration(duration)}).`);
             }
 
-            // 2. Extraer audio y transcodificar obligatoriamente a MP3 real con FFmpeg (128K)
-            await youtubedl(ytUrl, {
-                extractAudio: true,
-                audioFormat: 'mp3',
-                audioQuality: '128K',
-                output: tempPath,
-                noPlaylist: true,
-                noWarnings: true,
-                noCheckCertificates: true
-            });
+            // 2. Descargar el mejor flujo de audio a la carpeta ./tmp/
+            await execYtdlp([
+                '-f', 'bestaudio/best',
+                '--no-playlist',
+                '--no-warnings',
+                '-o', rawOutputTemplate,
+                ytUrl
+            ], { timeout: 180000 });
 
-            // 3. Verificar que el archivo exista y pese más de 0 bytes
-            if (!fs.existsSync(tempPath)) {
-                throw new Error('El archivo de audio no se generó en el almacenamiento temporal.');
+            // Localizar el archivo descargado por yt-dlp en ./tmp/
+            const filesInTmp = await fs.readdir(tmpDir);
+            const matchName = filesInTmp.find(f => f.startsWith(rawPrefix) && !f.endsWith('_final.mp3'));
+
+            if (!matchName) {
+                throw new Error('No se pudo localizar el archivo de audio descargado por yt-dlp.');
             }
 
-            const stat = fs.statSync(tempPath);
-            if (!stat || stat.size === 0) {
-                throw new Error('El archivo descargado está vacío o corrupto (0 bytes).');
+            downloadedRawFile = path.join(tmpDir, matchName);
+
+            // 3. Recodificar obligatoriamente a MP3 estándar con FFmpeg
+            // -c:a libmp3lame -b:a 128k -ar 44100
+            await runFfmpeg([
+                '-y',
+                '-i', downloadedRawFile,
+                '-vn',
+                '-c:a', 'libmp3lame',
+                '-b:a', '128k',
+                '-ar', '44100',
+                '-ac', '2',
+                finalMp3Path
+            ], { timeout: 120000 });
+
+            // Verificar que el archivo generado exista y tenga contenido
+            if (!fs.existsSync(finalMp3Path)) {
+                throw new Error('El archivo MP3 final no fue creado por FFmpeg.');
             }
 
-            const cleanTitle = sanitizeTitle(title);
+            const stats = await fs.stat(finalMp3Path);
+            if (stats.size === 0) {
+                throw new Error('El archivo MP3 generado está vacío (0 bytes).');
+            }
 
-            // 4. Enviar a Baileys usando fs.readFileSync y mimetype 'audio/mpeg'
+            // 4. Envío seguro con Baileys (leyendo como buffer y sin ptt)
+            const audioBuffer = await fs.readFile(finalMp3Path);
+
             await sock.sendMessage(m.chat, {
-                audio: fs.readFileSync(tempPath),
+                audio: audioBuffer,
                 mimetype: 'audio/mpeg',
-                fileName: `${cleanTitle}.mp3`,
-                ptt: false
+                fileName: `${title}.mp3`
             }, { quoted: m });
 
             await m.react('✅');
 
         } catch (err) {
+            logger.error('[YTMP3 ERROR]:', err.message);
             await m.react('❌');
-            await m.reply(`❌ Error al procesar el audio de YouTube: ${err.message || 'Error desconocido'}`);
+            await m.reply(`❌ Ocurrió un error al procesar el audio de YouTube: ${err.message}`);
         } finally {
-            // 5. Eliminar obligatoriamente el archivo temporal
-            if (fs.existsSync(tempPath)) {
-                try {
-                    fs.unlinkSync(tempPath);
-                } catch (_) {}
+            // 5. Limpieza obligatoria de todos los archivos temporales generados en ./tmp/
+            if (downloadedRawFile && fs.existsSync(downloadedRawFile)) {
+                try { await fs.unlink(downloadedRawFile); } catch (_) {}
             }
+            if (fs.existsSync(finalMp3Path)) {
+                try { await fs.unlink(finalMp3Path); } catch (_) {}
+            }
+            // Limpiar cualquier residuo de esta descarga en ./tmp/
+            try {
+                const lingering = (await fs.readdir(tmpDir)).filter(f => f.startsWith(rawPrefix));
+                for (const lFile of lingering) {
+                    try { await fs.unlink(path.join(tmpDir, lFile)); } catch (_) {}
+                }
+            } catch (_) {}
         }
     }
 };

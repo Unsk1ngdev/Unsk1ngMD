@@ -50,12 +50,14 @@ yarn-error.log*
 pino.log
 pino*.log
 
-# 6. Archivos temporales, descargas de medios y copias de seguridad
+# 6. Archivos temporales, binarios autónomos y copias de seguridad
+bin/
 temp/
 tmp/
 cache/
 .cache/
 *.tmp
+*.exe
 *.zip
 *.tar.gz
 Backup-*.zip

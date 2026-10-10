@@ -19,7 +19,30 @@ Un asistente multifuncional para WhatsApp enfocado en alto rendimiento, dinamism
 
 ---
 
-## 🚀 Despliegue Rápido
+## 🚀 Despliegue Rápido & Plug & Play
+
+**Unsk1ngMD** está diseñado con una arquitectura **100% Plug & Play**:
+* ❌ **Sin Python:** No requiere Python ni gestores externos a nivel de sistema operativo.
+* ❌ **Sin compilación nativa:** Cero dependencias `node-gyp`.
+* ❌ **Sin paquetes de sistema:** No requiere `apt-get install ffmpeg` ni `apk add`. El binario de FFmpeg está autocontenido (`ffmpeg-static`) y `yt-dlp` se descarga y actualiza de forma autónoma en `./bin/`.
+
+### 🎮 Despliegue en Pterodactyl Panel (Docker Node.js)
+
+1. En tu servidor de Pterodactyl, asegúrate de utilizar un Egg estándar de **Node.js 18** o **Node.js 20**.
+2. Sube o clona los archivos del proyecto directamente en la raíz del contenedor (`/home/container/`).
+3. En la sección **Startup (Configuración de arranque)** del panel, define el comando:
+   ```bash
+   node index.js
+   ```
+4. En la consola o pestaña de archivos, ejecuta la instalación de dependencias:
+   ```bash
+   npm install
+   ```
+5. Enciende el servidor desde el panel. ¡El bot creará automáticamente las carpetas necesarias (`tmp/`, `bin/`, `auth_info/`) y estará listo para vincular!
+
+---
+
+### 💻 Despliegue en Servidores VPS / Terminal Local
 
 1. **Clonar el proyecto:**
    ```bash

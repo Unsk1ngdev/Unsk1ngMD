@@ -1,24 +1,10 @@
 const fs = require('fs-extra');
 const sharp = require('sharp');
-const ffmpeg = require('fluent-ffmpeg');
 const webpmux = require('node-webpmux');
 const axios = require('axios');
 const FormData = require('form-data');
 const { createTempPath, safeUnlink } = require('../lib/cleaner');
-
-// Configuración prioritaria de FFmpeg (preferir sistema si existe, fallback a installer)
-try {
-    const { execSync } = require('child_process');
-    execSync('ffmpeg -version', { stdio: 'ignore' });
-    ffmpeg.setFfmpegPath('ffmpeg');
-} catch (e) {
-    try {
-        const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-        if (ffmpegInstaller && ffmpegInstaller.path) {
-            ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-        }
-    } catch (_) {}
-}
+const { runFfmpeg } = require('../lib/ffmpeg');
 
 /**
  * Handler centralizado para conversión de stickers (.toimg y .tovideo)
@@ -71,20 +57,15 @@ const handleStickerConversion = async ({ sock, m }) => {
         await fs.writeFile(inputPath, stickerBuffer);
 
         try {
-            await new Promise((resolve, reject) => {
-                ffmpeg(inputPath)
-                    .inputOptions(['-y'])
-                    .outputOptions([
-                        '-c:v', 'libx264',
-                        '-pix_fmt', 'yuv420p',
-                        '-movflags', 'faststart',
-                        '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2'
-                    ])
-                    .toFormat('mp4')
-                    .save(outputPath)
-                    .on('end', resolve)
-                    .on('error', reject);
-            });
+            await runFfmpeg([
+                '-y',
+                '-i', inputPath,
+                '-c:v', 'libx264',
+                '-pix_fmt', 'yuv420p',
+                '-movflags', 'faststart',
+                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                outputPath
+            ]);
 
             const videoBuffer = await fs.readFile(outputPath);
 
@@ -153,22 +134,17 @@ module.exports = [
             await fs.writeFile(inputPath, mediaBuffer);
 
             try {
-                await new Promise((resolve, reject) => {
-                    ffmpeg(inputPath)
-                        .inputOptions(['-y'])
-                        .outputOptions([
-                            '-vn',
-                            '-c:a', 'libopus',
-                            '-b:a', '64k',
-                            '-vbr', 'on',
-                            '-ar', '48000',
-                            '-ac', '1'
-                        ])
-                        .toFormat('opus')
-                        .save(outputPath)
-                        .on('end', resolve)
-                        .on('error', reject);
-                });
+                await runFfmpeg([
+                    '-y',
+                    '-i', inputPath,
+                    '-vn',
+                    '-c:a', 'libopus',
+                    '-b:a', '64k',
+                    '-vbr', 'on',
+                    '-ar', '48000',
+                    '-ac', '1',
+                    outputPath
+                ]);
 
                 const opusBuffer = await fs.readFile(outputPath);
 
@@ -215,21 +191,16 @@ module.exports = [
             await fs.writeFile(inputPath, mediaBuffer);
 
             try {
-                await new Promise((resolve, reject) => {
-                    ffmpeg(inputPath)
-                        .inputOptions(['-y'])
-                        .outputOptions([
-                            '-vn',
-                            '-c:a', 'libmp3lame',
-                            '-b:a', '128k',
-                            '-ar', '44100',
-                            '-ac', '2'
-                        ])
-                        .toFormat('mp3')
-                        .save(outputPath)
-                        .on('end', resolve)
-                        .on('error', reject);
-                });
+                await runFfmpeg([
+                    '-y',
+                    '-i', inputPath,
+                    '-vn',
+                    '-c:a', 'libmp3lame',
+                    '-b:a', '128k',
+                    '-ar', '44100',
+                    '-ac', '2',
+                    outputPath
+                ]);
 
                 const mp3Buffer = await fs.readFile(outputPath);
 

@@ -21,6 +21,7 @@ const { loadCommands } = require('./handlers/commandLoader');
 const { handleMessage } = require('./handlers/messageHandler');
 const { handleGroupUpdate } = require('./handlers/groupHandler');
 const antispamMiddleware = require('./middlewares/antispam');
+const { ensureYtdlp } = require('./lib/ytdlp');
 
 /**
  * Renderiza el banner cyberpunk con cfonts y la caja de información neón
@@ -88,6 +89,13 @@ const askQuestion = (query) => {
  * Función principal de arranque del socket de WhatsApp
  */
 const startBot = async () => {
+    // 0. Crear directorios base esenciales si no existen
+    const tmpDir = path.join(process.cwd(), 'tmp');
+    const binDir = path.join(process.cwd(), 'bin');
+    fs.ensureDirSync(tmpDir);
+    fs.ensureDirSync(binDir);
+    fs.ensureDirSync(config.sessionDir);
+
     renderBanner('Iniciando conexión...');
 
     // 1. Cargar catálogo modular de comandos
@@ -97,14 +105,29 @@ const startBot = async () => {
     global.akinatorSessions = global.akinatorSessions || new Map();
     global.spamTracker = global.spamTracker || new Map();
 
-    // 3. Comprobación explícita de configuración de Groq Cloud
+    // 3. Comprobación segura de variables de entorno (.env)
+    const envPath = path.join(process.cwd(), '.env');
+    if (!fs.existsSync(envPath)) {
+        console.warn(chalk.yellow.bold('\n⚠️ [CONFIGURACIÓN] Archivo .env no encontrado en la raíz.'));
+        console.warn(chalk.yellow('Variables recomendadas:'));
+        console.warn(chalk.white('  • GROQ_API_KEY (Para IA y enciclopedia .wiki)'));
+        console.warn(chalk.white('  • OWNER_NUMBER (Tu número internacional, ej: 584160666286)'));
+        console.warn(chalk.white('  • PREFIX       (Prefijo de comandos, por defecto: .)'));
+        console.warn(chalk.cyan('El bot continuará iniciando con valores predeterminados.\n'));
+    }
+
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
         console.warn('⚠️ [AVISO]: GROQ_API_KEY no detectada en .env. Comandos de IA deshabilitados.');
     } else {
         console.log('✅ [GROQ]: API Key detectada correctamente.');
     }
 
-    // 4. Iniciar limpieza periódica de /tmp y optimización de memoria
+    // 4. Iniciar verificación y preparación de yt-dlp en segundo plano (sin retrasar el arranque)
+    ensureYtdlp().catch((err) => {
+        logger.warn('[YT-DLP] Inicialización en segundo plano pospuesta:', err.message);
+    });
+
+    // 5. Iniciar limpieza periódica de /tmp y optimización de memoria
     startCleanerInterval(config.tempFileMaxAgeMs);
 
     // 3. Preparar estado de autenticación multi-archivo
@@ -242,13 +265,13 @@ const startBot = async () => {
     return sock;
 };
 
-// Manejo de cierres limpios y excepciones no controladas
+// Manejo robusto de excepciones no capturadas para mantener el servidor siempre activo
 process.on('uncaughtException', (err) => {
-    logger.error('Uncaught Exception:', err.message);
+    logger.error('💥 [UNCAUGHT EXCEPTION]:', err?.stack || err?.message || err);
 });
 
-process.on('unhandledRejection', (err) => {
-    logger.error('Unhandled Rejection:', err?.message || err);
+process.on('unhandledRejection', (reason) => {
+    logger.error('⚠️ [UNHANDLED REJECTION]:', reason?.stack || reason?.message || reason);
 });
 
 process.on('SIGINT', () => {

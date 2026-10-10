@@ -1,150 +1,157 @@
-const youtubedl = require('yt-dlp-exec');
 const path = require('path');
 const fs = require('fs-extra');
+const logger = require('../../lib/logger');
+const { runFfmpeg, isFfmpegAvailable } = require('../../lib/ffmpeg');
+const {
+    execYtdlp,
+    getYtMetadata,
+    extractYouTubeId,
+    formatDuration,
+    sanitizeTitle
+} = require('../../lib/ytdlp');
 
-const tempDir = path.join(process.cwd(), 'temp');
-fs.ensureDirSync(tempDir);
+const tmpDir = path.join(process.cwd(), 'tmp');
+fs.ensureDirSync(tmpDir);
 
-const MAX_DURATION_SECONDS = 15 * 60; // 15 minutos
-
-/**
- * Extrae el ID de 11 caracteres de un enlace de YouTube
- */
-const extractYouTubeId = (url) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i);
-    return match ? match[1] : null;
-};
-
-/**
- * Limpia el título para usarlo como nombre de archivo seguro
- */
-const sanitizeTitle = (title) => {
-    if (!title) return 'video';
-    return title.replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 60) || 'video';
-};
-
-/**
- * Formatea duración en segundos a mm:ss o hh:mm:ss
- */
-const formatDuration = (seconds) => {
-    if (!seconds && seconds !== 0) return 'Desconocida';
-    const s = Math.round(Number(seconds));
-    const hrs = Math.floor(s / 3600);
-    const mins = Math.floor((s % 3600) / 60);
-    const secs = Math.floor(s % 60);
-    if (hrs > 0) {
-        return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
+const MAX_DURATION_SECONDS = 15 * 60; // Límite máximo: 15 minutos
 
 module.exports = {
     name: 'ytmp4',
-    alias: ['ytv', 'videoyt', 'mp4yt'],
+    alias: ['ytv', 'videoyt', 'mp4yt', 'playvideo'],
     category: 'descargas',
-    desc: 'Descarga y multiplexa video y audio de YouTube hasta 720p en MP4 real con yt-dlp y FFmpeg',
+    desc: 'Descarga y transcodifica video de YouTube hasta 720p en MP4 compatible con WhatsApp (H.264/AAC)',
     usage: '.ytmp4 [enlace de YouTube o Shorts]',
     execute: async ({ sock, m, text }) => {
-        if (!text) {
-            return await m.reply('❌ Por favor, proporciona el enlace del video de YouTube.\nEjemplo: *.ytmp4 https://youtu.be/...*');
+        const inputUrl = text?.trim() || m.quoted?.body?.trim();
+        if (!inputUrl) {
+            return await m.reply('❌ Por favor, proporciona un enlace de video de YouTube.\nEjemplo: *.ytmp4 https://youtu.be/...*');
         }
 
-        const videoId = extractYouTubeId(text);
+        const videoId = extractYouTubeId(inputUrl);
         if (!videoId) {
-            return await m.reply('❌ Enlace no válido. Asegúrate de incluir un link de youtube.com o youtu.be.');
+            return await m.reply('❌ Enlace de YouTube no válido. Asegúrate de incluir un link de youtube.com o youtu.be.');
+        }
+
+        // Comprobar disponibilidad de dependencias
+        if (!isFfmpegAvailable()) {
+            return await m.reply('⚠️ El conversor multimedia (FFmpeg) no está disponible en este momento en el servidor.');
         }
 
         const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        const tempPath = path.join(tempDir, `yt_video_${Date.now()}.mp4`);
-
         await m.react('⏳');
 
+        // Aviso preliminar al usuario
+        await m.reply('⏳ Descargando y procesando video...');
+
+        const timestamp = Date.now();
+        const rawPrefix = `ytdl_video_${timestamp}_${Math.random().toString(36).substring(7)}`;
+        const rawOutputTemplate = path.join(tmpDir, `${rawPrefix}.%(ext)s`);
+        const finalMp4Path = path.join(tmpDir, `${rawPrefix}_final.mp4`);
+
+        let downloadedRawFile = null;
+
         try {
-            // 1. Obtener metadatos previos y validar duración máxima permitida (15 minutos)
-            let title = `video_${videoId}`;
-            let duration = 0;
+            // 1. Validación previa de metadatos (duración máxima 15 minutos)
+            const metadata = await getYtMetadata(ytUrl);
+            const duration = Number(metadata?.duration) || 0;
+            const title = sanitizeTitle(metadata?.title || `video_${videoId}`);
 
-            try {
-                const meta = await youtubedl(ytUrl, {
-                    dumpSingleJson: true,
-                    noWarnings: true,
-                    noCheckCertificates: true
-                });
-                if (meta?.title) title = meta.title;
-                if (meta?.duration) duration = meta.duration;
-
-                if (duration > MAX_DURATION_SECONDS) {
-                    await m.react('❌');
-                    return await m.reply(`❌ El video dura ${formatDuration(duration)} y supera el límite máximo permitido de 15 minutos.`);
-                }
-            } catch (metaErr) {
-                // Si falla dumpSingleJson, continuar con la descarga
-            }
-
-            // 2. Descargar y multiplexar video (máx 720p) + audio con FFmpeg en contenedor MP4
-            await youtubedl(ytUrl, {
-                format: 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[ext=mp4]/b',
-                mergeOutputFormat: 'mp4',
-                output: tempPath,
-                noPlaylist: true,
-                noWarnings: true,
-                noCheckCertificates: true
-            });
-
-            // 3. Verificar que el archivo exista y pese más de 0 bytes
-            if (!fs.existsSync(tempPath)) {
-                throw new Error('El archivo de video no se generó en el almacenamiento temporal.');
-            }
-
-            const stat = fs.statSync(tempPath);
-            if (!stat || stat.size === 0) {
-                throw new Error('El archivo de video descargado está vacío o corrupto (0 bytes).');
-            }
-
-            const sizeBytes = stat.size;
-            const sizeMB = sizeBytes / (1024 * 1024);
-
-            // Validar límite de 100 MB para WhatsApp
-            if (sizeMB > 100) {
+            if (duration > MAX_DURATION_SECONDS) {
                 await m.react('❌');
-                return await m.reply(`❌ El video supera los 100 MB permitidos por WhatsApp (Tamaño: ${sizeMB.toFixed(1)} MB).`);
+                return await m.reply(`❌ El video excede el límite máximo de 15 minutos (Duración: ${formatDuration(duration)}).`);
             }
 
-            const cleanTitle = sanitizeTitle(title);
-            const durationFormatted = formatDuration(duration);
-            const caption = `🎬 *${title}*\n⏳ *Duración:* ${durationFormatted}\n📦 *Peso:* ${sizeMB.toFixed(1)} MB`;
+            // 2. Descargar mejor video y mejor audio (máximo 720p para no saturar memoria/red)
+            await execYtdlp([
+                '-f', 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+                '--no-playlist',
+                '--no-warnings',
+                '-o', rawOutputTemplate,
+                ytUrl
+            ], { timeout: 240000 });
 
-            // 4. Envío condicional según el peso:
-            // Entre 16 MB y 99 MB: como documento
-            if (sizeMB >= 16) {
+            // Localizar el archivo descargado por yt-dlp en ./tmp/
+            const filesInTmp = await fs.readdir(tmpDir);
+            const matchName = filesInTmp.find(f => f.startsWith(rawPrefix) && !f.endsWith('_final.mp4'));
+
+            if (!matchName) {
+                throw new Error('No se pudo localizar el archivo de video descargado por yt-dlp.');
+            }
+
+            downloadedRawFile = path.join(tmpDir, matchName);
+
+            // 3. Transcodificación obligatoria compatible con WhatsApp:
+            // Contenedor MP4 con códec de video H.264 (libx264), audio AAC (aac) y metadatos faststart
+            await runFfmpeg([
+                '-y',
+                '-i', downloadedRawFile,
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-crf', '26',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-ar', '44100',
+                '-pix_fmt', 'yuv420p',
+                '-movflags', '+faststart',
+                finalMp4Path
+            ], { timeout: 180000 });
+
+            if (!fs.existsSync(finalMp4Path)) {
+                throw new Error('El archivo de video final no fue generado.');
+            }
+
+            const stats = await fs.stat(finalMp4Path);
+            const sizeInMb = stats.size / (1024 * 1024);
+
+            if (stats.size === 0) {
+                throw new Error('El archivo de video generado está vacío (0 bytes).');
+            }
+
+            // 4. Lógica de envío por tamaño:
+            // - Mayor a 100 MB: Cancelar y notificar al usuario
+            if (sizeInMb > 100) {
+                await m.react('❌');
+                return await m.reply(`❌ El video resultante pesa ${sizeInMb.toFixed(1)} MB, superando el límite máximo de 100 MB permitido por WhatsApp.`);
+            }
+
+            const videoBuffer = await fs.readFile(finalMp4Path);
+
+            // - Entre 16 MB y 99 MB: Enviar como documento adjunto
+            if (sizeInMb >= 16) {
                 await sock.sendMessage(m.chat, {
-                    document: fs.readFileSync(tempPath),
+                    document: videoBuffer,
                     mimetype: 'video/mp4',
-                    fileName: `${cleanTitle}.mp4`,
-                    caption: caption
+                    fileName: `${title}.mp4`
                 }, { quoted: m });
             } else {
-                // Menor a 16 MB: como video reproducible directo
+                // - Menor a 16 MB: Enviar como video estándar
                 await sock.sendMessage(m.chat, {
-                    video: fs.readFileSync(tempPath),
+                    video: videoBuffer,
                     mimetype: 'video/mp4',
-                    caption: caption
+                    caption: `🎬 *${title}*\n⏱️ *Duración:* ${formatDuration(duration)}\n📦 *Peso:* ${sizeInMb.toFixed(2)} MB`
                 }, { quoted: m });
             }
 
             await m.react('✅');
 
         } catch (err) {
+            logger.error('[YTMP4 ERROR]:', err.message);
             await m.react('❌');
-            await m.reply(`❌ Error al procesar el video de YouTube: ${err.message || 'Error desconocido'}`);
+            await m.reply(`❌ Ocurrió un error al procesar el video de YouTube: ${err.message}`);
         } finally {
-            // 5. Eliminar obligatoriamente el archivo temporal
-            if (fs.existsSync(tempPath)) {
-                try {
-                    fs.unlinkSync(tempPath);
-                } catch (_) {}
+            // 5. Limpieza obligatoria de todos los archivos temporales generados en ./tmp/
+            if (downloadedRawFile && fs.existsSync(downloadedRawFile)) {
+                try { await fs.unlink(downloadedRawFile); } catch (_) {}
             }
+            if (fs.existsSync(finalMp4Path)) {
+                try { await fs.unlink(finalMp4Path); } catch (_) {}
+            }
+            try {
+                const lingering = (await fs.readdir(tmpDir)).filter(f => f.startsWith(rawPrefix));
+                for (const lFile of lingering) {
+                    try { await fs.unlink(path.join(tmpDir, lFile)); } catch (_) {}
+                }
+            } catch (_) {}
         }
     }
 };
