@@ -1,23 +1,22 @@
-require('dotenv').config();
 const axios = require('axios');
 const logger = require('../lib/logger');
 
-// Asegurar inicialización global en memoria
+// Almacenamiento centralizado de sesiones activas en memoria indexado por JID del chat
 global.akinatorSessions = global.akinatorSessions || new Map();
 
-// Modelos Groq ordenados por disponibilidad y compatibilidad
+const SESSION_TIMEOUT_MS = 90000; // Temporizador realista de inactividad (90 segundos)
+
 const CANDIDATE_MODELS = [
-    process.env.GROQ_MODEL,
-    'openai/gpt-oss-120b',
-    'qwen/qwen3.8-27b',
-    'openai/gpt-oss-20b',
+    process.env.GROQ_MODEL?.trim(),
     'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant'
+    'llama-3.1-8b-instant',
+    'openai/gpt-oss-120b',
+    'qwen/qwen3.8-27b'
 ].filter(Boolean);
 
 const SYSTEM_PROMPT =
 `Eres el genio Akinator en español. El usuario está pensando en un personaje real o ficticio (celebridad, anime, cine, videojuegos, historia, etc.).
-Tu objetivo es adivinarlo haciéndole preguntas precisas de eliminación.
+Tu objetivo es adivinarlo formulando preguntas de eliminación estratégicas.
 En cada turno el usuario responderá estrictamente con una de estas 5 opciones:
 1 = Sí
 2 = No
@@ -25,9 +24,9 @@ En cada turno el usuario responderá estrictamente con una de estas 5 opciones:
 4 = Probablemente sí
 5 = Probablemente no
 
-Reglas:
-1. Formula una sola pregunta a la vez, concisa y directa en español.
-2. Si tienes certeza alta (más del 80%) o si ya llevas entre 10 y 14 preguntas, debes emitir tu adivinanza final.
+Reglas fundamentales:
+1. Formula UNA SOLA pregunta a la vez, concisa y directa en español.
+2. Si tienes certeza alta (más del 80%) o has alcanzado entre 10 y 14 preguntas, debes emitir tu adivinanza final.
 3. Devuelve SIEMPRE y ÚNICAMENTE un JSON válido con una de estas dos estructuras:
 
 Si continúas preguntando:
@@ -49,44 +48,69 @@ Si estás listo para adivinar:
  * Consulta la IA de Groq probando modelos con formato JSON garantizado
  */
 const queryAkinatorAI = async (messages) => {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey || apiKey.trim() === '') {
+    const apiKey = process.env.GROQ_API_KEY?.trim();
+    if (!apiKey) {
         throw new Error('GROQ_API_KEY no configurada');
     }
 
+    const uniqueModels = [...new Set(CANDIDATE_MODELS)];
     let lastError = null;
 
-    for (const model of CANDIDATE_MODELS) {
+    for (const model of uniqueModels) {
         try {
-            const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-                model,
-                messages,
-                response_format: { type: 'json_object' },
-                temperature: 0.6
-            }, {
-                headers: {
-                    Authorization: `Bearer ${apiKey.trim()}`,
-                    'Content-Type': 'application/json'
+            const res = await axios.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                {
+                    model,
+                    messages,
+                    response_format: { type: 'json_object' },
+                    temperature: 0.6
                 },
-                timeout: 15000
-            });
+                {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 18000 // 18 segundos por intento
+                }
+            );
 
-            const content = res.data?.choices?.[0]?.message?.content;
+            let content = res.data?.choices?.[0]?.message?.content?.trim();
             if (content) {
+                // Eliminar posibles bloques de markdown ```json ... ```
+                content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
                 return JSON.parse(content);
             }
         } catch (err) {
             lastError = err;
             const status = err.response?.status;
-            if (status === 401) break; // Token inválido, no reintentar
+            if (status === 401) break; // Token inválido
+            if (status === 429 || status === 404 || status === 500 || status === 503) {
+                continue; // Probar modelo alternativo
+            }
+            break;
         }
     }
 
-    throw lastError || new Error('No se pudo obtener respuesta de Akinator AI');
+    throw lastError || new Error('No se pudo contactar el servidor de Akinator AI');
 };
 
 /**
- * Intenta obtener la imagen oficial del personaje desde la API REST de Wikipedia
+ * Reintento silencioso de red: si el primer intento falla por socket, timeout o ECONNRESET,
+ * espera 800ms y reintenta automáticamente 1 vez antes de emitir error.
+ */
+const queryAkinatorWithRetry = async (messages) => {
+    try {
+        return await queryAkinatorAI(messages);
+    } catch (firstErr) {
+        logger.warn('[AKINATOR] Error de red en primer intento, reintentando tras 800ms:', firstErr.message);
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return await queryAkinatorAI(messages);
+    }
+};
+
+/**
+ * Obtiene la imagen oficial del personaje desde Wikipedia (opcional, no bloqueante)
  */
 const getCharacterImage = async (characterName) => {
     if (!characterName) return null;
@@ -107,7 +131,7 @@ const getCharacterImage = async (characterName) => {
 };
 
 /**
- * Configura o reinicia el temporizador de inactividad de 60 segundos
+ * Configura o renueva el temporizador de inactividad de 90 segundos
  */
 const setSessionTimeout = (sock, chatId) => {
     return setTimeout(async () => {
@@ -115,11 +139,11 @@ const setSessionTimeout = (sock, chatId) => {
             global.akinatorSessions.delete(chatId);
             try {
                 await sock.sendMessage(chatId, {
-                    text: '🧞‍♂️ *[AKINATOR]* El juego ha finalizado por inactividad (60 segundos sin responder).'
+                    text: '🧞‍♂️ *[AKINATOR]* La partida ha finalizado por inactividad (90 segundos sin responder).'
                 });
             } catch (_) {}
         }
-    }, 60000);
+    }, SESSION_TIMEOUT_MS);
 };
 
 /**
@@ -128,14 +152,22 @@ const setSessionTimeout = (sock, chatId) => {
 const startGame = async (sock, m) => {
     const chatId = m.chat;
 
-    if (global.akinatorSessions && global.akinatorSessions.has(chatId)) {
-        return await m.reply(
-            '⚠️ Ya hay una partida de Akinator activa en este chat.\n' +
-            'Responde a la pregunta actual o escribe *.cancelakinator* para reiniciar.'
-        );
+    // Validación de clave de API antes de iniciar
+    if (!process.env.GROQ_API_KEY?.trim()) {
+        return await sock.sendMessage(chatId, {
+            text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
+        }, { quoted: m });
     }
 
-    await m.reply('🧞‍♂️ *[AKINATOR - EL GENIO]*\n\n🔮 _Piensa en un personaje real o ficticio. Conéctate mentalmente... Preparando la primera pregunta..._');
+    if (global.akinatorSessions && global.akinatorSessions.has(chatId)) {
+        return await sock.sendMessage(chatId, {
+            text: '⚠️ Ya hay una partida de Akinator activa en este chat.\nResponde a la pregunta actual o escribe *.cancelakinator* para reiniciar.'
+        }, { quoted: m });
+    }
+
+    await sock.sendMessage(chatId, {
+        text: '🧞‍♂️ *[AKINATOR - EL GENIO]*\n\n🔮 _Piensa en un personaje real o ficticio. Conéctate mentalmente... Preparando la primera pregunta..._'
+    }, { quoted: m });
 
     const initialMessages = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -143,7 +175,7 @@ const startGame = async (sock, m) => {
     ];
 
     try {
-        const aiResponse = await queryAkinatorAI(initialMessages);
+        const aiResponse = await queryAkinatorWithRetry(initialMessages);
 
         if (!aiResponse || !aiResponse.pregunta) {
             throw new Error('Respuesta inicial de Akinator inválida');
@@ -153,15 +185,19 @@ const startGame = async (sock, m) => {
             chatId,
             player: m.sender,
             step: 1,
-            isProcessing: false, // Bloqueo de respuestas concurrentes
+            currentStep: 1,
+            progress: aiResponse.progreso || 5,
+            processing: false,    // Mutex para bloquear llamadas simultáneas
+            isProcessing: false,  // Alias retrocompatible
             timeout: setSessionTimeout(sock, chatId),
             aki: {
+                currentStep: 1,
+                progress: aiResponse.progreso || 5,
+                lastQuestion: aiResponse.pregunta,
                 messages: [
                     ...initialMessages,
                     { role: 'assistant', content: JSON.stringify(aiResponse) }
-                ],
-                lastQuestion: aiResponse.pregunta,
-                progress: aiResponse.progreso || 5
+                ]
             }
         };
 
@@ -188,7 +224,9 @@ const startGame = async (sock, m) => {
             if (s?.timeout) clearTimeout(s.timeout);
             global.akinatorSessions.delete(chatId);
         }
-        await m.reply('❌ La sesión de Akinator expiró o no pudo completarse. Intenta de nuevo con .akinator');
+        await sock.sendMessage(chatId, {
+            text: '❌ No se pudo conectar con el servidor de Akinator. Por favor intenta de nuevo con .akinator'
+        }, { quoted: m });
     }
 };
 
@@ -209,7 +247,9 @@ const checkAnswer = async (sock, m) => {
     if (body === 'cancelar' || body === '.cancelar' || body === '.cancelakinator') {
         if (session.timeout) clearTimeout(session.timeout);
         global.akinatorSessions.delete(chatId);
-        await m.reply('🧞‍♂️ *[AKINATOR]* Partida cancelada con éxito. ¡Vuelve cuando quieras!');
+        await sock.sendMessage(chatId, {
+            text: '🧞‍♂️ *[AKINATOR]* Partida cancelada con éxito. ¡Vuelve cuando quieras!'
+        }, { quoted: m });
         return true;
     }
 
@@ -233,48 +273,53 @@ const checkAnswer = async (sock, m) => {
 
     const answerText = validAnswers[body];
     if (!answerText) {
-        // Si el usuario citó expresamente el mensaje del bot o envió un número inválido
         const isReplyingToBot = m.quoted && m.quoted.fromMe;
         const isSingleDigit = /^[0-9]$/.test(body);
 
         if (isReplyingToBot || isSingleDigit) {
-            await m.reply(
-                '⚠️ *[AKINATOR]* Opción no válida.\n' +
-                'Por favor responde únicamente con un número del *1 al 5*:\n\n' +
-                '1️⃣ Sí | 2️⃣ No | 3️⃣ No sé\n' +
-                '4️⃣ Probablemente sí | 5️⃣ Probablemente no\n\n' +
-                '_(Escribe *cancelar* para terminar el juego)_'
-            );
+            await sock.sendMessage(chatId, {
+                text: '⚠️ *[AKINATOR]* Opción no válida.\nPor favor responde únicamente con un número del *1 al 5*:\n\n' +
+                      '1️⃣ Sí | 2️⃣ No | 3️⃣ No sé\n' +
+                      '4️⃣ Probablemente sí | 5️⃣ Probablemente no\n\n' +
+                      '_(Escribe *cancelar* para salir)_'
+            }, { quoted: m });
             return true;
         }
         return false;
     }
 
-    // 3. Bloqueo de respuestas simultáneas para evitar condiciones de carrera
-    if (session.isProcessing) {
-        return true; // Mensaje ignorado mientras se procesa la solicitud previa
+    // 3. Bloqueo de peticiones simultáneas (Mutex)
+    // Si ya hay una respuesta procesándose, ignorar llamadas repetidas o concurrentes
+    if (session.processing || session.isProcessing) {
+        return true;
     }
+    session.processing = true;
     session.isProcessing = true;
 
-    // 4. Renovar temporizador de inactividad
+    // 4. Renovar temporizador de 90 segundos desde este momento
     if (session.timeout) clearTimeout(session.timeout);
     session.timeout = setSessionTimeout(sock, chatId);
 
     session.step += 1;
-    session.aki.messages.push({
+    session.currentStep = session.step;
+    session.aki.currentStep = session.step;
+
+    const userMessageEntry = {
         role: 'user',
         content: `El usuario respondió: ${answerText}. Formula la siguiente pregunta o tu adivinanza final.`
-    });
+    };
+    session.aki.messages.push(userMessageEntry);
 
     await m.react('🔮');
 
     try {
-        const aiResponse = await queryAkinatorAI(session.aki.messages);
+        // Ejecución con reintento automático de 800ms
+        const aiResponse = await queryAkinatorWithRetry(session.aki.messages);
         session.aki.messages.push({ role: 'assistant', content: JSON.stringify(aiResponse) });
 
         const isGuess = aiResponse.tipo === 'adivinanza' || (aiResponse.progreso && aiResponse.progreso >= 80) || session.step >= 15;
 
-        // Caso: Fin del juego / Akinator adivina el personaje
+        // Fin del juego: Akinator adivina el personaje
         if (isGuess && (aiResponse.nombre || aiResponse.tipo === 'adivinanza')) {
             if (session.timeout) clearTimeout(session.timeout);
             global.akinatorSessions.delete(chatId);
@@ -303,8 +348,9 @@ const checkAnswer = async (sock, m) => {
             return true;
         }
 
-        // Siguiente pregunta diagnóstica
+        // Actualizar y preservar estado de la sesión
         const progress = Math.min(95, aiResponse.progreso || (session.step * 7));
+        session.progress = progress;
         session.aki.progress = progress;
         session.aki.lastQuestion = aiResponse.pregunta || '¿Tu personaje sigue activo?';
 
@@ -324,17 +370,25 @@ const checkAnswer = async (sock, m) => {
         return true;
 
     } catch (err) {
-        logger.error('Error procesando respuesta en Akinator:', err.message);
-        if (session.timeout) clearTimeout(session.timeout);
-        global.akinatorSessions.delete(chatId);
+        logger.error('[AKINATOR STEP ERROR]:', err.message);
 
-        await m.reply('❌ La sesión de Akinator expiró o no pudo completarse. Intenta de nuevo con .akinator');
-        return true;
-    } finally {
-        if (global.akinatorSessions.has(chatId)) {
-            const current = global.akinatorSessions.get(chatId);
-            if (current) current.isProcessing = false;
+        // Revertir paso en memoria para no desfasar la sesión y permitir que el usuario reintente
+        session.step -= 1;
+        session.currentStep = session.step;
+        session.aki.currentStep = session.step;
+        if (session.aki.messages[session.aki.messages.length - 1] === userMessageEntry) {
+            session.aki.messages.pop();
         }
+
+        // NO destruir la sesión ante un error temporal de red; pedir al usuario que reenvíe su número
+        await sock.sendMessage(chatId, {
+            text: '⚠️ *[AKINATOR]* Ocurrió una demora temporal con el servidor de IA.\n👉 Tu partida sigue guardada. Por favor, reenvía tu número (*1 al 5*) para continuar.'
+        }, { quoted: m });
+        return true;
+
+    } finally {
+        session.processing = false;
+        session.isProcessing = false;
     }
 };
 
@@ -352,10 +406,9 @@ const cancelGame = (chatId) => {
 };
 
 const hasActiveGame = (chatId) => {
-    return global.akinatorSessions && global.akinatorSessions.has(chatId);
+    return Boolean(global.akinatorSessions && global.akinatorSessions.has(chatId));
 };
 
-// Exportación modular para commandLoader y messageHandler
 const commands = [
     {
         name: 'akinator',
@@ -373,22 +426,24 @@ const commands = [
         category: 'juegos',
         desc: 'Cancela la sesión activa de Akinator en el chat',
         usage: '.cancelakinator',
-        execute: async ({ m }) => {
+        execute: async ({ sock, m }) => {
             const cancelled = cancelGame(m.chat);
             if (cancelled) {
-                await m.reply('🧞‍♂️ La partida de Akinator ha sido cancelada.');
+                await sock.sendMessage(m.chat, {
+                    text: '🧞‍♂️ La partida de Akinator ha sido cancelada.'
+                }, { quoted: m });
             } else {
-                await m.reply('ℹ️ No hay ninguna partida de Akinator activa en este chat.');
+                await sock.sendMessage(m.chat, {
+                    text: 'ℹ️ No hay ninguna partida de Akinator activa en este chat.'
+                }, { quoted: m });
             }
         }
     }
 ];
 
-// Vincular métodos al objeto exportado para interoperabilidad con messageHandler y lib/akinator
 commands.hasActiveGame = hasActiveGame;
 commands.checkAnswer = checkAnswer;
 commands.startGame = startGame;
 commands.cancelGame = cancelGame;
 
 module.exports = commands;
-

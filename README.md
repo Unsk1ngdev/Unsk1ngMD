@@ -31,10 +31,9 @@ Un asistente multifuncional para WhatsApp enfocado en alto rendimiento, dinamism
 1. **Configuración del Egg en Pterodactyl:**
    - Selecciona un Egg oficial o estándar de **Node.js** (versión **18**, **20** o **22**). Totalmente compatible tanto con imágenes basadas en Debian/Ubuntu (`glibc`) como en Alpine Linux (`musl`).
    - En la sección **Startup (Configuración de arranque)** del panel:
-     - **Main File (Archivo Principal):** `index.js`
-     - **Startup Command (Comando de inicio):**
+     - **Main File (Archivo de inicio):**
        ```bash
-       node index.js
+       index.js
        ```
 
 2. **Estructura de Archivos en el Contenedor:**

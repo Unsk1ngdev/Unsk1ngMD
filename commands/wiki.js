@@ -1,5 +1,4 @@
 const axios = require('axios');
-const config = require('../config');
 const logger = require('../lib/logger');
 
 const SYSTEM_PROMPT = "Eres Wiki, el módulo enciclopédico del bot Unsk1ngMD desarrollado por Castrodev. Tu objetivo es explicar conceptos matemáticos, ciencia, historia, personajes, tecnología o términos generales en español de forma rigurosa, clara y estructurada. Responde directamente en 2 o 3 párrafos concisos sin rodeos, introducciones innecesarias ni saludos.";
@@ -11,86 +10,79 @@ module.exports = {
     desc: 'Consulta enciclopédica avanzada y explicaciones rigurosas con IA (Groq Cloud)',
     usage: '.wiki [término o tema a consultar]',
     execute: async ({ sock, m, text }) => {
+        const jid = m.chat;
+
         // 1. Extracción y validación de la consulta
         const rawText = text || m.quoted?.body || '';
         const query = rawText.replace(/^[.\/#!](?:wiki|kiwi|wikipedia|enciclopedia)\s*/i, '').trim();
 
         if (!query) {
-            return await sock.sendMessage(m.chat, {
+            return await sock.sendMessage(jid, {
                 text: '❌ Por favor indica el tema que deseas consultar. Ejemplo: `.wiki El número Pi`'
             }, { quoted: m });
         }
 
-        const apiKey = process.env.GROQ_API_KEY || config.groqApiKey;
-
-        if (!apiKey || apiKey.trim() === '') {
-            return await sock.sendMessage(m.chat, {
-                text: '❌ La clave de IA no está configurada o es inválida.'
+        // 2. Validación estricta y dinámica de la API Key de Groq
+        const apiKey = process.env.GROQ_API_KEY?.trim();
+        if (!apiKey) {
+            return await sock.sendMessage(jid, {
+                text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
             }, { quoted: m });
         }
 
         await m.react('📚');
 
-        try {
-            const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+        const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+        const candidateModels = [
+            process.env.GROQ_MODEL?.trim(),
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant',
+            'openai/gpt-oss-120b',
+            'qwen/qwen3.8-27b'
+        ].filter(Boolean);
 
-            // Lista de modelos con fallback automático de alta disponibilidad
-            const candidateModels = [
-                process.env.GROQ_MODEL,
-                'openai/gpt-oss-120b',
-                'qwen/qwen3.8-27b',
-                'openai/gpt-oss-20b',
-                'llama-3.3-70b-versatile',
-                'llama-3.1-8b-instant'
-            ].filter(Boolean);
+        const uniqueModels = [...new Set(candidateModels)];
 
-            const uniqueModels = [...new Set(candidateModels)];
+        let explanation = null;
+        let lastError = null;
 
-            let explanation = null;
-            let lastError = null;
-
-            for (const model of uniqueModels) {
-                try {
-                    const response = await axios.post(
-                        endpoint,
-                        {
-                            model: model,
-                            messages: [
-                                { role: 'system', content: SYSTEM_PROMPT },
-                                { role: 'user', content: query }
-                            ],
-                            temperature: 0.3,
-                            max_tokens: 800
+        // 3. Petición HTTP a Groq con timeout estricto de 20s
+        for (const model of uniqueModels) {
+            try {
+                const response = await axios.post(
+                    endpoint,
+                    {
+                        model,
+                        messages: [
+                            { role: 'system', content: SYSTEM_PROMPT },
+                            { role: 'user', content: query }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 800
+                    },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
                         },
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${apiKey.trim()}`,
-                                'Content-Type': 'application/json'
-                            },
-                            timeout: 20000
-                        }
-                    );
+                        timeout: 20000 // 20 segundos de timeout
+                    }
+                );
 
-                    explanation = response.data?.choices?.[0]?.message?.content?.trim();
-                    if (explanation) break;
-                } catch (err) {
-                    lastError = err;
-                    const status = err.response?.status;
-                    if (status === 401) break; // Token inválido
+                explanation = response.data?.choices?.[0]?.message?.content?.trim();
+                if (explanation) break;
+            } catch (err) {
+                lastError = err;
+                const status = err.response?.status;
+                if (status === 401) break;
+                if (status === 429 || status === 404 || status === 500 || status === 503) {
+                    continue;
                 }
+                break;
             }
+        }
 
-            if (!explanation) {
-                await m.react('❌');
-                const isAuthError = lastError?.response?.status === 401;
-                const errorMsg = isAuthError
-                    ? '❌ La clave de IA no está configurada o es inválida.'
-                    : `❌ No fue posible obtener la explicación enciclopédica para "*${query}*". Detalle: ${lastError?.response?.data?.error?.message || lastError?.message || 'Error de servicio'}`;
-
-                return await sock.sendMessage(m.chat, { text: errorMsg }, { quoted: m });
-            }
-
-            // 2. Estructura visual de respuesta
+        if (explanation) {
             const formattedExplanation = explanation
                 .split('\n')
                 .map(line => line.trim() ? `│ ${line}` : '│')
@@ -103,16 +95,43 @@ module.exports = {
 ${formattedExplanation}
 └─────────────────────────────`;
 
-            await sock.sendMessage(m.chat, { text: message }, { quoted: m });
+            await sock.sendMessage(jid, { text: message }, { quoted: m });
             await m.react('✅');
+            return;
+        }
 
-        } catch (error) {
-            logger.error('[WIKI ERROR]:', error.message);
-            await m.react('❌');
-            await sock.sendMessage(m.chat, {
-                text: `❌ Ocurrió un error al procesar la consulta enciclopédica. Intenta nuevamente.`
+        // 4. Manejo de errores amigables
+        await m.react('❌');
+        const statusCode = lastError?.response?.status;
+
+        if (statusCode === 401) {
+            return await sock.sendMessage(jid, {
+                text: '❌ La API Key de Groq configurada es inválida o ha expirado. Por favor, revísala en el archivo .env.'
             }, { quoted: m });
         }
+
+        if (statusCode === 429) {
+            return await sock.sendMessage(jid, {
+                text: '⚠️ Límite de peticiones alcanzado en Groq API (Rate Limit). Por favor espera un momento antes de enviar otra consulta.'
+            }, { quoted: m });
+        }
+
+        if (statusCode === 500 || statusCode === 503) {
+            return await sock.sendMessage(jid, {
+                text: '⚠️ El servidor de Groq no está disponible en este momento debido a alta demanda. Inténtalo más tarde.'
+            }, { quoted: m });
+        }
+
+        if (lastError?.code === 'ECONNABORTED' || lastError?.message?.includes('timeout')) {
+            return await sock.sendMessage(jid, {
+                text: '⚠️ La consulta enciclopédica tardó más de 20 segundos en responder. Por favor intenta de nuevo.'
+            }, { quoted: m });
+        }
+
+        const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Error de servicio';
+        logger.error('[WIKI ERROR]:', errMsg);
+        await sock.sendMessage(jid, {
+            text: `❌ No fue posible obtener la explicación enciclopédica para "*${query}*": ${errMsg}`
+        }, { quoted: m });
     }
 };
-

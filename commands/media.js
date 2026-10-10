@@ -59,11 +59,15 @@ const handleStickerConversion = async ({ sock, m }) => {
         try {
             await runFfmpeg([
                 '-y',
+                '-r', '20',
                 '-i', inputPath,
                 '-c:v', 'libx264',
                 '-pix_fmt', 'yuv420p',
-                '-movflags', 'faststart',
-                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=20',
+                '-preset', 'veryfast',
+                '-crf', '23',
+                '-an',
+                '-movflags', '+faststart',
                 outputPath
             ]);
 
@@ -95,16 +99,6 @@ module.exports = [
         category: 'multimedia',
         desc: 'Convierte un sticker estático a imagen JPEG (o animado a MP4)',
         usage: '.toimg [citando un sticker]',
-        execute: handleStickerConversion
-    },
-
-    // 2. .tovideo
-    {
-        name: 'tovideo',
-        alias: ['tovid', 'videosticker'],
-        category: 'multimedia',
-        desc: 'Convierte un sticker animado a video MP4 reproducible',
-        usage: '.tovideo [citando un sticker]',
         execute: handleStickerConversion
     },
 

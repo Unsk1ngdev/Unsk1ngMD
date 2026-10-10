@@ -1,7 +1,7 @@
 const axios = require('axios');
-const config = require('../../config');
+const logger = require('../../lib/logger');
 
-const SYSTEM_PROMPT = "Eres Unsk1ngMD, una IA avanzada, útil, analítica y directa creada por Castrodev. Responde en español de forma clara, precisa y adaptada a cualquier consulta sobre programación, dudas cotidianas, redacción o análisis.";
+const SYSTEM_PROMPT = "Eres Unsk1ngMD, una IA avanzada, analítica, directa y cordial creada por Castrodev. Responde en español de forma concisa, clara y estructurada a cualquier consulta sobre programación, dudas cotidianas, redacción o ciencia.";
 
 module.exports = {
     name: 'ia',
@@ -10,128 +10,133 @@ module.exports = {
     desc: 'Consulta Inteligencia Artificial ultrarrápida con Groq Cloud (Llama 3.3)',
     usage: '.ia [pregunta o citando un mensaje previo]',
     execute: async ({ sock, m, text }) => {
-        const queryText = text || m.quoted?.body;
+        const jid = m.chat;
+        const queryText = text?.trim() || m.quoted?.body?.trim();
 
         // 1. Validación de entrada
         if (!queryText) {
-            return await m.reply('Debes escribir una pregunta. Ejemplo: `.ia ¿Cómo funciona la memoria RAM?`');
+            return await sock.sendMessage(jid, {
+                text: '❌ Debes escribir una pregunta. Ejemplo: `.ia ¿Cómo funciona la memoria RAM?`'
+            }, { quoted: m });
         }
 
-        const apiKey = process.env.GROQ_API_KEY || config.groqApiKey;
-
-        // Comprobar configuración de la API Key
-        if (!apiKey || apiKey.trim() === '') {
-            return await m.reply('❌ La clave de IA no está configurada o es inválida.');
+        // 2. Validación estricta y dinámica de la API Key de Groq
+        const apiKey = process.env.GROQ_API_KEY?.trim();
+        if (!apiKey) {
+            return await sock.sendMessage(jid, {
+                text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
+            }, { quoted: m });
         }
 
         await m.react('⚡');
 
-        // 2. Construir historial de mensajes y mantener contexto
+        // 3. Construir mensajes manteniendo contexto si se cita una respuesta
         const messages = [
             { role: 'system', content: SYSTEM_PROMPT }
         ];
 
-        // Soporte de contexto si el usuario cita una respuesta previa
         if (m.quoted && m.quoted.body) {
             const cleanQuoted = m.quoted.body.replace(/^🤖\s*\*Unsk1ngMD AI:\*\s*\n\n/i, '').trim();
             if (m.quoted.fromMe) {
                 messages.push({ role: 'assistant', content: cleanQuoted });
             } else {
-                messages.push({ role: 'user', content: `Contexto previo citado: "${cleanQuoted}"` });
+                messages.push({ role: 'user', content: `Contexto citado: "${cleanQuoted}"` });
             }
         }
 
-        messages.push({ role: 'user', content: text || queryText });
+        messages.push({ role: 'user', content: queryText });
 
         const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-        
-        // Modelos candidatos en orden de prioridad:
         const candidateModels = [
-            process.env.GROQ_MODEL,
-            'openai/gpt-oss-120b',
-            'qwen/qwen3.8-27b',
-            'openai/gpt-oss-20b',
+            process.env.GROQ_MODEL?.trim(),
             'llama-3.3-70b-versatile',
-            'llama-3.1-8b-instant'
+            'llama-3.1-8b-instant',
+            'openai/gpt-oss-120b',
+            'qwen/qwen3.8-27b'
         ].filter(Boolean);
 
-        // Deduplicar lista de modelos
         const uniqueModels = [...new Set(candidateModels)];
 
-        // 3. Petición HTTP a Groq Cloud con reintento ante fallos de modelo
         let replyText = null;
         let lastError = null;
 
+        // 4. Petición a Groq con timeout estricto de 20s y conmutación por fallo
         for (const model of uniqueModels) {
             try {
                 const response = await axios.post(
                     endpoint,
                     {
-                        model: model,
-                        messages: messages,
+                        model,
+                        messages,
                         temperature: 0.6,
                         max_tokens: 1500
                     },
                     {
                         headers: {
-                            'Authorization': `Bearer ${apiKey.trim()}`,
+                            'Authorization': `Bearer ${apiKey}`,
                             'Content-Type': 'application/json'
                         },
-                        timeout: 30000
+                        timeout: 20000 // Timeout estricto de 20 segundos
                     }
                 );
 
                 replyText = response.data?.choices?.[0]?.message?.content?.trim();
-                if (replyText) {
-                    break; // Respuesta obtenida exitosamente
-                }
+                if (replyText) break;
             } catch (err) {
                 lastError = err;
                 const status = err.response?.status;
-
-                // Si es error 401 (Credencial inválida o expirada), no tiene sentido probar más modelos
-                if (status === 401) {
-                    break;
-                }
-
-                // Si es 404 (modelo no disponible en este tier de cuenta), 429 o 503, intentar con el siguiente modelo
-                if (status === 404 || status === 429 || status === 503) {
+                // Si la credencial es 401 no tiene caso reintentar con otro modelo
+                if (status === 401) break;
+                // Si es rate-limit o 500/503 en este modelo específico, probar siguiente modelo
+                if (status === 429 || status === 404 || status === 500 || status === 503) {
                     continue;
                 }
-
-                // Para otros errores no recuperables, romper ciclo
                 break;
             }
         }
 
         if (replyText) {
             try {
-                // 4. Devolver la respuesta directamente como texto citado al mensaje original
-                await m.reply(replyText);
+                await sock.sendMessage(jid, { text: replyText }, { quoted: m });
                 await m.react('✅');
-            } catch (replyErr) {
-                console.error('[IA] Error al enviar mensaje:', replyErr.message);
+            } catch (sendErr) {
+                logger.error('[IA SEND ERROR]:', sendErr.message);
             }
             return;
         }
 
-        // 5. Manejo específico y amigable de códigos de error HTTP
+        // 5. Gestión controlada de errores HTTP amigables
         await m.react('❌');
         const statusCode = lastError?.response?.status;
 
         if (statusCode === 401) {
-            return await m.reply('❌ La clave de IA no está configurada o es inválida.');
+            return await sock.sendMessage(jid, {
+                text: '❌ La API Key de Groq configurada es inválida o ha expirado. Por favor, revísala en el archivo .env.'
+            }, { quoted: m });
         }
 
         if (statusCode === 429) {
-            return await m.reply('⚠️ *Límite de peticiones alcanzado (429):* Has alcanzado la cuota de peticiones por minuto de Groq Cloud. Por favor, espera unos segundos antes de consultar nuevamente.');
+            return await sock.sendMessage(jid, {
+                text: '⚠️ Límite de peticiones alcanzado en Groq API (Rate Limit). Por favor espera un momento antes de enviar otra consulta.'
+            }, { quoted: m });
         }
 
         if (statusCode === 500 || statusCode === 503) {
-            return await m.reply('⚠️ *Servicio de Groq temporalmente no disponible:* Los servidores de inferencia están experimentando alta demanda. Intenta de nuevo en un momento.');
+            return await sock.sendMessage(jid, {
+                text: '⚠️ El servicio de Groq no está disponible en este momento debido a alta demanda en sus servidores. Inténtalo más tarde.'
+            }, { quoted: m });
+        }
+
+        if (lastError?.code === 'ECONNABORTED' || lastError?.message?.includes('timeout')) {
+            return await sock.sendMessage(jid, {
+                text: '⚠️ El servidor de Groq tardó demasiado en responder (tiempo límite de 20s agotado). Intenta de nuevo en unos segundos.'
+            }, { quoted: m });
         }
 
         const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Error desconocido';
-        await m.reply(`❌ Ocurrió un error al procesar tu solicitud con Groq: ${errMsg}`);
+        logger.error('[IA ERROR]:', errMsg);
+        await sock.sendMessage(jid, {
+            text: `❌ Ocurrió un error al procesar tu solicitud con Groq: ${errMsg}`
+        }, { quoted: m });
     }
 };
