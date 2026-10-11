@@ -1,4 +1,8 @@
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const axios = require('axios');
+const config = require('../config');
 const logger = require('../lib/logger');
 
 const SYSTEM_PROMPT = "Eres Wiki, el módulo enciclopédico del bot Unsk1ngMD desarrollado por Unknown Codexツ</>. Tu objetivo es explicar conceptos matemáticos, ciencia, historia, personajes, tecnología o términos generales en español de forma rigurosa, clara y estructurada. Responde directamente en 2 o 3 párrafos concisos sin rodeos, introducciones innecesarias ni saludos.";
@@ -23,7 +27,18 @@ module.exports = {
         }
 
         // 2. Validación estricta y dinámica de la API Key de Groq
-        const apiKey = process.env.GROQ_API_KEY?.trim();
+        let apiKey = (process.env.GROQ_API_KEY || config.groqApiKey || '').trim();
+        if (!apiKey) {
+            try {
+                const envPath = path.resolve(__dirname, '../.env');
+                if (fs.existsSync(envPath)) {
+                    const envContent = fs.readFileSync(envPath, 'utf8');
+                    const mKey = envContent.match(/^GROQ_API_KEY=(.*)$/m);
+                    if (mKey) apiKey = mKey[1].trim();
+                }
+            } catch (_) {}
+        }
+
         if (!apiKey) {
             return await sock.sendMessage(jid, {
                 text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
@@ -35,10 +50,12 @@ module.exports = {
         const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
         const candidateModels = [
             process.env.GROQ_MODEL?.trim(),
-            'llama-3.3-70b-versatile',
-            'llama-3.1-8b-instant',
+            config.groqModel,
             'openai/gpt-oss-120b',
-            'qwen/qwen3.8-27b'
+            'openai/gpt-oss-20b',
+            'qwen/qwen3.8-27b',
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant'
         ].filter(Boolean);
 
         const uniqueModels = [...new Set(candidateModels)];

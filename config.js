@@ -1,5 +1,5 @@
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Limpieza y formateo de número de teléfono a JID
 const formatJid = (number) => {
@@ -38,7 +38,7 @@ module.exports = {
 
     // APIs
     groqApiKey: process.env.GROQ_API_KEY || '',
-    groqModel: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    groqModel: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
     aiApiUrl: process.env.AI_API_URL || '',
     aiApiKey: process.env.AI_API_KEY || '',
     aiModel: process.env.AI_MODEL || 'deepseek',

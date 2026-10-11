@@ -1,5 +1,24 @@
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const axios = require('axios');
+const config = require('../config');
 const logger = require('../lib/logger');
+
+const getGroqApiKey = () => {
+    let key = (process.env.GROQ_API_KEY || config.groqApiKey || '').trim();
+    if (!key) {
+        try {
+            const envPath = path.resolve(__dirname, '../.env');
+            if (fs.existsSync(envPath)) {
+                const content = fs.readFileSync(envPath, 'utf8');
+                const match = content.match(/^GROQ_API_KEY=(.*)$/m);
+                if (match) key = match[1].trim();
+            }
+        } catch (_) {}
+    }
+    return key;
+};
 
 // Almacenamiento centralizado de sesiones activas en memoria indexado por JID del chat
 global.akinatorSessions = global.akinatorSessions || new Map();
@@ -8,10 +27,12 @@ const SESSION_TIMEOUT_MS = 90000; // Temporizador realista de inactividad (90 se
 
 const CANDIDATE_MODELS = [
     process.env.GROQ_MODEL?.trim(),
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
+    config.groqModel,
     'openai/gpt-oss-120b',
-    'qwen/qwen3.8-27b'
+    'openai/gpt-oss-20b',
+    'qwen/qwen3.8-27b',
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant'
 ].filter(Boolean);
 
 const SYSTEM_PROMPT =
@@ -48,7 +69,7 @@ Si estás listo para adivinar:
  * Consulta la IA de Groq probando modelos con formato JSON garantizado
  */
 const queryAkinatorAI = async (messages) => {
-    const apiKey = process.env.GROQ_API_KEY?.trim();
+    const apiKey = getGroqApiKey();
     if (!apiKey) {
         throw new Error('GROQ_API_KEY no configurada');
     }
@@ -153,7 +174,7 @@ const startGame = async (sock, m) => {
     const chatId = m.chat;
 
     // Validación de clave de API antes de iniciar
-    if (!process.env.GROQ_API_KEY?.trim()) {
+    if (!getGroqApiKey()) {
         return await sock.sendMessage(chatId, {
             text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
         }, { quoted: m });

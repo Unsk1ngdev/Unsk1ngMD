@@ -1,4 +1,8 @@
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const axios = require('axios');
+const config = require('../../config');
 const logger = require('../../lib/logger');
 
 const SYSTEM_PROMPT = "Eres Unsk1ngMD, una IA avanzada, analítica, directa y cordial creada por Unknown Codexツ</>. Responde en español de forma concisa, clara y estructurada a cualquier consulta sobre programación, dudas cotidianas, redacción o ciencia.";
@@ -7,7 +11,7 @@ module.exports = {
     name: 'ia',
     alias: ['ai', 'ask', 'groq', 'llama'],
     category: 'herramientas',
-    desc: 'Consulta Inteligencia Artificial ultrarrápida con Groq Cloud (Llama 3.3)',
+    desc: 'Consulta Inteligencia Artificial ultrarrápida con Groq Cloud (GPT-OSS / Llama)',
     usage: '.ia [pregunta o citando un mensaje previo]',
     execute: async ({ sock, m, text }) => {
         const jid = m.chat;
@@ -21,7 +25,18 @@ module.exports = {
         }
 
         // 2. Validación estricta y dinámica de la API Key de Groq
-        const apiKey = process.env.GROQ_API_KEY?.trim();
+        let apiKey = (process.env.GROQ_API_KEY || config.groqApiKey || '').trim();
+        if (!apiKey) {
+            try {
+                const envPath = path.resolve(__dirname, '../../.env');
+                if (fs.existsSync(envPath)) {
+                    const envContent = fs.readFileSync(envPath, 'utf8');
+                    const mKey = envContent.match(/^GROQ_API_KEY=(.*)$/m);
+                    if (mKey) apiKey = mKey[1].trim();
+                }
+            } catch (_) {}
+        }
+
         if (!apiKey) {
             return await sock.sendMessage(jid, {
                 text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
@@ -49,10 +64,12 @@ module.exports = {
         const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
         const candidateModels = [
             process.env.GROQ_MODEL?.trim(),
-            'llama-3.3-70b-versatile',
-            'llama-3.1-8b-instant',
+            config.groqModel,
             'openai/gpt-oss-120b',
-            'qwen/qwen3.8-27b'
+            'openai/gpt-oss-20b',
+            'qwen/qwen3.8-27b',
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant'
         ].filter(Boolean);
 
         const uniqueModels = [...new Set(candidateModels)];
