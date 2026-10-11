@@ -1,56 +1,32 @@
 'use strict';
 
 /**
- * Comando: .reactch [url_canal/id_mensaje] [emoji o palabra]
+ * Comando: .reactch [url_canal] [texto]
  * Cuando el owner use .reactch:
- * 1. Verifica que quien ejecuta es el owner del bot.
- * 2. Si NO es el owner: ignorar silenciosamente.
- * 3. Valida que la URL sea de canal de WhatsApp (https://whatsapp.com/channel/).
- * 4. Extrae el ID del canal y el ID del mensaje de la URL.
- * 5. Mapea palabras clave a emojis reales de WhatsApp.
- * 6. Si es emoji directo, lo usa tal cual.
- * 7. Si no se reconoce la palabra, usa ✅ por defecto avisando al owner.
- * 8. Si WhatsApp rechaza el emoji, intenta con ✅ por defecto.
+ * 1. Verifica que quien ejecuta es el owner del bot. Si no es, ignora silenciosamente.
+ * 2. Valida que la URL sea de canal de WhatsApp (https://whatsapp.com/channel/).
+ * 3. Extrae el ID del canal de la URL.
+ * 4. Convierte el texto a letras estilizadas con emojis de círculo negro (🅐🅑🅒...).
+ * 5. Envía el texto estilizado como MENSAJE al canal (sock.sendMessage al JID @newsletter).
+ * 6. Confirma que el mensaje fue enviado al canal.
  */
 
-// ── Mapa de palabras a emojis reales ──
-// WhatsApp solo acepta emojis Unicode estándar como reacciones
-const palabraAEmoji = {
-    // Positivos
-    'ok': '✅', 'bien': '👍', 'perfecto': '💯', 'excelente': '🏆',
-    'si': '✅', 'no': '❌', 'love': '❤️', 'amor': '❤️',
-    'fuego': '🔥', 'fire': '🔥', 'caliente': '🔥',
-    'jaja': '😂', 'risa': '😂', 'gracioso': '😂',
-    'wow': '😮', 'sorpresa': '😮', 'increible': '🤯',
-    'triste': '😢', 'llorar': '😭', 'sad': '😢',
-    'bravo': '👏', 'aplausos': '👏', 'felicidades': '🎉',
-    'fiesta': '🎉', 'celebrar': '🎊', 'cumple': '🎂',
-    // Reacciones comunes
-    'corazon': '❤️', 'heart': '❤️', 'like': '👍',
-    'dislike': '👎', 'mano': '👋', 'hola': '👋',
-    'dinero': '💰', 'money': '💸', 'rico': '🤑',
-    'musica': '🎵', 'nota': '🎶', 'baile': '💃',
-    'corona': '👑', 'rey': '👑', 'domina': '💪',
-    'fuerte': '💪', 'calavera': '💀', 'muerte': '💀',
-    'nuke': '☠️', 'bomba': '💣', 'explosion': '💥',
-    'ojo': '👀', 'ver': '👀', 'spy': '🕵️',
-    'raro': '🤔', 'pensar': '🤔', 'duda': '❓',
-    'importante': '‼️', 'alerta': '⚠️', 'peligro': '🚨',
-    'check': '✅', 'x': '❌', 'cruz': '❌',
-    'estrella': '⭐', 'brillo': '✨', 'chido': '😎',
-    'frio': '🥶', 'calor': '🥵', 'dormir': '😴',
-    'enojado': '😡', 'bravo2': '🤬', 'diablo': '😈',
-    'angel': '😇', 'rezar': '🙏', 'gracias': '🙏',
-    'paloma': '🕊️', 'paz': '🕊️', 'aguila': '🦅',
-    'codex': '💀', 'unknown': '👑', 'bot': '🤖'
+// ── Fuente estilizada (Círculos negros con letras y números) ──
+const fuenteEstilizada = {
+    a: '🅐', b: '🅑', c: '🅒', d: '🅓', e: '🅔', f: '🅕', g: '🅖',
+    h: '🅗', i: '🅘', j: '🅙', k: '🅚', l: '🅛', m: '🅜', n: '🅝',
+    o: '🅞', p: '🅟', q: '🅠', r: '🅡', s: '🅢', t: '🅣', u: '🅤',
+    v: '🅥', w: '🅦', x: '🅧', y: '🅨', z: '🅩',
+    '0': '⓿', '1': '➊', '2': '➋', '3': '➌', '4': '➍',
+    '5': '➎', '6': '➏', '7': '➐', '8': '➑', '9': '➒'
 };
 
 module.exports = {
     name: 'reactch',
-    alias: ['reaccionarcanal', 'chreact'],
+    alias: ['canalmsg', 'chmsg', 'react'],
     category: 'tools',
-    desc: 'Reacciona a un mensaje de canal de WhatsApp con un emoji o palabra clave (solo owner)',
-    usage: '.reactch [url_canal/id_mensaje] [emoji o palabra]',
+    desc: 'Publica un mensaje estilizado con letras circulares en un canal de WhatsApp (solo owner)',
+    usage: '.reactch [url_canal] [texto]',
     groupOnly: false,
     adminOnly: false,
     ownerOnly: false, // Manejo manual para ignorar silenciosamente si no es el owner
@@ -65,100 +41,66 @@ module.exports = {
         if (!args[0] || !args[0].startsWith('https://whatsapp.com/channel/')) {
             return await sock.sendMessage(chatId, {
                 text: '❌ Uso correcto:\n' +
-                      '*.reactch https://whatsapp.com/channel/xxx/yyy [emoji]*\n\n' +
-                      '📌 Ejemplos:\n' +
-                      '*.reactch [url] 🔥*\n' +
-                      '*.reactch [url] fuego*\n' +
-                      '*.reactch [url] amor*\n' +
-                      '*.reactch [url] ok*'
+                      '*.reactch https://whatsapp.com/channel/xxx hola mundo*\n\n' +
+                      '📌 El texto se enviará estilizado al canal:\n' +
+                      '🅗🅞🅛🅐␣🅜🅤🅝🅓🅞\n\n' +
+                      '_Unknown Codexツ</>_'
             }, { quoted: m });
         }
 
-        // 3. Extraer ID del canal y del mensaje
-        const cleanUrl = args[0].split('?')[0].replace(/\/+$/, '');
-        const partes = cleanUrl.split('/');
-        const idCanal = partes[4];
-        const idMensaje = partes[5];
-
-        if (!idCanal || !idMensaje) {
+        // 3. Validar que escribió un texto
+        if (!args[1]) {
             return await sock.sendMessage(chatId, {
-                text: '❌ URL inválida. Asegúrate de que tenga el formato:\n' +
-                      '*https://whatsapp.com/channel/ID_CANAL/ID_MENSAJE*'
+                text: '❌ Debes escribir un texto.\nEjemplo: *.reactch [url] hola mundo*'
             }, { quoted: m });
         }
 
-        // 4. Procesar el texto/emoji del usuario
-        const inputTexto = args.slice(1).join(' ').toLowerCase().trim();
-        let emojiAUsar = '';
-
-        if (!inputTexto) {
-            // Sin argumento: usar 🔥 por defecto
-            emojiAUsar = '🔥';
-        } else {
-            // Verificar si el usuario puso un emoji directamente
-            const esEmoji = /\p{Extended_Pictographic}/u.test(inputTexto);
-
-            if (esEmoji) {
-                // El usuario ya puso un emoji directamente
-                emojiAUsar = inputTexto;
-            } else if (palabraAEmoji[inputTexto]) {
-                // Palabra conocida → mapear a emoji
-                emojiAUsar = palabraAEmoji[inputTexto];
-            } else if (['quitar', 'remove', 'delete', 'borrar'].includes(inputTexto)) {
-                // Opción para eliminar la reacción
-                emojiAUsar = '';
-            } else {
-                // Palabra no reconocida → usar ✅ por defecto
-                emojiAUsar = '✅';
-                await sock.sendMessage(chatId, {
-                    text: `⚠️ Palabra no reconocida. Usando *✅* por defecto.\n` +
-                          `💡 Tip: Usa directamente un emoji como *🔥 ❤️ 👍 💯*`
-                }, { quoted: m });
-            }
-        }
+        // 4. Convertir texto plano a fuente estilizada
+        const textoPlano = args.slice(1).join(' ').toLowerCase();
+        const textoConvertido = textoPlano.split('').map(c => {
+            if (c === ' ') return '␣';
+            return fuenteEstilizada[c] || c;
+        }).join('');
 
         try {
-            // Obtener metadata del canal
-            const datosCanal = await sock.newsletterMetadata('invite', idCanal);
+            // 5. Extraer ID del canal desde la URL
+            const cleanUrl = args[0].split('?')[0].replace(/\/+$/, '');
+            const partes = cleanUrl.split('/');
+            const idCanal = partes[4];
 
-            // Enviar la reacción
-            await sock.newsletterReactMessage(datosCanal.id, idMensaje, emojiAUsar);
-
-            if (!emojiAUsar) {
-                await sock.sendMessage(chatId, {
-                    text: `🗑️ Reacción eliminada del mensaje en el canal *${datosCanal.name || idCanal}*\n\n_Unknown Codexツ</>_`
-                }, { quoted: m });
-            } else {
-                await sock.sendMessage(chatId, {
-                    text: `✅ *Reacción enviada exitosamente*\n\n` +
-                          `📢 Canal: *${datosCanal.name || idCanal}*\n` +
-                          `⚡ Reacción: *${emojiAUsar}*\n\n` +
-                          `_Unknown Codexツ</>_`
+            if (!idCanal) {
+                return await sock.sendMessage(chatId, {
+                    text: '❌ URL inválida.\nFormato: *https://whatsapp.com/channel/ID_CANAL*'
                 }, { quoted: m });
             }
+
+            // 6. Obtener metadata del canal
+            const datosCanal = await sock.newsletterMetadata('invite', idCanal);
+
+            // 7. Enviar como MENSAJE al canal (soporte oficial de Baileys a @newsletter)
+            if (typeof sock.newsletterSendMessage === 'function') {
+                await sock.newsletterSendMessage(datosCanal.id, { text: textoConvertido });
+            } else {
+                await sock.sendMessage(datosCanal.id, { text: textoConvertido });
+            }
+
+            // 8. Confirmar al owner
+            await sock.sendMessage(chatId, {
+                text: `✅ *Mensaje enviado al canal*\n\n` +
+                      `📢 Canal: *${datosCanal.name || idCanal}*\n` +
+                      `📝 Texto: *${textoConvertido}*\n\n` +
+                      `_Unknown Codexツ</>_`
+            }, { quoted: m });
 
         } catch (err) {
             console.error('[REACTCH] Error:', err.message);
-
-            // Si falla, intentar con emoji básico (✅)
-            try {
-                const datosCanal = await sock.newsletterMetadata('invite', idCanal);
-                await sock.newsletterReactMessage(datosCanal.id, idMensaje, '✅');
-
-                await sock.sendMessage(chatId, {
-                    text: `⚠️ El emoji original falló.\n✅ Se usó *✅* como alternativa.\n\n` +
-                          `📢 Canal: *${datosCanal.name || idCanal}*\n\n` +
-                          `_Unknown Codexツ</>_`
-                }, { quoted: m });
-            } catch (err2) {
-                await sock.sendMessage(chatId, {
-                    text: `❌ Error al reaccionar.\n📋 Detalle: ${err.message}\n\n` +
-                          `💡 Verifica que:\n` +
-                          `1. La URL sea correcta\n` +
-                          `2. El bot esté suscrito al canal\n` +
-                          `3. El ID del mensaje sea válido`
-                }, { quoted: m });
-            }
+            await sock.sendMessage(chatId, {
+                text: `❌ Error al enviar al canal.\n📋 Detalle: ${err.message}\n\n` +
+                      `💡 Verifica:\n` +
+                      `1. URL correcta\n` +
+                      `2. Bot suscrito al canal\n` +
+                      `3. Bot tiene permisos para publicar en el canal`
+            }, { quoted: m });
         }
     }
 };
