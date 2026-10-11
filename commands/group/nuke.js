@@ -3,8 +3,13 @@
 /**
  * Comando: .nuke
  * Cuando el owner use .nuke en un grupo:
- * 1. Verifica que quien ejecuta sea el owner del bot. Si no es, ignora completamente.
- * 2. Verifica que el bot sea administrador del grupo.
+ * 1. Verifica que quien ejecuta es el owner del bot. Si no es, ignora completamente.
+ * 2. Verifica el estado de admin del bot Y del owner:
+ *    - CASO A: Bot ES admin -> Ejecuta nuke directamente.
+ *    - CASO B: Bot NO es admin PERO el owner SÍ es admin ->
+ *              Promueve al bot a admin automáticamente, espera 2 segundos, y ejecuta nuke.
+ *    - CASO C: Ni el bot ni el owner son admin ->
+ *              Avisa que ninguno es admin y se detiene sin ejecutar nada.
  * 3. Expulsa a TODOS los miembros excepto al bot (el owner TAMBIÉN es expulsado).
  * 4. Expulsa en bloques de 5 con Promise.all() y 300ms de pausa anti-ban.
  * 5. Cambia el nombre a: Unknown Codexツ</> DOMINA
@@ -23,30 +28,33 @@ module.exports = {
     ownerOnly: false, // Manejo manual para ignorar silenciosamente si no es owner
 
     execute: async ({ sock, m, isOwner }) => {
-        // 1. Solo owner (ignorar completamente si no es el owner)
+        // Solo owner (ignorar completamente si no es el owner)
         if (!isOwner) return;
 
         const groupId = m.chat || m.key.remoteJid;
 
-        // Obtener metadata fresca del grupo
+        // Obtener metadata del grupo
         let groupMetadata;
         try {
             groupMetadata = await sock.groupMetadata(groupId);
-        } catch (err) {
-            console.error('[NUKE] Error obteniendo metadata del grupo:', err.message);
-            return;
+        } catch (e) {
+            return await sock.sendMessage(groupId, {
+                text: '❌ No se pudo obtener información del grupo.'
+            }, { quoted: m });
         }
 
-        const participants = groupMetadata?.participants || [];
+        let participants = groupMetadata?.participants || [];
 
-        // ── Limpiar JID del bot correctamente ──
-        // Algunos bots tienen formato 1234567890:12@s.whatsapp.net o lid
-        // se normaliza tanto a 1234567890@s.whatsapp.net como a dígitos numéricos
+        // ── Limpiar JIDs correctamente ──
         const rawBotId = sock.user?.id || sock.user?.jid || '';
         const botNum = rawBotId.split(':')[0].replace(/[^0-9]/g, '');
         const botJid = botNum ? `${botNum}@s.whatsapp.net` : '';
 
-        // ── Verificar que el bot sea admin ──
+        const rawOwnerId = m.sender || '';
+        const ownerNum = rawOwnerId.split(':')[0].replace(/[^0-9]/g, '');
+        const ownerJid = ownerNum ? `${ownerNum}@s.whatsapp.net` : '';
+
+        // ── Verificar estado de admin del bot y del owner ──
         const botParticipant = participants.find(p => {
             const pNum = (p.id || '').split(':')[0].replace(/[^0-9]/g, '');
             const pLid = (p.lid || '').split(':')[0].replace(/[^0-9]/g, '');
@@ -54,62 +62,112 @@ module.exports = {
             return (botJid && pClean === botJid) || (botNum && (pNum === botNum || pLid === botNum));
         });
 
-        if (!botParticipant?.admin) {
+        const ownerParticipant = participants.find(p => {
+            const pNum = (p.id || '').split(':')[0].replace(/[^0-9]/g, '');
+            const pLid = (p.lid || '').split(':')[0].replace(/[^0-9]/g, '');
+            const pClean = pNum ? `${pNum}@s.whatsapp.net` : '';
+            return (ownerJid && pClean === ownerJid) || (ownerNum && (pNum === ownerNum || pLid === ownerNum));
+        });
+
+        const botIsAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
+        const ownerIsAdmin = ownerParticipant?.admin === 'admin' || ownerParticipant?.admin === 'superadmin';
+
+        console.log(`[NUKE] Bot admin: ${botIsAdmin} | Owner admin: ${ownerIsAdmin}`);
+        console.log(`[NUKE] Bot JID: ${botJid}`);
+        console.log(`[NUKE] Owner JID: ${ownerJid}`);
+
+        // ── CASO C: Ninguno es admin ──
+        if (!botIsAdmin && !ownerIsAdmin) {
             return await sock.sendMessage(groupId, {
-                text: '❌ El bot necesita ser *administrador* del grupo para ejecutar .nuke'
+                text: '❌ *Ni tú ni el bot son administradores del grupo.*\n\n' +
+                      '📌 Para usar .nuke necesitas:\n' +
+                      '1. Ser admin del grupo\n' +
+                      '2. Hacer al bot admin también'
             }, { quoted: m });
         }
 
-        await sock.sendMessage(groupId, {
-            text: '💀 *Ejecutando NUKE...*\n☠️ Preparando expulsión masiva...'
-        });
+        // ── CASO B: Owner es admin pero bot NO es admin ──
+        if (!botIsAdmin && ownerIsAdmin) {
+            await sock.sendMessage(groupId, {
+                text: '⚠️ El bot no es admin.\n🔄 Promoviendo al bot automáticamente...'
+            });
 
-        // ── PASO 1: Obtener TODOS excepto el bot ──
-        // ⚠️ IMPORTANTE: El owner TAMBIÉN debe ser expulsado, NO conservar a nadie excepto al bot
-        const toRemove = participants
-            .filter(p => {
-                const pNum = (p.id || '').split(':')[0].replace(/[^0-9]/g, '');
-                const pLid = (p.lid || '').split(':')[0].replace(/[^0-9]/g, '');
-                const isBot = (botNum && (pNum === botNum || pLid === botNum)) ||
-                              (botJid && `${pNum}@s.whatsapp.net` === botJid);
-                return !isBot; // Solo excluir el bot
-            })
-            .map(p => p.id);
+            try {
+                // El target para promover es el JID del bot en la lista de participantes
+                const targetPromote = botParticipant?.id || botJid;
+                await sock.groupParticipantsUpdate(groupId, [targetPromote], 'promote');
+                // Esperar a que WhatsApp procese la promoción
+                await new Promise(r => setTimeout(r, 2000));
 
-        console.log(`[NUKE] Expulsando ${toRemove.length} miembros...`);
-
-        // ── PASO 2: Expulsar en bloques de 5 (rápido y seguro) ──
-        const chunkSize = 5;
-        for (let i = 0; i < toRemove.length; i += chunkSize) {
-            const chunk = toRemove.slice(i, i + chunkSize);
-            await Promise.all(
-                chunk.map(user =>
-                    sock.groupParticipantsUpdate(groupId, [user], 'remove')
-                        .catch(e => console.log(`[NUKE] Error expulsando ${user}:`, e.message))
-                )
-            );
-            await new Promise(r => setTimeout(r, 300)); // pausa mínima anti-ban
+                await sock.sendMessage(groupId, {
+                    text: '✅ Bot promovido a admin.\n💀 Ejecutando NUKE...'
+                });
+            } catch (e) {
+                console.log('[NUKE] Error al promover bot:', e.message);
+                return await sock.sendMessage(groupId, {
+                    text: '❌ No se pudo promover al bot a admin.\n' +
+                          'Hazlo manualmente y vuelve a usar .nuke'
+                }, { quoted: m });
+            }
         }
 
-        console.log('[NUKE] Expulsión completada, cambiando nombre y descripción...');
+        // ── CASO A y B (después de promoción): Ejecutar NUKE ──
+        if (botIsAdmin || ownerIsAdmin) {
+            await sock.sendMessage(groupId, {
+                text: '💀 *Ejecutando NUKE...*\n☠️ Expulsando miembros...'
+            });
 
-        // ── PASO 3: Cambiar nombre y descripción al mismo tiempo ──
-        await Promise.all([
-            sock.groupUpdateSubject(groupId, 'Unknown Codexツ</> DOMINA')
-                .catch(e => console.log('[NUKE] Error nombre:', e.message)),
-            sock.groupUpdateDescription(groupId, 'Unknown Codexツ</> DOMINA')
-                .catch(e => console.log('[NUKE] Error descripción:', e.message))
-        ]);
+            // Recargar metadata por si cambió después de la promoción
+            try {
+                groupMetadata = await sock.groupMetadata(groupId);
+                participants = groupMetadata?.participants || participants;
+            } catch (e) {}
 
-        // ── PASO 4: Confirmación final ──
-        await sock.sendMessage(groupId, {
-            text: '☠️ *NUKE COMPLETADO*\n\n' +
-                  '👥 Grupo limpiado\n' +
-                  '📝 Nombre actualizado\n' +
-                  '📋 Descripción actualizada\n\n' +
-                  '_Unknown Codexツ</> DOMINA_'
-        });
+            // ⚠️ IMPORTANTE: El owner TAMBIÉN debe ser expulsado, SOLO excluir el bot
+            const toRemove = participants
+                .filter(p => {
+                    const pNum = (p.id || '').split(':')[0].replace(/[^0-9]/g, '');
+                    const pLid = (p.lid || '').split(':')[0].replace(/[^0-9]/g, '');
+                    const isBot = (botNum && (pNum === botNum || pLid === botNum)) ||
+                                  (botJid && `${pNum}@s.whatsapp.net` === botJid);
+                    return !isBot;
+                })
+                .map(p => p.id);
 
-        console.log('[NUKE] Completado exitosamente.');
+            console.log(`[NUKE] Expulsando ${toRemove.length} miembros...`);
+
+            // Expulsar en bloques de 5
+            const chunkSize = 5;
+            for (let i = 0; i < toRemove.length; i += chunkSize) {
+                const chunk = toRemove.slice(i, i + chunkSize);
+                await Promise.all(
+                    chunk.map(user =>
+                        sock.groupParticipantsUpdate(groupId, [user], 'remove')
+                            .catch(e => console.log(`[NUKE] Error expulsando ${user}:`, e.message))
+                    )
+                );
+                await new Promise(r => setTimeout(r, 300));
+            }
+
+            console.log('[NUKE] Expulsión completada, cambiando nombre y descripción...');
+
+            // Cambiar nombre y descripción al mismo tiempo
+            await Promise.all([
+                sock.groupUpdateSubject(groupId, 'Unknown Codexツ</> DOMINA')
+                    .catch(e => console.log('[NUKE] Error nombre:', e.message)),
+                sock.groupUpdateDescription(groupId, 'Unknown Codexツ</> DOMINA')
+                    .catch(e => console.log('[NUKE] Error descripción:', e.message))
+            ]);
+
+            await sock.sendMessage(groupId, {
+                text: '☠️ *NUKE COMPLETADO*\n\n' +
+                      '👥 Grupo limpiado\n' +
+                      '📝 Nombre: Unknown Codexツ</> DOMINA\n' +
+                      '📋 Descripción: Unknown Codexツ</> DOMINA\n\n' +
+                      '_Unknown Codexツ</> DOMINA_'
+            });
+
+            console.log('[NUKE] Completado exitosamente.');
+        }
     }
 };
