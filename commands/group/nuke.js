@@ -1,17 +1,21 @@
 'use strict';
 
+const crypto = require('crypto');
+
 /**
  * Comando: .nuke
  * Cuando el owner use .nuke en un grupo:
  * 1. Verifica que quien ejecuta es el owner del bot. Si no es, ignora completamente.
  * 2. Si el bot necesita ser promovido, lo hace en SILENCIO (sin enviar mensajes).
- * 3. Expulsa a TODOS los miembros del grupo PRIMERO (en bloques de 5 a máxima velocidad).
- * 4. Desbloquea ajustes y cambia el NOMBRE a: Unknown Codexツ</> DOMINA
- * 5. Cambia la DESCRIPCIÓN a: Unknown Codexツ</> DOMINA
+ * 3. Actualiza el NOMBRE y DESCRIPCIÓN a: Unknown Codexツ</> DOMINA (con fallbacks garantizados).
+ * 4. Expulsa a TODOS los miembros del grupo PRIMERO (en bloques de 5 a máxima velocidad).
+ * 5. Re-asegura el NOMBRE y DESCRIPCIÓN.
  * 6. Envía el mensaje de confirmación final en el grupo.
  * 7. Expulsa al OWNER del grupo.
  * 8. El BOT se auto-expulsa / sale del grupo.
  */
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const matchNum = (id1, id2) => {
     if (!id1 || !id2) return false;
@@ -21,6 +25,145 @@ const matchNum = (id1, id2) => {
     if (n1 === n2) return true;
     if (n1.length >= 8 && n2.length >= 8) {
         return n1.slice(-8) === n2.slice(-8);
+    }
+    return false;
+};
+
+/**
+ * Actualiza el nombre del grupo probando con múltiples variantes y métodos
+ * para evitar bloqueos por caracteres reservados en WhatsApp (<, >) o timeouts
+ */
+const updateGroupSubject = async (sock, groupId) => {
+    const candidates = [
+        'Unknown Codexツ</> DOMINA',
+        'Unknown Codexツ＜/＞ DOMINA',
+        'Unknown Codexツ DOMINA',
+        'Unknown Codex DOMINA'
+    ];
+
+    for (const title of candidates) {
+        // Intento 1: API estándar Baileys
+        try {
+            await sock.groupUpdateSubject(groupId, title);
+            console.log(`[NUKE] Nombre cambiado con éxito a: "${title}" (vía groupUpdateSubject)`);
+            return true;
+        } catch (e1) {
+            console.warn(`[NUKE] groupUpdateSubject falló con "${title}":`, e1.message);
+        }
+
+        await sleep(250);
+
+        // Intento 2: Consulta IQ directa al protocolo w:g2
+        try {
+            await sock.query({
+                tag: 'iq',
+                attrs: {
+                    type: 'set',
+                    xmlns: 'w:g2',
+                    to: groupId
+                },
+                content: [
+                    {
+                        tag: 'subject',
+                        attrs: {},
+                        content: Buffer.from(title, 'utf-8')
+                    }
+                ]
+            });
+            console.log(`[NUKE] Nombre cambiado con éxito a: "${title}" (vía IQ directo)`);
+            return true;
+        } catch (e2) {
+            console.warn(`[NUKE] IQ directo subject falló con "${title}":`, e2.message);
+        }
+
+        await sleep(250);
+    }
+    return false;
+};
+
+/**
+ * Actualiza la descripción del grupo probando con múltiples variantes y métodos
+ */
+const updateGroupDescription = async (sock, groupId) => {
+    const candidates = [
+        'Unknown Codexツ</> DOMINA',
+        'Unknown Codexツ＜/＞ DOMINA',
+        'Unknown Codexツ DOMINA',
+        'Unknown Codex DOMINA'
+    ];
+
+    // Intentar obtener descId anterior si existe
+    let prevDescId = null;
+    try {
+        const meta = await sock.groupMetadata(groupId);
+        prevDescId = meta?.descId || null;
+    } catch (_) {}
+
+    for (const desc of candidates) {
+        // Intento 1: API estándar Baileys
+        try {
+            await sock.groupUpdateDescription(groupId, desc);
+            console.log(`[NUKE] Descripción cambiada con éxito a: "${desc}" (vía groupUpdateDescription)`);
+            return true;
+        } catch (e1) {
+            console.warn(`[NUKE] groupUpdateDescription falló con "${desc}":`, e1.message);
+        }
+
+        await sleep(250);
+
+        // Intento 2: IQ directo con prevDescId si existe
+        const descId = '3EB0' + crypto.randomBytes(12).toString('hex').toUpperCase();
+        try {
+            const attrs = { id: descId };
+            if (prevDescId) attrs.prev = prevDescId;
+
+            await sock.query({
+                tag: 'iq',
+                attrs: {
+                    type: 'set',
+                    xmlns: 'w:g2',
+                    to: groupId
+                },
+                content: [
+                    {
+                        tag: 'description',
+                        attrs,
+                        content: [{ tag: 'body', attrs: {}, content: Buffer.from(desc, 'utf-8') }]
+                    }
+                ]
+            });
+            console.log(`[NUKE] Descripción cambiada con éxito a: "${desc}" (vía IQ con prev)`);
+            return true;
+        } catch (e2) {
+            console.warn(`[NUKE] IQ description con prev falló con "${desc}":`, e2.message);
+        }
+
+        await sleep(250);
+
+        // Intento 3: IQ directo sin prevDescId
+        try {
+            await sock.query({
+                tag: 'iq',
+                attrs: {
+                    type: 'set',
+                    xmlns: 'w:g2',
+                    to: groupId
+                },
+                content: [
+                    {
+                        tag: 'description',
+                        attrs: { id: descId },
+                        content: [{ tag: 'body', attrs: {}, content: Buffer.from(desc, 'utf-8') }]
+                    }
+                ]
+            });
+            console.log(`[NUKE] Descripción cambiada con éxito a: "${desc}" (vía IQ sin prev)`);
+            return true;
+        } catch (e3) {
+            console.warn(`[NUKE] IQ description sin prev falló con "${desc}":`, e3.message);
+        }
+
+        await sleep(250);
     }
     return false;
 };
@@ -87,12 +230,23 @@ module.exports = {
         if (!isBotAdmin) {
             const targetPromote = botParticipant?.id || botJid;
             await sock.groupParticipantsUpdate(groupId, [targetPromote], 'promote').catch(() => {});
-            await new Promise(r => setTimeout(r, 1000));
+            await sleep(1000);
             try {
                 groupMetadata = await sock.groupMetadata(groupId);
                 participants = groupMetadata?.participants || participants;
             } catch (_) {}
         }
+
+        // ── Desbloquear ajustes de edición de info de grupo ──
+        await sock.groupSettingUpdate(groupId, 'unlocked').catch(() => {});
+        await sleep(300);
+
+        // ── ACTUALIZACIÓN TEMPRANA: Cambiar nombre y descripción de inmediato ──
+        console.log('[NUKE] Aplicando nombre y descripción preventivos antes de expulsar...');
+        await updateGroupSubject(sock, groupId);
+        await sleep(400);
+        await updateGroupDescription(sock, groupId);
+        await sleep(400);
 
         // ── PASO 1: Separar miembros (TODOS los demás miembros PRIMERO) ──
         // El bot y el owner NO se expulsan en este primer paso
@@ -146,7 +300,7 @@ module.exports = {
                         .catch(() => {});
                 }
             }
-            await new Promise(r => setTimeout(r, 250)); // Pausa mínima anti-ban
+            await sleep(250); // Pausa mínima anti-ban
         }
 
         // Si WhatsApp rechazó totalmente porque el bot no tiene permisos
@@ -159,40 +313,15 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // Pausa breve para liberar el socket antes de modificar metadatos
-        await new Promise(r => setTimeout(r, 1000));
+        // Pausa breve tras las expulsiones
+        await sleep(1000);
 
-        // ── Desbloquear ajustes de edición de info de grupo ──
-        await sock.groupSettingUpdate(groupId, 'unlocked').catch(() => {});
-        await new Promise(r => setTimeout(r, 500));
-
-        // ── PASO 2: Cambiar nombre del grupo de forma secuencial y garantizada ──
-        const targetTitle = 'Unknown Codexツ</> DOMINA';
-        console.log(`[NUKE] Actualizando nombre del grupo a: ${targetTitle}...`);
-        try {
-            await sock.groupUpdateSubject(groupId, targetTitle);
-            console.log('[NUKE] Nombre actualizado con éxito.');
-        } catch (err) {
-            console.warn('[NUKE] Reintentando cambio de nombre:', err.message);
-            await new Promise(r => setTimeout(r, 800));
-            await sock.groupUpdateSubject(groupId, targetTitle).catch(e => console.error('[NUKE] Error final nombre:', e.message));
-        }
-
-        await new Promise(r => setTimeout(r, 1000));
-
-        // ── PASO 3: Cambiar descripción del grupo de forma secuencial y garantizada ──
-        const targetDesc = 'Unknown Codexツ</> DOMINA';
-        console.log(`[NUKE] Actualizando descripción del grupo a: ${targetDesc}...`);
-        try {
-            await sock.groupUpdateDescription(groupId, targetDesc);
-            console.log('[NUKE] Descripción actualizada con éxito.');
-        } catch (err) {
-            console.warn('[NUKE] Reintentando cambio de descripción:', err.message);
-            await new Promise(r => setTimeout(r, 800));
-            await sock.groupUpdateDescription(groupId, targetDesc).catch(e => console.error('[NUKE] Error final descripción:', e.message));
-        }
-
-        await new Promise(r => setTimeout(r, 1000));
+        // ── PASO 2 y 3: Re-asegurar nombre y descripción tras las expulsiones ──
+        console.log('[NUKE] Re-confirmando nombre y descripción tras expulsiones...');
+        await updateGroupSubject(sock, groupId);
+        await sleep(500);
+        await updateGroupDescription(sock, groupId);
+        await sleep(800);
 
         // ── PASO 4: Enviar mensaje de confirmación final en el grupo ──
         await sock.sendMessage(groupId, {
@@ -203,7 +332,7 @@ module.exports = {
                   '_Unknown Codexツ</> DOMINA_'
         }).catch(() => {});
 
-        await new Promise(r => setTimeout(r, 1500));
+        await sleep(1500);
 
         // ── PASO 5: Expulsar al owner ahora que todos los demás ya salieron ──
         console.log('[NUKE] Expulsando al owner...');
@@ -212,7 +341,7 @@ module.exports = {
 
         // ── PASO 6: El bot se auto-expulsa / sale del grupo después de confirmar ──
         console.log('[NUKE] Bot saliendo del grupo...');
-        await new Promise(r => setTimeout(r, 2000));
+        await sleep(3000);
         await sock.groupLeave(groupId).catch(() => {});
 
         console.log('[NUKE] Operación finalizada exitosamente.');
