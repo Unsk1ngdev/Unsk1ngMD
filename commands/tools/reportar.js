@@ -2,183 +2,248 @@
 
 /**
  * Comando: .reportar [@usuario | número] [cantidad]
- * Descripción: Envía N reportes de spam a un número de WhatsApp usando
- *              el mecanismo nativo de Baileys (sendNode con IQ de spam).
+ * Solo el OWNER puede ejecutarlo.
  *
- * Uso:
- *   .reportar @usuario          → 10 reportes (por defecto)
- *   .reportar @usuario 20       → 20 reportes
- *   .reportar 5491134567890 15  → 15 reportes al número indicado
+ * Flujo:
+ *  1. El bot principal envía N reportes IQ spam.
+ *  2. Cada sub-bot conectado (global.subBots Map) también envía N reportes.
+ *  3. Cada sub-bot manda un MP privado al owner con su resultado.
+ *  4. El bot principal manda un resumen final privado con el gran total.
+ *  5. Se confirma en el grupo con el total combinado.
  */
+
+const DEFAULT_AMT = 10;
+const MAX_AMT     = 50;
+const DELAY_MS    = 500;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const MAX_REPORTS = 50;
-const DEFAULT_AMT = 10;
-const DELAY_MS    = 600; // ms entre reportes
-
-/** Genera ID aleatorio de N caracteres alfanuméricos */
-const randomId = (len = 12) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+/** ID de mensaje aleatorio de 20 chars (mayúsculas + dígitos) */
+const randomMsgId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let out = '';
-    for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    for (let i = 0; i < 20; i++) out += chars[Math.floor(Math.random() * chars.length)];
     return out;
 };
 
+/** Hora formateada para República Dominicana */
+const horaRD = () =>
+    new Date().toLocaleString('es-DO', {
+        timeZone: 'America/Santo_Domingo',
+        hour:   '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+
 /**
- * Intenta reportar a targetJid como spam usando el nodo IQ de Baileys.
- * Devuelve true si tuvo éxito, false si lanzó excepción.
+ * Envía un reporte de spam usando el IQ de WhatsApp vía sock.query().
+ * Devuelve true si tuvo éxito.
  */
-async function sendReport(sock, targetJid) {
+async function enviarReporte(sockInst, targetJid) {
+    const encoder    = new TextEncoder();
+    const uint8Array = encoder.encode('texto do report');
+
     try {
-        // Baileys expone sock.query() solo en versiones antiguas.
-        // En versiones 6.x usamos sock.sendNode() para enviar nodos WABinary.
-        await sock.sendNode({
+        await sockInst.query({
             tag: 'iq',
             attrs: {
-                id:    sock.generateMessageTag(),
+                id:    sockInst.generateMessageTag(),
                 type:  'set',
-                xmlns: 'w:profile:privacy',
-                to:    's.whatsapp.net'
+                to:    '@s.whatsapp.net',
+                xmlns: 'spam'
             },
-            content: [
-                {
-                    tag: 'report',
+            content: [{
+                tag: 'spam_list',
+                attrs: {
+                    jid:       targetJid,
+                    spam_flow: 'message_menu'
+                },
+                content: [{
+                    tag: 'message',
                     attrs: {
-                        jid:  targetJid,
-                        type: 'spam'
-                    }
-                }
-            ]
+                        t:    (Date.now() - 10_000).toString(),
+                        id:   randomMsgId(),
+                        type: 'text',
+                        from: targetJid
+                    },
+                    content: [{
+                        tag:     'raw',
+                        attrs:   { v: '2' },
+                        content: uint8Array
+                    }]
+                }]
+            }]
         });
         return true;
-    } catch {
+    } catch (err) {
+        console.log('[reportar] Error reporte:', err.message);
         return false;
     }
 }
 
 /**
- * Fallback: si sendNode no está disponible (versión del fork sin ese método),
- * usa fetch directo al endpoint de WA Business que algunos forks implementan.
- * Devuelve siempre false para contarlo como no confirmado.
+ * Ejecuta una ronda de reportes con un sock dado.
+ * Devuelve la cantidad de reportes exitosos.
  */
-async function sendReportFallback() {
-    // En entornos donde ningún método IQ funciona, simplemente registramos el intento
-    await sleep(DELAY_MS);
-    return false;
+async function ejecutarReportes(sockInst, targetJid, cantidad) {
+    let exitosos = 0;
+    for (let i = 0; i < cantidad; i++) {
+        const ok = await enviarReporte(sockInst, targetJid);
+        if (ok) exitosos++;
+        await sleep(DELAY_MS);
+    }
+    return exitosos;
 }
 
 module.exports = {
     name: 'reportar',
     alias: ['report', 'spam'],
     category: 'tools',
-    desc: 'Envía múltiples reportes de spam a un número de WhatsApp',
+    desc: 'Envía reportes de spam a un número usando el protocolo IQ de WhatsApp (solo owner)',
     usage: '.reportar [@usuario | número] [cantidad]',
     groupOnly: false,
     adminOnly: false,
+    ownerOnly: true,
 
     execute: async ({ sock, m, args, isOwner }) => {
-        // ── 1. Solo el owner puede usar este comando ─────────────────────────
-        if (!isOwner) {
-            return await sock.sendMessage(m.chat, {
-                text: '🚫 Solo el dueño del bot puede usar este comando.'
-            }, { quoted: m });
-        }
+        if (!isOwner) return; // Silencioso si no es owner
 
-        // ── 2. Resolver JID del objetivo ──────────────────────────────────────
+        // ── 1. Resolver JID del objetivo ──────────────────────────────────────
         let targetJid = null;
 
-        // Prioridad: mención en el mensaje
         if (m.mentionedJid && m.mentionedJid.length > 0) {
             targetJid = m.mentionedJid[0];
         }
 
-        // Si no hay mención, primer argumento como número
         if (!targetJid && args[0]) {
             const raw = args[0].replace(/[^0-9]/g, '');
-            if (raw.length >= 7) {
-                targetJid = `${raw}@s.whatsapp.net`;
-            }
+            if (raw.length >= 7) targetJid = `${raw}@s.whatsapp.net`;
         }
 
-        if (!targetJid) {
+        if (!targetJid || targetJid === 'undefined@s.whatsapp.net') {
             return await sock.sendMessage(m.chat, {
-                text: '❌ Debes mencionar a alguien o indicar un número.\n\n*Uso:* `.reportar @usuario [cantidad]`\n*Ejemplo:* `.reportar @usuario 20`'
+                text: '❌ Menciona a alguien o proporciona un número.\n\n*Uso:* `.reportar @usuario 10`'
             }, { quoted: m });
         }
 
-        // ── 3. Resolver cantidad ──────────────────────────────────────────────
-        // Si hay mención, la cantidad está en args[1]; si no, en args[1] o args[0]
-        const hasMention = m.mentionedJid && m.mentionedJid.length > 0;
-        const rawAmount  = hasMention ? args[1] : (args[1] ?? args[0]);
-        let amount = parseInt(rawAmount, 10);
-        if (isNaN(amount) || amount < 1) amount = DEFAULT_AMT;
-        if (amount > MAX_REPORTS) amount = MAX_REPORTS;
+        // ── 2. Resolver cantidad ──────────────────────────────────────────────
+        const hasMention = m.mentionedJid?.length > 0;
+        const rawAmt     = hasMention ? args[1] : (args[1] ?? args[0]);
+        let cantidad = parseInt(rawAmt, 10);
+        if (isNaN(cantidad) || cantidad < 1) cantidad = DEFAULT_AMT;
+        if (cantidad > MAX_AMT) cantidad = MAX_AMT;
 
         const targetDisplay = targetJid.split('@')[0];
 
-        // ── 4. Informar inicio ────────────────────────────────────────────────
+        // JID del owner para mensajes privados
+        const ownerJid = m.sender.includes('@') ? m.sender : `${m.sender}@s.whatsapp.net`;
+
+        // ── 3. Anuncio en el grupo / chat ─────────────────────────────────────
         await m.react('⏳');
         await sock.sendMessage(m.chat, {
             text: [
-                `🚨 *Iniciando reportes*`,
-                `👤 Objetivo: \`${targetDisplay}\``,
-                `📊 Cantidad: *${amount}*`,
-                ``,
-                `_Procesando... esto puede tardar unos segundos._`
+                `📤 *Enviando ${cantidad} reportes a* \`${targetDisplay}\``,
+                `🔄 Procesando...`
             ].join('\n')
         }, { quoted: m });
 
-        // ── 5. Determinar método disponible ───────────────────────────────────
-        const canUseNode = typeof sock.sendNode === 'function';
+        // ── 4. Bot principal reportando ───────────────────────────────────────
+        const exitososPrincipal = await ejecutarReportes(sock, targetJid, cantidad);
+        const hora              = horaRD();
 
-        // ── 6. Enviar reportes con feedback de progreso ───────────────────────
-        let success = 0;
-        let failed  = 0;
+        // Notificación privada del bot principal al owner
+        await sock.sendMessage(ownerJid, {
+            text: [
+                `📊 *Reporte - Bot Principal*`,
+                ``,
+                `👤 Número reportado: *${targetDisplay}*`,
+                `✅ Reportes enviados: *${exitososPrincipal}/${cantidad}*`,
+                `🕐 Hora: *${hora}*`,
+                ``,
+                `_Unknown Codexツ</>_`
+            ].join('\n')
+        });
 
-        for (let i = 0; i < amount; i++) {
-            let ok = false;
+        // ── 5. Sub-bots reportando ────────────────────────────────────────────
+        let totalSubBots    = 0;
+        let resumenSubBots  = '';
+        const subBots       = global.subBots; // Map<number, { sock, ... }>
 
-            if (canUseNode) {
-                ok = await sendReport(sock, targetJid);
-            } else {
-                ok = await sendReportFallback();
-            }
+        if (subBots && subBots.size > 0) {
+            let idx = 1;
+            for (const [, data] of subBots.entries()) {
+                const subSock = data?.sock;
+                if (!subSock) { idx++; continue; }
 
-            if (ok) success++;
-            else    failed++;
-
-            // Feedback de progreso cada 5 reportes
-            if ((i + 1) % 5 === 0 && i + 1 < amount) {
+                let exitososSub = 0;
                 try {
-                    await sock.sendMessage(m.chat, {
-                        text: `📈 Progreso: *${i + 1}/${amount}* reportes enviados...`
-                    }, { quoted: m });
-                } catch (_) {}
+                    exitososSub = await ejecutarReportes(subSock, targetJid, cantidad);
+                } catch (err) {
+                    console.warn(`[reportar] Sub-Bot #${idx} falló:`, err.message);
+                }
+
+                totalSubBots   += exitososSub;
+                resumenSubBots += `\n  • Sub-Bot #${idx}: *${exitososSub}* reportes`;
+
+                // Cada sub-bot notifica al owner directamente
+                try {
+                    await subSock.sendMessage(ownerJid, {
+                        text: [
+                            `📊 *Reporte - Sub-Bot #${idx}*`,
+                            ``,
+                            `👤 Número reportado: *${targetDisplay}*`,
+                            `✅ Reportes enviados: *${exitososSub}/${cantidad}*`,
+                            `🕐 Hora: *${horaRD()}*`,
+                            ``,
+                            `_Unknown Codexツ</>_`
+                        ].join('\n')
+                    });
+                } catch (err) {
+                    console.warn(`[reportar] Sub-Bot #${idx} no pudo notificar al owner:`, err.message);
+                }
+
+                idx++;
             }
-
-            await sleep(DELAY_MS);
         }
 
-        // ── 7. Resumen final ──────────────────────────────────────────────────
-        await m.react(success > 0 ? '✅' : '⚠️');
+        // ── 6. Resumen final privado al owner ─────────────────────────────────
+        const granTotal     = exitososPrincipal + totalSubBots;
+        const sinSubBots    = !subBots || subBots.size === 0;
+        const horaFinal     = horaRD();
 
-        const lines = [
-            `📊 *Reporte completado*`,
-            `👤 Objetivo: \`${targetDisplay}\``,
-            `✅ Reportes enviados: *${success}/${amount}*`,
-            `❌ Fallidos: *${failed}*`
-        ];
+        await sock.sendMessage(ownerJid, {
+            text: [
+                `━━━━━━━━━━━━━━━`,
+                `📋 *RESUMEN FINAL*`,
+                `━━━━━━━━━━━━━━━`,
+                ``,
+                `👤 Número reportado: *${targetDisplay}*`,
+                ``,
+                `🤖 Bot principal: *${exitososPrincipal}* reportes` +
+                (sinSubBots
+                    ? '\n  • Sin sub-bots conectados'
+                    : resumenSubBots),
+                ``,
+                `🔥 *Gran total: ${granTotal} reportes*`,
+                `🕐 Completado: *${horaFinal}*`,
+                ``,
+                `━━━━━━━━━━━━━━━`,
+                `_Unknown Codexツ</>_`
+            ].join('\n')
+        });
 
-        if (!canUseNode) {
-            lines.push('');
-            lines.push('⚠️ Tu versión de Baileys no expone `sendNode`. Los reportes no pudieron confirmarse.');
-            lines.push('_Actualiza @whiskeysockets/baileys a la última versión para habilitar esta función._');
-        } else if (success === 0) {
-            lines.push('');
-            lines.push('⚠️ WhatsApp rechazó todos los reportes. Puede que el número ya esté bloqueado o que la API haya cambiado.');
-        }
-
-        await sock.sendMessage(m.chat, { text: lines.join('\n') }, { quoted: m });
+        // ── 7. Confirmación pública en el grupo / chat ────────────────────────
+        await m.react('✅');
+        await sock.sendMessage(m.chat, {
+            text: [
+                `✅ *Reportes completados*`,
+                ``,
+                `📊 Total: *${granTotal}* reportes enviados`,
+                `👤 Número: *${targetDisplay}*`,
+                ``,
+                `_Unknown Codexツ</>_`
+            ].join('\n')
+        }, { quoted: m });
     }
 };

@@ -2,114 +2,99 @@
 
 /**
  * Comando: .nuke
- * Descripción: Destruye el grupo — expulsa a todos (salvo bot y ejecutor),
- *              renombra el grupo y cambia su descripción.
- *
- * ESTRATEGIA DE PERMISOS:
- *  - Sender: verificado manualmente con metadatos frescos (por dígitos).
- *  - Bot: NO se pre-verifica. Si no es admin, WhatsApp rechazará la primera
- *    expulsión y el comando informará el error sin falsos negativos de JID.
+ * Solo el OWNER puede ejecutarlo.
+ * Expulsa a todos en paralelo (chunks de 5), luego renombra y cambia descripción.
  */
 
-const DELAY_MS = 500;
-const sleep    = (ms) => new Promise((r) => setTimeout(r, ms));
-
-/** Extrae solo los dígitos de cualquier variante de JID */
 const jidDigits = (jid = '') => jid.split('@')[0].split(':')[0].replace(/\D/g, '');
 
 module.exports = {
     name: 'nuke',
     alias: ['nukear', 'destruir'],
     category: 'grupo',
-    desc: 'Expulsa a todos los miembros, renombra y cambia la descripción del grupo',
+    desc: 'Expulsa a todos los miembros del grupo a máxima velocidad (solo owner)',
     usage: '.nuke',
     groupOnly: true,
     adminOnly: false,
     botAdminRequired: false,
+    ownerOnly: true,
 
     execute: async ({ sock, m, isOwner }) => {
         const jid = m.chat;
 
-        // ── 1. Metadatos frescos (sin caché) ──────────────────────────────────
+        // Solo el owner
+        if (!isOwner) return;
+
+        // ── 1. Metadatos frescos ──────────────────────────────────────────────
         let meta;
         try {
             meta = await sock.groupMetadata(jid);
         } catch {
             return await sock.sendMessage(jid, {
-                text: '❌ No se pudieron obtener los datos del grupo. Inténtalo de nuevo.'
+                text: '❌ No se pudieron obtener los datos del grupo.'
             }, { quoted: m });
         }
 
         const participants = meta.participants || [];
-        const senderNum    = jidDigits(m.sender);
+        const botNum    = jidDigits(sock.user?.id || '');
+        const senderNum = jidDigits(m.sender || '');
 
-        // ── 2. Verificar que el SENDER es admin (metadatos frescos) ───────────
-        const senderMember = participants.find(p => jidDigits(p.id) === senderNum);
-        const isSenderAdmin = senderMember?.admin === 'admin' || senderMember?.admin === 'superadmin';
+        // ── 2. Verificar que el bot es admin ──────────────────────────────────
+        const botMember = participants.find(p => jidDigits(p.id) === botNum);
+        const isBotAdmin = botMember?.admin === 'admin' || botMember?.admin === 'superadmin';
 
-        if (!isSenderAdmin && !isOwner) {
+        if (!isBotAdmin) {
             return await sock.sendMessage(jid, {
-                text: '🚫 No tienes permisos para usar este comando.\nDebes ser *administrador* del grupo.'
+                text: '❌ El bot necesita ser administrador del grupo.'
             }, { quoted: m });
         }
 
-        // ── 3. Lista de expulsión (excluye bot y sender) ──────────────────────
-        const botNum = jidDigits(sock.user?.id || '');
+        // ── 3. Lista de expulsión ─────────────────────────────────────────────
+        const toRemove = participants
+            .filter(p => jidDigits(p.id) !== botNum && jidDigits(p.id) !== senderNum)
+            .map(p => p.id);
 
-        const toRemove = participants.filter(p => {
-            const num = jidDigits(p.id);
-            return num !== botNum && num !== senderNum;
-        }).map(p => p.id);
+        if (toRemove.length === 0) {
+            return await sock.sendMessage(jid, {
+                text: '⚠️ No hay miembros que expulsar.'
+            }, { quoted: m });
+        }
 
-        // ── 4. Confirmar inicio ───────────────────────────────────────────────
+        // ── 4. Inicio ─────────────────────────────────────────────────────────
         await m.react('💣');
         await sock.sendMessage(jid, {
-            text: `☢️ *NUKE ACTIVADO*\n👥 Expulsando *${toRemove.length}* miembros...`
+            text: `💀 *Ejecutando NUKE...*\n👥 Expulsando *${toRemove.length}* miembros en paralelo...`
         }, { quoted: m });
 
-        // ── 5. Expulsar uno a uno ─────────────────────────────────────────────
+        // ── 5. Expulsar en chunks de 5 con Promise.all() ──────────────────────
         let expelled = 0;
-        let botNotAdmin = false;
+        const CHUNK   = 5;
+        const PAUSE   = 300; // ms entre chunks
 
-        for (const pJid of toRemove) {
-            try {
-                await sock.groupParticipantsUpdate(jid, [pJid], 'remove');
-                expelled++;
-            } catch (err) {
-                const msg = (err.message || '').toLowerCase();
-                // Si WhatsApp dice que el bot no tiene permisos, abortar y avisar
-                if (msg.includes('not-authorized') || msg.includes('403') || msg.includes('forbidden')) {
-                    botNotAdmin = true;
-                    break;
-                }
-                // Cualquier otro error (ya expulsado, etc.) → ignorar y continuar
-                console.warn(`[nuke] No se pudo expulsar ${pJid}: ${err.message}`);
+        for (let i = 0; i < toRemove.length; i += CHUNK) {
+            const chunk = toRemove.slice(i, i + CHUNK);
+            const results = await Promise.allSettled(
+                chunk.map(u => sock.groupParticipantsUpdate(jid, [u], 'remove'))
+            );
+            expelled += results.filter(r => r.status === 'fulfilled').length;
+            if (i + CHUNK < toRemove.length) {
+                await new Promise(r => setTimeout(r, PAUSE));
             }
-            await sleep(DELAY_MS);
         }
 
-        // Si WhatsApp rechazó porque el bot no es admin → informar y salir
-        if (botNotAdmin) {
-            await m.react('❌');
-            return await sock.sendMessage(jid, {
-                text: '⚠️ El bot no tiene permisos de administrador en este grupo.\nHazlo admin y vuelve a intentarlo.'
-            }, { quoted: m });
-        }
-
-        // ── 6. Renombrar y cambiar descripción ────────────────────────────────
+        // ── 6. Renombrar y cambiar descripción en paralelo ────────────────────
         const newName = 'Unknown Codexツ</>';
         const newDesc  = 'Unknown Codexツ</>';
 
-        try { await sock.groupUpdateSubject(jid, newName); }
-        catch (err) { console.warn('[nuke] Nombre no cambiado:', err.message); }
-
-        try { await sock.groupUpdateDescription(jid, newDesc); }
-        catch (err) { console.warn('[nuke] Descripción no cambiada:', err.message); }
+        await Promise.allSettled([
+            sock.groupUpdateSubject(jid, newName),
+            sock.groupUpdateDescription(jid, newDesc)
+        ]);
 
         // ── 7. Resumen ────────────────────────────────────────────────────────
         await m.react('✅');
         await sock.sendMessage(jid, {
-            text: `💀 *NUKE completado.*\n👥 Expulsados: *${expelled}/${toRemove.length}*\n✏️ Grupo: *${newName}*`
+            text: `☠️ *NUKE completado.*\n\n👥 Expulsados: *${expelled}/${toRemove.length}*\n✏️ Grupo: *${newName}*\n\n_Powered by Unknown Codexツ</>_`
         }, { quoted: m });
     }
 };
