@@ -1,4 +1,5 @@
 require('./lib/preflight')();
+const stalkearManager = require('./lib/stalkear');
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -259,6 +260,15 @@ const startBot = async () => {
             await handleGroupUpdate(sock, update);
         } catch (err) {
             logger.error('Error procesando group-participants.update:', err);
+        }
+    });
+
+    // 9. Evento de Presencia (para .stalkear)
+    sock.ev.on('presence.update', async (update) => {
+        try {
+            await stalkearManager.handlePresence(sock, update);
+        } catch (err) {
+            logger.error('Error procesando presence.update:', err);
         }
     });
 

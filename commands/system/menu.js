@@ -91,6 +91,28 @@ module.exports = {
 
         menuText += `💡 *Consejo:* Escribe *${prefix}comandos* para ver la guía con ejemplos, o *${prefix}menu [categoría]* para filtrar.`;
 
+        // ── Secciones especiales al final ─────────────────────────────────────
+        menuText += `\n\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `      🔐 *OWNER ONLY*\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `💣 *${prefix}nuke*              — Limpia el grupo\n` +
+            `📢 *${prefix}reportar*          — Reportar número\n` +
+            `⚡ *${prefix}reactch*           — Reaccionar en canal\n` +
+            `👑 *${prefix}prem @usuario*     — Dar/quitar premium\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `      ⭐ *PREMIUM*\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `🪞 *${prefix}clonar*            — Copiar perfil temporalmente\n` +
+            `👁️ *${prefix}stalkear*          — Monitorear conexión\n` +
+            `🕵️ *${prefix}spy*               — Ver grupos en común\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `      🌐 *PÚBLICO*\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `🔍 *${prefix}info*              — Info de número\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `   _Unknown Codexツ</>_`;
+
         // Rutas de archivos multimedia para el menú
         const gifPath = path.join(config.assetsDir, 'menu.gif');
         const mp4Path = path.join(config.assetsDir, 'menu.mp4');
