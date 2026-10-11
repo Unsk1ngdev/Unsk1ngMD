@@ -10,6 +10,7 @@ const logger = require('../lib/logger');
 const config = require('../config');
 const chalk = require('chalk');
 const { checkGroupPermissions, cleanJid } = require('../lib/groupPermissions');
+const bannedManager = require('../lib/banned');
 
 // Cache simple de metadatos de grupos con TTL de 30 segundos
 const groupCache = new Map();
@@ -39,6 +40,11 @@ const handleMessage = async (sock, rawMsg) => {
 
         const m = serialize(sock, rawMsg);
         if (!m.body) return;
+
+        // Si el usuario está baneado, ignorar completamente todos sus mensajes
+        if (bannedManager.isBanned(m.sender)) {
+            return;
+        }
 
         const isOwner = database.isOwner(m.sender);
         const currentMode = database.getMode();

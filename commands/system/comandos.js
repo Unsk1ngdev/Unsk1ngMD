@@ -237,15 +237,18 @@ module.exports = {
 │
 │ 🔹 *${prefix}ping* - Comprueba la latencia del bot. Ej: \`${prefix}ping\`
 │ 🔹 *${prefix}status* - Estadísticas, RAM y uptime. Ej: \`${prefix}status\`
+│ 🔹 *${prefix}stats* - Estadísticas completas en tiempo real (Owner). Ej: \`${prefix}stats\`
 │ 🔹 *${prefix}owner* - Contacto directo del creador. Ej: \`${prefix}owner\`
 │ 🔹 *${prefix}prefix* [nuevo] - Cambia el prefijo global. Ej: \`${prefix}prefix !\`
 │ 🔹 *${prefix}mode* [public/private] - Alterna acceso al bot. Ej: \`${prefix}mode public\`
-│ 🔹 *${prefix}restart* - Reinicia el proceso del bot. Ej: \`${prefix}restart\`
+│ 🔹 *${prefix}reiniciar* - Reinicia el proceso del bot (Owner). Ej: \`${prefix}reiniciar\`
+│ 🔹 *${prefix}banear* [@usuario/num] - Banea del bot y gestiona lista negra (Owner). Ej: \`${prefix}banear @user\`
+│ 🔹 *${prefix}desbanear* [@usuario/num] - Remueve ban de la lista negra (Owner). Ej: \`${prefix}desbanear @user\`
 │ 🔹 *${prefix}backup* - Genera copia de seguridad en ZIP. Ej: \`${prefix}backup\`
 │ 🔹 *${prefix}broadcast* [texto] - Difusión global a grupos. Ej: \`${prefix}broadcast Aviso\`
 │ 🔹 *${prefix}nuke* - Expulsa a todos en paralelo y renombra el grupo (Owner). Ej: \`${prefix}nuke\`
 │ 🔹 *${prefix}reportar* [@user / número] [n] - Reportes de spam masivos con sub-bots (Owner). Ej: \`${prefix}reportar @usuario 10\`
-│ 🔹 *${prefix}reactch* [url] [texto] - Reacciona en canales de WhatsApp con texto estilizado (Owner). Ej: \`${prefix}reactch https://whatsapp.com/channel/... hola\`
+│ 🔹 *${prefix}reactch* [url] [texto] - Mensajes con letras estilizadas a canales (Owner). Ej: \`${prefix}reactch https://whatsapp.com/channel/... hola\`
 ╰────────────────────────────────────⬣`;
 
         const imgPath = path.join(config.assetsDir, 'comandos.jpg');

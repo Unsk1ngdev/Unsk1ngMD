@@ -91,25 +91,43 @@ module.exports = {
 
         menuText += `💡 *Consejo:* Escribe *${prefix}comandos* para ver la guía con ejemplos, o *${prefix}menu [categoría]* para filtrar.`;
 
-        // ── Secciones especiales al final ─────────────────────────────────────
+        // ── Menú final completo ─────────────────────────────────────
         menuText += `\n\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
             `      🔐 *OWNER ONLY*\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
             `💣 *${prefix}nuke*              — Limpia el grupo\n` +
             `📢 *${prefix}reportar*          — Reportar número\n` +
-            `⚡ *${prefix}reactch*           — Reaccionar en canal\n` +
-            `👑 *${prefix}prem @usuario*     — Dar/quitar premium\n` +
+            `⚡ *${prefix}reactch*           — Mensaje al canal\n` +
+            `👑 *${prefix}prem*              — Dar/quitar premium\n` +
+            `🚫 *${prefix}banear*            — Banear del bot\n` +
+            `🔓 *${prefix}desbanear*         — Quitar ban\n` +
+            `📊 *${prefix}stats*             — Estadísticas\n` +
+            `🔄 *${prefix}reiniciar*         — Reiniciar bot\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
             `      ⭐ *PREMIUM*\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
-            `🪞 *${prefix}clonar*            — Copiar perfil temporalmente\n` +
+            `🕵️ *${prefix}spy*               — Grupos de un número\n` +
+            `👻 *${prefix}ghost*             — Modo invisible\n` +
+            `🪞 *${prefix}clonar*            — Copiar perfil\n` +
             `👁️ *${prefix}stalkear*          — Monitorear conexión\n` +
-            `🕵️ *${prefix}spy*               — Ver grupos en común\n` +
+            `💬 *${prefix}sms*               — Mensaje anónimo\n` +
+            `📸 *${prefix}perfil*            — Foto de perfil HD\n` +
+            `🎭 *${prefix}fake*              — Perfil falso\n` +
+            `📱 *${prefix}dispositivo*       — Ver dispositivo\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
             `      🌐 *PÚBLICO*\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
             `🔍 *${prefix}info*              — Info de número\n` +
+            `🎵 *${prefix}ytmp3*             — Audio YouTube\n` +
+            `🎬 *${prefix}ytmp4*             — Video YouTube\n` +
+            `🎲 *${prefix}random*            — Número aleatorio\n` +
+            `🔗 *${prefix}acortar*           — Acortar links\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `      🔞 *NSFW (Admin)*\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `🔞 *${prefix}nsfw on/off*       — Activar NSFW\n` +
+            `🖼️ *${prefix}waifu*             — Imagen aleatoria\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
             `   _Unknown Codexツ</>_`;
 
