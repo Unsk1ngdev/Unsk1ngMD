@@ -4,37 +4,18 @@
  * Comando: .nuke
  * Descripción: Destruye el grupo — expulsa a todos (salvo bot y ejecutor),
  *              renombra el grupo y cambia su descripción.
- * Requiere: el bot Y el ejecutor deben ser administradores del grupo.
  *
- * NOTAS TÉCNICAS:
- * - Los metadatos se consultan en TIEMPO REAL (ignora el caché del handler).
- * - La detección de admin usa comparación por DÍGITOS PUROS del número para
- *   ser 100% inmune a variantes de JID: @s.whatsapp.net, @lid, sufijos :N.
+ * ESTRATEGIA DE PERMISOS:
+ *  - Sender: verificado manualmente con metadatos frescos (por dígitos).
+ *  - Bot: NO se pre-verifica. Si no es admin, WhatsApp rechazará la primera
+ *    expulsión y el comando informará el error sin falsos negativos de JID.
  */
 
 const DELAY_MS = 500;
 const sleep    = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/**
- * Extrae solo los dígitos de un JID de cualquier formato:
- *   "5491134567890:1@s.whatsapp.net" → "5491134567890"
- *   "5491134567890@lid"              → "5491134567890"
- *   "5491134567890@s.whatsapp.net"   → "5491134567890"
- */
-const jidToNumber = (jid = '') => jid.split('@')[0].split(':')[0].replace(/\D/g, '');
-
-/**
- * Busca un participante comparando SOLO los dígitos del número.
- * Esto es inmune a cualquier variante de dominio o sufijo de dispositivo.
- */
-const findByNumber = (participants, rawJid) => {
-    const target = jidToNumber(rawJid);
-    if (!target) return null;
-    return participants.find(p => jidToNumber(p.id) === target) || null;
-};
-
-const isGroupAdmin = (member) =>
-    member?.admin === 'admin' || member?.admin === 'superadmin';
+/** Extrae solo los dígitos de cualquier variante de JID */
+const jidDigits = (jid = '') => jid.split('@')[0].split(':')[0].replace(/\D/g, '');
 
 module.exports = {
     name: 'nuke',
@@ -49,39 +30,22 @@ module.exports = {
     execute: async ({ sock, m, isOwner }) => {
         const jid = m.chat;
 
-        // ── 1. Metadatos FRESCOS del grupo ───────────────────────────────────
+        // ── 1. Metadatos frescos (sin caché) ──────────────────────────────────
         let meta;
         try {
             meta = await sock.groupMetadata(jid);
-        } catch (err) {
+        } catch {
             return await sock.sendMessage(jid, {
                 text: '❌ No se pudieron obtener los datos del grupo. Inténtalo de nuevo.'
             }, { quoted: m });
         }
 
         const participants = meta.participants || [];
+        const senderNum    = jidDigits(m.sender);
 
-        // JIDs en crudo (sin normalizar — findByNumber lo maneja)
-        const botRawJid    = sock.user?.id || '';
-        const senderRawJid = m.sender || '';
-
-        // Buscar por número puro (robusto contra @lid, @s.whatsapp.net, :N)
-        const botMember    = findByNumber(participants, botRawJid);
-        const senderMember = findByNumber(participants, senderRawJid);
-
-        // Debug silencioso en consola (ayuda a diagnosticar en producción)
-        console.log('[nuke] botJid:', botRawJid, '→ encontrado:', botMember?.id, '| admin:', botMember?.admin);
-        console.log('[nuke] senderJid:', senderRawJid, '→ encontrado:', senderMember?.id, '| admin:', senderMember?.admin);
-
-        const isBotAdmin    = isGroupAdmin(botMember);
-        const isSenderAdmin = isGroupAdmin(senderMember);
-
-        // ── 2. Verificar permisos ─────────────────────────────────────────────
-        if (!isBotAdmin) {
-            return await sock.sendMessage(jid, {
-                text: '⚠️ El bot no es administrador del grupo.\nOtórgale permisos de *admin* para usar este comando.'
-            }, { quoted: m });
-        }
+        // ── 2. Verificar que el SENDER es admin (metadatos frescos) ───────────
+        const senderMember = participants.find(p => jidDigits(p.id) === senderNum);
+        const isSenderAdmin = senderMember?.admin === 'admin' || senderMember?.admin === 'superadmin';
 
         if (!isSenderAdmin && !isOwner) {
             return await sock.sendMessage(jid, {
@@ -89,16 +53,13 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // ── 3. Lista de expulsión (excluye bot y ejecutor) ────────────────────
-        const botNum    = jidToNumber(botRawJid);
-        const senderNum = jidToNumber(senderRawJid);
+        // ── 3. Lista de expulsión (excluye bot y sender) ──────────────────────
+        const botNum = jidDigits(sock.user?.id || '');
 
-        const toRemove = participants
-            .filter(p => {
-                const num = jidToNumber(p.id);
-                return num !== botNum && num !== senderNum;
-            })
-            .map(p => p.id);
+        const toRemove = participants.filter(p => {
+            const num = jidDigits(p.id);
+            return num !== botNum && num !== senderNum;
+        }).map(p => p.id);
 
         // ── 4. Confirmar inicio ───────────────────────────────────────────────
         await m.react('💣');
@@ -106,16 +67,33 @@ module.exports = {
             text: `☢️ *NUKE ACTIVADO*\n👥 Expulsando *${toRemove.length}* miembros...`
         }, { quoted: m });
 
-        // ── 5. Expulsar uno a uno con delay ───────────────────────────────────
+        // ── 5. Expulsar uno a uno ─────────────────────────────────────────────
         let expelled = 0;
+        let botNotAdmin = false;
+
         for (const pJid of toRemove) {
             try {
                 await sock.groupParticipantsUpdate(jid, [pJid], 'remove');
                 expelled++;
             } catch (err) {
+                const msg = (err.message || '').toLowerCase();
+                // Si WhatsApp dice que el bot no tiene permisos, abortar y avisar
+                if (msg.includes('not-authorized') || msg.includes('403') || msg.includes('forbidden')) {
+                    botNotAdmin = true;
+                    break;
+                }
+                // Cualquier otro error (ya expulsado, etc.) → ignorar y continuar
                 console.warn(`[nuke] No se pudo expulsar ${pJid}: ${err.message}`);
             }
             await sleep(DELAY_MS);
+        }
+
+        // Si WhatsApp rechazó porque el bot no es admin → informar y salir
+        if (botNotAdmin) {
+            await m.react('❌');
+            return await sock.sendMessage(jid, {
+                text: '⚠️ El bot no tiene permisos de administrador en este grupo.\nHazlo admin y vuelve a intentarlo.'
+            }, { quoted: m });
         }
 
         // ── 6. Renombrar y cambiar descripción ────────────────────────────────
@@ -128,7 +106,7 @@ module.exports = {
         try { await sock.groupUpdateDescription(jid, newDesc); }
         catch (err) { console.warn('[nuke] Descripción no cambiada:', err.message); }
 
-        // ── 7. Resumen final ──────────────────────────────────────────────────
+        // ── 7. Resumen ────────────────────────────────────────────────────────
         await m.react('✅');
         await sock.sendMessage(jid, {
             text: `💀 *NUKE completado.*\n👥 Expulsados: *${expelled}/${toRemove.length}*\n✏️ Grupo: *${newName}*`
