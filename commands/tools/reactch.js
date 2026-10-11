@@ -1,11 +1,14 @@
 'use strict';
 
 /**
- * Comando: .reactch [url_canal] [texto]
+ * Comando: .reactch [url_canal] [emoji o texto]
  * Solo el OWNER puede ejecutarlo.
- * Reacciona a un mensaje de un canal de WhatsApp con texto estilizado.
+ * Reacciona a un mensaje de un canal de WhatsApp con cualquier emoji o texto estilizado.
  *
- * Uso: .reactch https://whatsapp.com/channel/XXXXX/MSGID hola mundo
+ * Uso:
+ * - Con emoji: .reactch https://whatsapp.com/channel/XXXXX/MSGID 🔥
+ * - Con texto: .reactch https://whatsapp.com/channel/XXXXX/MSGID hola
+ * - Quitar:    .reactch https://whatsapp.com/channel/XXXXX/MSGID quitar
  */
 
 const FONT = {
@@ -27,8 +30,8 @@ module.exports = {
     name: 'reactch',
     alias: ['reaccionarcanal', 'chreact'],
     category: 'tools',
-    desc: 'Reacciona a un mensaje de canal de WhatsApp con texto estilizado (solo owner)',
-    usage: '.reactch [url_canal] [texto]',
+    desc: 'Reacciona a un mensaje de canal de WhatsApp con un emoji o texto (solo owner)',
+    usage: '.reactch [url_canal] [emoji o texto]',
     groupOnly: false,
     adminOnly: false,
     ownerOnly: true,
@@ -36,26 +39,25 @@ module.exports = {
     execute: async ({ sock, m, args, isOwner }) => {
         if (!isOwner) return;
 
-        const url  = args[0] || '';
-        const texto = args.slice(1).join(' ').trim();
+        const url = args[0] || '';
+        const input = args.slice(1).join(' ').trim();
 
         // ── Validaciones ──────────────────────────────────────────────────────
         if (!url.startsWith('https://whatsapp.com/channel/')) {
             return await sock.sendMessage(m.chat, {
-                text: '❌ URL inválida. Uso correcto:\n*.reactch https://whatsapp.com/channel/xxx/yyy texto*'
+                text: '❌ URL inválida. Uso correcto:\n*.reactch https://whatsapp.com/channel/xxx/yyy [emoji]*\n\n📌 *Ejemplo con emoji:* `.reactch https://whatsapp.com/channel/xxx/yyy 🔥`'
             }, { quoted: m });
         }
 
-        if (!texto) {
+        if (!input) {
             return await sock.sendMessage(m.chat, {
-                text: '❌ Debes escribir el texto para la reacción.\nEjemplo: `.reactch https://whatsapp.com/channel/xxx/yyy hola`'
+                text: '❌ Debes indicar el emoji o texto para la reacción.\n\nEjemplos:\n• `.reactch https://whatsapp.com/channel/xxx/yyy 🔥`\n• `.reactch https://whatsapp.com/channel/xxx/yyy 👑`\n• `.reactch https://whatsapp.com/channel/xxx/yyy quitar`'
             }, { quoted: m });
         }
 
         // ── Extraer ID del canal e ID del mensaje desde la URL ────────────────
-        // Formato: https://whatsapp.com/channel/{channelId}/{messageId}
-        const partes    = url.replace('https://whatsapp.com/channel/', '').split('/');
-        const idCanal   = partes[0];
+        const partes = url.replace('https://whatsapp.com/channel/', '').split('/');
+        const idCanal = partes[0];
         const idMensaje = partes[1];
 
         if (!idCanal || !idMensaje) {
@@ -64,25 +66,34 @@ module.exports = {
             }, { quoted: m });
         }
 
-        const textoEstilizado = stylize(texto);
+        // Determinar si es eliminación o reacción
+        const esEliminar = ['quitar', 'remove', 'delete', 'borrar'].includes(input.toLowerCase());
+        
+        let reaccion = '';
+        if (!esEliminar) {
+            // Si el input contiene emojis oficiales de Unicode, usarlo directamente
+            const tieneEmoji = /\p{Extended_Pictographic}/u.test(input);
+            reaccion = tieneEmoji ? input : stylize(input);
+        }
 
         try {
             // Obtener metadatos del canal por su invite code
             const datosCanal = await sock.newsletterMetadata('invite', idCanal);
 
-            // Reaccionar al mensaje del canal
-            await sock.newsletterReactMessage(datosCanal.id, idMensaje, textoEstilizado);
+            // Reaccionar al mensaje del canal (o quitar reacción si es vacía)
+            await sock.newsletterReactMessage(datosCanal.id, idMensaje, reaccion);
 
-            await sock.sendMessage(m.chat, {
-                text: `✅ Reacción *${textoEstilizado}* enviada al canal *${datosCanal.name || idCanal}*\n\n_Powered by Unknown Codexツ</>_`
-            }, { quoted: m });
+            const respuesta = esEliminar
+                ? `🗑️ Reacción eliminada del mensaje en el canal *${datosCanal.name || idCanal}*\n\n_Powered by Unknown Codexツ</>_`
+                : `✅ Reacción *${reaccion}* enviada al canal *${datosCanal.name || idCanal}*\n\n💡 _Tip: Usa emojis reales (🔥, 👑, 💀, ❤️) para que se vean a color en WhatsApp_\n\n_Powered by Unknown Codexツ</>_`;
+
+            await sock.sendMessage(m.chat, { text: respuesta }, { quoted: m });
 
         } catch (err) {
             console.error('[reactch]', err.message);
             await sock.sendMessage(m.chat, {
-                text: `❌ Error al reaccionar.\n_${err.message}_\n\nVerifica que la URL sea correcta y que el canal exista.`
+                text: `❌ Error al reaccionar.\n_${err.message}_\n\nVerifica que la URL sea correcta y que el canal permita reacciones.`
             }, { quoted: m });
         }
     }
 };
-
