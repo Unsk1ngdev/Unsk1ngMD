@@ -46,6 +46,16 @@ const handleMessage = async (sock, rawMsg) => {
             return;
         }
 
+        // Modo Ghost: simular desconexión e ignorar todo excepto .ghost stop
+        if (global.ghostMode) {
+            const prefix = database.getPrefix();
+            const textBody = (m.body || '').trim().toLowerCase();
+            const isGhostCommand = textBody.startsWith(`${prefix}ghost`) || textBody.startsWith(`${prefix}fantasma`);
+            if (!isGhostCommand) {
+                return;
+            }
+        }
+
         const isOwner = database.isOwner(m.sender);
         const currentMode = database.getMode();
 
