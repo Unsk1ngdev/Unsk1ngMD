@@ -62,18 +62,30 @@ module.exports = {
                 return await m.reply(`❌ El video excede el límite máximo de 15 minutos (Duración: ${formatDuration(duration)}).`);
             }
 
-            // 2. Descargar el mejor flujo de audio a la carpeta ./tmp/
+            // 2. Descargar el mejor flujo de audio a la carpeta ./tmp/ con parámetros de elusión anti-403
             await execYtdlp([
                 '-f', 'bestaudio/best',
                 '--no-playlist',
                 '--no-warnings',
+                '--extractor-args', 'youtube:player_client=android,ios',
+                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                '--no-check-certificates',
+                '--prefer-free-formats',
                 '-o', rawOutputTemplate,
                 ytUrl
             ], { timeout: 180000 });
 
-            // Localizar el archivo descargado por yt-dlp en ./tmp/
+            // Localizar el archivo descargado por yt-dlp en ./tmp/ (filtrando temporales incompletos)
             const filesInTmp = await fs.readdir(tmpDir);
-            const matchName = filesInTmp.find(f => f.startsWith(rawPrefix) && !f.endsWith('_final.mp3'));
+            const candidateFiles = filesInTmp.filter(f =>
+                f.startsWith(rawPrefix) &&
+                !f.endsWith('_final.mp3') &&
+                !f.endsWith('.part') &&
+                !f.endsWith('.ytdl') &&
+                !f.endsWith('.temp')
+            );
+
+            const matchName = candidateFiles[0];
 
             if (!matchName) {
                 throw new Error('No se pudo localizar el archivo de audio descargado por yt-dlp.');
@@ -104,13 +116,14 @@ module.exports = {
                 throw new Error('El archivo MP3 generado está vacío (0 bytes).');
             }
 
-            // 4. Envío seguro con Baileys (leyendo como buffer y sin ptt)
+            // 4. Envío seguro con Baileys (leyendo como buffer, sin ptt y con metadatos de duración)
             const audioBuffer = await fs.readFile(finalMp3Path);
 
             await sock.sendMessage(m.chat, {
                 audio: audioBuffer,
                 mimetype: 'audio/mpeg',
-                fileName: `${title}.mp3`
+                fileName: `${title}.mp3`,
+                seconds: Math.round(duration)
             }, { quoted: m });
 
             await m.react('✅');

@@ -61,18 +61,34 @@ module.exports = {
                 return await m.reply(`❌ El video excede el límite máximo de 15 minutos (Duración: ${formatDuration(duration)}).`);
             }
 
-            // 2. Descargar mejor video y mejor audio (máximo 720p para no saturar memoria/red)
+            // 2. Descargar mejor video y mejor audio con parámetros de elusión anti-403 y fusión forzada a MP4
             await execYtdlp([
                 '-f', 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+                '--merge-output-format', 'mp4',
                 '--no-playlist',
                 '--no-warnings',
+                '--extractor-args', 'youtube:player_client=android,ios',
+                '--user-agent', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                '--no-check-certificates',
+                '--prefer-free-formats',
                 '-o', rawOutputTemplate,
                 ytUrl
             ], { timeout: 240000 });
 
-            // Localizar el archivo descargado por yt-dlp en ./tmp/
+            // Localizar el archivo descargado por yt-dlp en ./tmp/ (filtrando temporales incompletos)
             const filesInTmp = await fs.readdir(tmpDir);
-            const matchName = filesInTmp.find(f => f.startsWith(rawPrefix) && !f.endsWith('_final.mp4'));
+            const candidateFiles = filesInTmp.filter(f =>
+                f.startsWith(rawPrefix) &&
+                !f.endsWith('_final.mp4') &&
+                !f.endsWith('.part') &&
+                !f.endsWith('.ytdl') &&
+                !f.endsWith('.temp')
+            );
+
+            // Priorizar el archivo .mp4 generado por el merge
+            const matchName = candidateFiles.find(f => f.endsWith('.mp4')) ||
+                              candidateFiles.find(f => f.endsWith('.mkv') || f.endsWith('.webm')) ||
+                              candidateFiles[0];
 
             if (!matchName) {
                 throw new Error('No se pudo localizar el archivo de video descargado por yt-dlp.');
@@ -81,17 +97,20 @@ module.exports = {
             downloadedRawFile = path.join(tmpDir, matchName);
 
             // 3. Transcodificación obligatoria compatible con WhatsApp:
-            // Contenedor MP4 con códec de video H.264 (libx264), audio AAC (aac) y metadatos faststart
+            // Contenedor MP4 con códec de video H.264 (libx264), audio AAC (aac), mapeo seguro y faststart
             await runFfmpeg([
                 '-y',
                 '-i', downloadedRawFile,
+                '-map', '0:v:0',
+                '-map', '0:a:0?',
                 '-c:v', 'libx264',
                 '-preset', 'fast',
                 '-crf', '26',
+                '-pix_fmt', 'yuv420p',
                 '-c:a', 'aac',
                 '-b:a', '128k',
                 '-ar', '44100',
-                '-pix_fmt', 'yuv420p',
+                '-ac', '2',
                 '-movflags', '+faststart',
                 finalMp4Path
             ], { timeout: 180000 });
@@ -121,14 +140,16 @@ module.exports = {
                 await sock.sendMessage(m.chat, {
                     document: videoBuffer,
                     mimetype: 'video/mp4',
-                    fileName: `${title}.mp4`
+                    fileName: `${title}.mp4`,
+                    caption: `🎬 *${title}*\n⏱️ *Duración:* ${formatDuration(duration)}\n📦 *Peso:* ${sizeInMb.toFixed(2)} MB`
                 }, { quoted: m });
             } else {
-                // - Menor a 16 MB: Enviar como video estándar
+                // - Menor a 16 MB: Enviar como video estándar con metadatos de duración (seconds) para evitar el bug de 0:00
                 await sock.sendMessage(m.chat, {
                     video: videoBuffer,
                     mimetype: 'video/mp4',
-                    caption: `🎬 *${title}*\n⏱️ *Duración:* ${formatDuration(duration)}\n📦 *Peso:* ${sizeInMb.toFixed(2)} MB`
+                    caption: `🎬 *${title}*\n⏱️ *Duración:* ${formatDuration(duration)}\n📦 *Peso:* ${sizeInMb.toFixed(2)} MB`,
+                    seconds: Math.round(duration)
                 }, { quoted: m });
             }
 
