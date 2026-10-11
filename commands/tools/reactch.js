@@ -1,17 +1,14 @@
 'use strict';
 
 /**
- * Comando: .reactch [url_canal] [texto]
- * Cuando el owner use .reactch:
- * 1. Verifica que quien ejecuta es el owner del bot. Si no es, ignora silenciosamente.
- * 2. Valida que la URL sea de canal de WhatsApp (https://whatsapp.com/channel/).
- * 3. Extrae el ID del canal de la URL.
- * 4. Convierte el texto a letras estilizadas con emojis de círculo negro (🅐🅑🅒...).
- * 5. Envía el texto estilizado como MENSAJE al canal (sock.sendMessage al JID @newsletter).
- * 6. Confirma que el mensaje fue enviado al canal.
+ * Comando: .reactch [url_canal/id_mensaje] [texto]
+ * Solo el OWNER puede ejecutarlo. Si no es el owner, se ignora silenciosamente.
+ * Reacciona a un mensaje específico de un canal de WhatsApp usando letras estilizadas (🅐🅑🅒...).
+ *
+ * Ejemplo de uso:
+ * .reactch https://whatsapp.com/channel/0029VaXXXXX/123 hola mundo
  */
 
-// ── Fuente estilizada (Círculos negros con letras y números) ──
 const fuenteEstilizada = {
     a: '🅐', b: '🅑', c: '🅒', d: '🅓', e: '🅔', f: '🅕', g: '🅖',
     h: '🅗', i: '🅘', j: '🅙', k: '🅚', l: '🅛', m: '🅜', n: '🅝',
@@ -23,13 +20,13 @@ const fuenteEstilizada = {
 
 module.exports = {
     name: 'reactch',
-    alias: ['canalmsg', 'chmsg', 'react'],
+    alias: ['reaccionarcanal', 'chreact', 'react'],
     category: 'tools',
-    desc: 'Publica un mensaje estilizado con letras circulares en un canal de WhatsApp (solo owner)',
-    usage: '.reactch [url_canal] [texto]',
+    desc: 'Reacciona a un mensaje de canal de WhatsApp con texto estilizado (solo owner)',
+    usage: '.reactch [url_canal/id_mensaje] [texto]',
     groupOnly: false,
     adminOnly: false,
-    ownerOnly: false, // Manejo manual para ignorar silenciosamente si no es el owner
+    ownerOnly: false, // Manejado manualmente para ignorar silenciosamente si no es el owner
 
     execute: async ({ sock, m, args, isOwner }) => {
         // 1. Solo owner (ignorar silenciosamente si no es el owner)
@@ -37,69 +34,64 @@ module.exports = {
 
         const chatId = m.chat || m.key.remoteJid;
 
-        // 2. Validar URL del canal
+        // 2. Validar URL
         if (!args[0] || !args[0].startsWith('https://whatsapp.com/channel/')) {
             return await sock.sendMessage(chatId, {
-                text: '❌ Uso correcto:\n' +
-                      '*.reactch https://whatsapp.com/channel/xxx hola mundo*\n\n' +
-                      '📌 El texto se enviará estilizado al canal:\n' +
-                      '🅗🅞🅛🅐␣🅜🅤🅝🅓🅞\n\n' +
+                text: '❌ *Ejemplo de uso:*\n' +
+                      '*.reactch https://whatsapp.com/channel/xxx/yyy texto*\n\n' +
+                      '📌 *Ejemplo:*\n' +
+                      '`.reactch https://whatsapp.com/channel/0029VaXXXXX/123 hola mundo`\n\n' +
                       '_Unknown Codexツ</>_'
             }, { quoted: m });
         }
 
-        // 3. Validar que escribió un texto
-        if (!args[1]) {
+        // 3. Validar texto
+        const textoPlano = args.slice(1).join(' ').trim();
+        if (!textoPlano) {
             return await sock.sendMessage(chatId, {
-                text: '❌ Debes escribir un texto.\nEjemplo: *.reactch [url] hola mundo*'
+                text: '❌ Debes escribir el texto o emoji para la reacción.\n' +
+                      'Ejemplo: `.reactch https://whatsapp.com/channel/xxx/yyy hola`'
             }, { quoted: m });
         }
 
-        // 4. Convertir texto plano a fuente estilizada
-        const textoPlano = args.slice(1).join(' ').toLowerCase();
-        const textoConvertido = textoPlano.split('').map(c => {
+        // 4. Convertir texto a letras estilizadas
+        const textoConvertido = textoPlano.toLowerCase().split('').map(c => {
             if (c === ' ') return '␣';
             return fuenteEstilizada[c] || c;
         }).join('');
 
         try {
-            // 5. Extraer ID del canal desde la URL
+            // 5. Extraer ID del canal y del mensaje
             const cleanUrl = args[0].split('?')[0].replace(/\/+$/, '');
             const partes = cleanUrl.split('/');
             const idCanal = partes[4];
+            const idMensaje = partes[5];
 
-            if (!idCanal) {
+            if (!idCanal || !idMensaje) {
                 return await sock.sendMessage(chatId, {
-                    text: '❌ URL inválida.\nFormato: *https://whatsapp.com/channel/ID_CANAL*'
+                    text: '❌ URL inválida. Asegúrate de incluir tanto el código del canal como el ID del mensaje.\n\n' +
+                          '📌 Formato: *https://whatsapp.com/channel/ID_CANAL/ID_MENSAJE*'
                 }, { quoted: m });
             }
 
             // 6. Obtener metadata del canal
             const datosCanal = await sock.newsletterMetadata('invite', idCanal);
 
-            // 7. Enviar como MENSAJE al canal (soporte oficial de Baileys a @newsletter)
-            if (typeof sock.newsletterSendMessage === 'function') {
-                await sock.newsletterSendMessage(datosCanal.id, { text: textoConvertido });
-            } else {
-                await sock.sendMessage(datosCanal.id, { text: textoConvertido });
-            }
+            // 7. Enviar la reacción al mensaje del canal usando newsletterReactMessage
+            await sock.newsletterReactMessage(datosCanal.id, idMensaje, textoConvertido);
 
-            // 8. Confirmar al owner
-            await sock.sendMessage(chatId, {
-                text: `✅ *Mensaje enviado al canal*\n\n` +
-                      `📢 Canal: *${datosCanal.name || idCanal}*\n` +
-                      `📝 Texto: *${textoConvertido}*\n\n` +
-                      `_Unknown Codexツ</>_`
+            // 8. Confirmación al owner
+            return await sock.sendMessage(chatId, {
+                text: `✅ Reacción enviada con *${textoConvertido}* al mensaje del canal *${datosCanal.name || idCanal}*.\n\n_Unknown Codexツ</>_`
             }, { quoted: m });
 
         } catch (err) {
-            console.error('[REACTCH] Error:', err.message);
-            await sock.sendMessage(chatId, {
-                text: `❌ Error al enviar al canal.\n📋 Detalle: ${err.message}\n\n` +
-                      `💡 Verifica:\n` +
-                      `1. URL correcta\n` +
-                      `2. Bot suscrito al canal\n` +
-                      `3. Bot tiene permisos para publicar en el canal`
+            console.error('[REACTCH] Error:', err);
+            return await sock.sendMessage(chatId, {
+                text: `❌ Error al reaccionar.\n📋 Detalle: ${err.message || 'Error desconocido'}\n\n` +
+                      `💡 Verifica que:\n` +
+                      `1. La URL sea correcta y contenga el ID del mensaje\n` +
+                      `2. El canal exista y permita reacciones`
             }, { quoted: m });
         }
     }
