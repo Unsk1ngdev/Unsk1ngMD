@@ -2,7 +2,7 @@
 
 Un asistente multifuncional para WhatsApp enfocado en alto rendimiento, dinamismo, bajo consumo de memoria RAM y utilidades multimedia. Construido sobre Node.js y la librería [@whiskeysockets/baileys](https://github.com/whiskeysockets/baileys).
 
-**Desarrollador:** Castrodev  
+**Desarrollador:** Unknown Codexツ</>  
 **Versión:** 1.0.0  
 **Licencia:** MIT  
 
@@ -186,7 +186,7 @@ Al iniciar por primera vez, selecciona el método de vinculación en la consola:
 | :--- | :--- | :--- |
 | `.ping` | - | Mide la latencia de respuesta del socket en milisegundos. |
 | `.status` | - | Muestra el consumo de memoria RAM (RSS/Heap), tiempo encendido (uptime) y CPU. |
-| `.owner` | - | Envía la tarjeta de contacto oficial (vCard) del creador Castrodev. |
+| `.owner` | - | Envía la tarjeta de contacto oficial (vCard) del creador Unknown Codexツ</>. |
 | `.menu` | `[categoría]` | Despliega el menú interactivo con portada multimedia y soporte de filtros. |
 | `.comandos` | - | Guía detallada con ejemplos prácticos de uso para cada funcionalidad. |
 | `.prefix` | `[nuevo]` | Cambia el prefijo global del bot en caliente (ej: `.prefix !`). |
@@ -228,5 +228,5 @@ pm2 stop unsk1ng-md
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia **MIT**. Desarrollado con dedicación por **Castrodev**.  
+Este proyecto está bajo la Licencia **MIT**. Desarrollado con dedicación por **Unknown Codexツ</>**.  
 Libre para uso personal y comunitario citando los créditos correspondientes.

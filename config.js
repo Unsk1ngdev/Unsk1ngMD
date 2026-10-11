@@ -14,7 +14,7 @@ const ownerJid = formatJid(ownerNumber);
 module.exports = {
     // Nombre del bot y dueño
     botName: process.env.BOT_NAME || 'Unsk1ngMD',
-    ownerName: process.env.OWNER_NAME || 'Castrodev',
+    ownerName: process.env.OWNER_NAME || 'Unknown Codexツ</>',
     ownerNumber: ownerNumber.replace(/[^0-9]/g, ''),
     ownerJid: ownerJid,
     owners: [ownerJid, '18494509905@s.whatsapp.net'], // Lista de administradores globales
@@ -24,7 +24,7 @@ module.exports = {
 
     // Metadatos de Stickers (WebP EXIF)
     packName: process.env.PACK_NAME || 'Unsk1ngMD',
-    authorName: process.env.AUTHOR_NAME || 'Dev',
+    authorName: process.env.AUTHOR_NAME || 'Unknown Codexツ</>',
 
     // Modo de operación: 'public' o 'private'
     defaultMode: process.env.BOT_MODE || 'public',

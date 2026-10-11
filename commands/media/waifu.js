@@ -7,139 +7,99 @@ module.exports = {
     name: 'waifu',
     alias: ['waifunsfw', 'hentai', 'nsfwpic'],
     category: 'multimedia',
-    desc: 'Envía contenido anime explícito +18 real (Rule34, Gelbooru, Nekosia, Nekos.life)',
+    desc: 'Envía una imagen anime +18 en grupos con NSFW activo',
     usage: '.waifu',
 
     execute: async ({ sock, m }) => {
         const jid = m.chat || m.key.remoteJid;
 
-        // 1. Verificar NSFW activado en el grupo
         if (jid.endsWith('@g.us')) {
             if (!nsfwManager.isNsfwEnabled(jid)) {
                 return await sock.sendMessage(jid, {
-                    text: '🔞 El modo NSFW no está activado en este grupo.\n\n' +
-                          'Un admin debe usar *.nsfw on* primero.\n\n' +
-                          '_Unknown Codexツ</>_'
+                    text: '🔞 Activa NSFW primero con *.nsfw on*\n_Unknown Codexツ</>_'
                 }, { quoted: m });
             }
         }
 
-        // Reacción discreta sin enviar mensajes de texto intermedios
-        await m.react('🔞').catch(() => {});
+        await sock.sendMessage(jid, {
+            text: '🔞 Buscando imagen +18...'
+        }, { quoted: m });
 
-        const randPid = () => Math.floor(Math.random() * 800);
-
-        const tagsExplicitos = [
-            'explicit',
-            'explicit+animated',
-            'explicit+gif',
-            'nsfw+explicit',
-            'hentai+explicit'
-        ];
-        const tagRandom = tagsExplicitos[Math.floor(Math.random() * tagsExplicitos.length)];
-
-        // APIs +18 reales en orden de prioridad
-        const apis = [
-            // 1. Rule34 — contenido explícito real
+        const apisImagenes = [
+            // Fuente 1: yande.re (API abierta de imágenes anime)
             async () => {
-                const pid = randPid();
-                const res = await axios.get(
-                    `https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=10&pid=${pid}&tags=${tagRandom}`,
-                    {
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                        timeout: 7000
-                    }
-                );
-                const json = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-                if (!Array.isArray(json) || json.length === 0) throw new Error('Sin resultados Rule34');
-                const post = json[Math.floor(Math.random() * json.length)];
-                if (!post?.file_url) throw new Error('Post sin file_url');
-                return {
-                    url: post.file_url,
-                    esGif: post.file_url?.includes('.gif') || post.file_url?.includes('.mp4') || post.tags?.includes('animated')
-                };
+                const page = Math.floor(Math.random() * 40) + 1;
+                const res = await axios.get(`https://yande.re/post.json?tags=rating:explicit&limit=25&page=${page}`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                    timeout: 7000
+                });
+                const items = Array.isArray(res.data) ? res.data.filter(p => (p.sample_url || p.jpeg_url || p.file_url) && !p.file_url?.endsWith('.zip')) : [];
+                if (items.length === 0) throw new Error('Sin posts en yande.re');
+                const picked = items[Math.floor(Math.random() * items.length)];
+                const url = picked.sample_url || picked.jpeg_url || picked.file_url;
+                if (!url) throw new Error('Sin URL');
+                return url;
             },
 
-            // 2. Gelbooru — contenido explícito
+            // Fuente 2: nekos.life
             async () => {
-                const pid = randPid();
-                const res = await axios.get(
-                    `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=explicit&limit=10&pid=${pid}`,
-                    {
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                        timeout: 7000
-                    }
-                );
-                const json = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-                const posts = json?.post;
-                if (!Array.isArray(posts) || posts.length === 0) throw new Error('Sin resultados Gelbooru');
-                const post = posts[Math.floor(Math.random() * posts.length)];
-                if (!post?.file_url) throw new Error('Post sin file_url');
-                return {
-                    url: post.file_url,
-                    esGif: post.file_url?.includes('.gif') || post.file_url?.includes('.mp4')
-                };
-            },
-
-            // 3. Nekosia — contenido nsfw
-            async () => {
-                const res = await axios.get('https://nekosia.cat/api/v1/images/nsfw', { timeout: 6000 });
-                const json = res.data;
-                const url = json?.image?.original?.url || json?.url;
-                if (!url) throw new Error('Sin URL Nekosia');
-                return {
-                    url,
-                    esGif: url?.includes('.gif') || url?.includes('.mp4')
-                };
-            },
-
-            // 4. Nekos.life lewd — fallback hiper rápido y seguro
-            async () => {
-                const res = await axios.get('https://nekos.life/api/v2/img/lewd', { timeout: 5000 });
+                const res = await axios.get('https://nekos.life/api/v2/img/lewd', { timeout: 6000 });
                 const url = res.data?.url;
-                if (!url) throw new Error('Sin URL Nekos.life');
-                return {
-                    url,
-                    esGif: url?.includes('.gif')
-                };
+                if (!url) throw new Error('Sin URL nekos.life');
+                return url;
+            },
+
+            // Fuente 3: waifu.im
+            async () => {
+                const res = await axios.get('https://api.waifu.im/search/?is_nsfw=true&many=true&gif=false', {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                    timeout: 6000
+                });
+                const images = res.data?.images?.filter(i => !i.url?.toLowerCase().endsWith('.gif'));
+                if (!images || images.length === 0) throw new Error('Sin imágenes waifu.im');
+                const img = images[Math.floor(Math.random() * images.length)];
+                if (!img?.url) throw new Error('URL vacía waifu.im');
+                return img.url;
+            },
+
+            // Fuente 4: hmtai
+            async () => {
+                const cats = ['ero', 'oppai', 'uniform', 'ass', 'hentai'];
+                const cat = cats[Math.floor(Math.random() * cats.length)];
+                const res = await axios.get(`https://hmtai.hatsunia.cfd/v2/nsfw/${cat}`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0' },
+                    timeout: 6000
+                });
+                const url = res.data?.url;
+                if (!url || url.toLowerCase().endsWith('.gif')) throw new Error('Sin URL válida hmtai');
+                return url;
             }
         ];
 
         let enviado = false;
 
-        for (const api of apis) {
+        for (const api of apisImagenes) {
             if (enviado) break;
-
             try {
-                const { url, esGif } = await api();
-                if (!url) throw new Error('URL vacía');
-
-                const isAnimated = esGif || url.endsWith('.gif') || url.endsWith('.mp4') || url.endsWith('.webm');
-
-                if (isAnimated) {
-                    await sock.sendMessage(jid, {
-                        video: { url },
-                        caption: '🔞 _Unknown Codexツ</> +18_',
-                        gifPlayback: true
-                    }, { quoted: m });
-                } else {
-                    await sock.sendMessage(jid, {
-                        image: { url },
-                        caption: '🔞 _Unknown Codexツ</> +18_'
-                    }, { quoted: m });
+                const url = await api();
+                if (url.toLowerCase().match(/\.(gif|mp4|webm)$/)) {
+                    throw new Error('No es imagen estática');
                 }
 
+                await sock.sendMessage(jid, {
+                    image: { url },
+                    caption: '🔞 _Unknown Codexツ</> +18_'
+                }, { quoted: m });
+
                 enviado = true;
-            } catch (_) {
+            } catch (e) {
                 continue;
             }
         }
 
         if (!enviado) {
             await sock.sendMessage(jid, {
-                text: '❌ No se pudo obtener contenido +18.\n' +
-                      'Intenta de nuevo en unos segundos.\n\n' +
-                      '_Unknown Codexツ</>_'
+                text: '❌ Error al obtener imagen.\nIntenta de nuevo.\n\n_Unknown Codexツ</>_'
             }, { quoted: m });
         }
     }

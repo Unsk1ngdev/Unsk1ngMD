@@ -119,7 +119,7 @@ const getCharacterImage = async (characterName) => {
         const url = `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`;
         const res = await axios.get(url, {
             headers: {
-                'User-Agent': 'Unsk1ngMD-Bot/1.0 (Node.js; contact: castrodev)',
+                'User-Agent': 'Unsk1ngMD-Bot/1.0 (Node.js; contact: unknowncodex)',
                 'Accept': 'application/json'
             },
             timeout: 5000

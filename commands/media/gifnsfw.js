@@ -1,118 +1,105 @@
 'use strict';
 
 const axios = require('axios');
+const path = require('path');
+const fs = require('fs-extra');
 const nsfwManager = require('../../lib/nsfw');
+const ffmpeg = require('../../lib/ffmpeg');
 
 module.exports = {
     name: 'gifnsfw',
     alias: ['nsfwgif', 'hentaigif', 'gifporn'],
     category: 'multimedia',
-    desc: 'Envía un GIF / video animado explícito +18 aleatorio en grupos con NSFW activo',
+    desc: 'Envía un GIF animado explícito +18 optimizado para WhatsApp en grupos con NSFW activo',
     usage: '.gifnsfw',
 
     execute: async ({ sock, m }) => {
         const jid = m.chat || m.key.remoteJid;
 
-        // 1. Verificar NSFW activado en el grupo
         if (jid.endsWith('@g.us')) {
             if (!nsfwManager.isNsfwEnabled(jid)) {
                 return await sock.sendMessage(jid, {
-                    text: '🔞 Activa NSFW primero con *.nsfw on*\n\n_Unknown Codexツ</>_'
+                    text: '🔞 Activa NSFW primero con *.nsfw on*\n_Unknown Codexツ</>_'
                 }, { quoted: m });
             }
         }
 
-        // Reacción discreta
-        await m.react('🔞').catch(() => {});
+        await sock.sendMessage(jid, {
+            text: '🎬 Buscando GIF +18...'
+        }, { quoted: m });
 
-        let gifUrl = null;
+        const availableEndpoints = [
+            'blowjob', 'anal', 'cum', 'fuck', 'yaoi',
+            'pussylick', 'solo', 'threesome_fff', 'threesome_ffm'
+        ].sort(() => Math.random() - 0.5);
 
-        // 1. Intento principal con Rule34 filtrado a videos/GIFs explícitos
-        try {
-            const pid = Math.floor(Math.random() * 400);
-            const res = await axios.get(
-                `https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=25&pid=${pid}&tags=explicit+animated`,
-                {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                    timeout: 7000
-                }
-            );
-            const json = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+        let enviado = false;
 
-            if (Array.isArray(json) && json.length > 0) {
-                const soloGifs = json.filter(p =>
-                    p.file_url && (
-                        p.file_url.includes('.gif') ||
-                        p.file_url.includes('.mp4') ||
-                        p.file_url.includes('.webm')
-                    )
-                );
+        // Intentar hasta con 3 endpoints distintos si alguno presenta lentitud
+        for (let i = 0; i < Math.min(3, availableEndpoints.length); i++) {
+            if (enviado) break;
+            const ep = availableEndpoints[i];
 
-                if (soloGifs.length > 0) {
-                    const post = soloGifs[Math.floor(Math.random() * soloGifs.length)];
-                    gifUrl = post.file_url;
-                }
-            }
-        } catch (_) {}
-
-        // 2. Fallback a Gelbooru filtrado por animated
-        if (!gifUrl) {
             try {
-                const pid = Math.floor(Math.random() * 200);
-                const res = await axios.get(
-                    `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=explicit+animated&limit=20&pid=${pid}`,
-                    {
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                        timeout: 7000
-                    }
-                );
-                const json = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-                const posts = json?.post;
+                // 1. Obtener URL del GIF
+                const resMeta = await axios.get(`https://purrbot.site/api/img/nsfw/${ep}/gif`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0' },
+                    timeout: 5000
+                });
+                const url = resMeta.data?.link;
+                if (!url) continue;
 
-                if (Array.isArray(posts) && posts.length > 0) {
-                    const soloGifs = posts.filter(p =>
-                        p.file_url && (
-                            p.file_url.includes('.gif') ||
-                            p.file_url.includes('.mp4') ||
-                            p.file_url.includes('.webm')
-                        )
-                    );
-                    if (soloGifs.length > 0) {
-                        const post = soloGifs[Math.floor(Math.random() * soloGifs.length)];
-                        gifUrl = post.file_url;
+                // 2. Descargar el archivo binario
+                const resMedia = await axios.get(url, {
+                    responseType: 'arraybuffer',
+                    timeout: 15000,
+                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                });
+                const rawBuffer = Buffer.from(resMedia.data);
+                const isMp4 = url.toLowerCase().endsWith('.mp4');
+
+                let finalVideoBuffer = rawBuffer;
+
+                // 3. Conversión ultrarrápida a MP4 compatible con WhatsApp (H.264, yuv420p)
+                if (!isMp4 && ffmpeg.isFfmpegAvailable()) {
+                    const tmpId = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+                    const tmpIn = path.join(process.cwd(), `tmp_gif_in_${tmpId}.gif`);
+                    const tmpOut = path.join(process.cwd(), `tmp_gif_out_${tmpId}.mp4`);
+
+                    try {
+                        fs.writeFileSync(tmpIn, rawBuffer);
+                        await ffmpeg.convertGifToMp4(tmpIn, tmpOut);
+                        if (fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0) {
+                            finalVideoBuffer = fs.readFileSync(tmpOut);
+                        }
+                    } catch (convErr) {
+                        console.error('[GIFNSFW] Conversión falló, usando original:', convErr.message);
+                    } finally {
+                        try { if (fs.existsSync(tmpIn)) fs.unlinkSync(tmpIn); } catch (_) {}
+                        try { if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut); } catch (_) {}
                     }
                 }
-            } catch (_) {}
-        }
 
-        // 3. Fallback alternativo rápido a endpoints de waifu.pics NSFW GIF
-        if (!gifUrl) {
-            const fallbackEndpoints = [
-                'https://api.waifu.pics/nsfw/blowjob',
-                'https://api.waifu.pics/nsfw/anal',
-                'https://api.waifu.pics/nsfw/waifu'
-            ];
-            for (const ep of fallbackEndpoints) {
-                try {
-                    const res = await axios.get(ep, { timeout: 4000 });
-                    if (res.data?.url) {
-                        gifUrl = res.data.url;
-                        break;
-                    }
-                } catch (_) {}
+                // 4. Enviar a WhatsApp como GIF animado nativo
+                await sock.sendMessage(jid, {
+                    video: finalVideoBuffer,
+                    caption: '🎬 _Unknown Codexツ</> +18 GIF_',
+                    gifPlayback: true,
+                    mimetype: 'video/mp4'
+                }, { quoted: m });
+
+                enviado = true;
+                break;
+            } catch (e) {
+                console.error(`[GIFNSFW] Intento con ${ep} falló:`, e.message);
+                continue;
             }
         }
 
-        if (!gifUrl) {
-            return await sock.sendMessage(jid, {
-                text: '❌ Error al obtener GIF +18.\nIntenta de nuevo en unos segundos.\n\n_Unknown Codexツ</>_'
+        if (!enviado) {
+            await sock.sendMessage(jid, {
+                text: '❌ Error al obtener GIF.\nIntenta de nuevo en unos segundos.\n\n_Unknown Codexツ</>_'
             }, { quoted: m });
         }
-
-        await sock.sendMessage(jid, {
-            video: { url: gifUrl },
-            caption: '🔞 _Unknown Codexツ</> +18 GIF_',
-            gifPlayback: true
-        }, { quoted: m });
     }
 };

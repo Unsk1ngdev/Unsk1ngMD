@@ -11,6 +11,9 @@ const config = require('../config');
 const chalk = require('chalk');
 const { checkGroupPermissions, cleanJid } = require('../lib/groupPermissions');
 const bannedManager = require('../lib/banned');
+const silenciadosManager = require('../lib/silenciados');
+const rankManager = require('../lib/rank');
+const logsManager = require('../lib/logs');
 
 // Cache simple de metadatos de grupos con TTL de 30 segundos
 const groupCache = new Map();
@@ -46,6 +49,11 @@ const handleMessage = async (sock, rawMsg) => {
             return;
         }
 
+        // Si el usuario está silenciado por el owner, ignorar todos sus mensajes
+        if (silenciadosManager.isSilenciado(m.sender)) {
+            return;
+        }
+
         // Modo Ghost: simular desconexión e ignorar todo excepto .ghost stop
         if (global.ghostMode) {
             const prefix = database.getPrefix();
@@ -72,6 +80,8 @@ const handleMessage = async (sock, rawMsg) => {
         let isAdmin = false;
 
         if (m.isGroup) {
+            rankManager.increment(m.chat, m.sender);
+
             const cachedMeta = await getCachedGroupMetadata(sock, m.chat);
             const perms = await checkGroupPermissions(sock, m.chat, m.sender, cachedMeta);
             groupMetadata = perms.groupMetadata;
@@ -107,6 +117,37 @@ const handleMessage = async (sock, rawMsg) => {
         // --- COMPROBACIÓN DE JUEGOS ACTIVOS Y COMANDOS ---
         const prefix = database.getPrefix();
         if (!m.body.startsWith(prefix)) {
+            // 0. Modo Roleplay activo para el usuario
+            if (global.roleplayMode && global.roleplayMode[m.sender]) {
+                const personaje = global.roleplayMode[m.sender];
+                const respuestas = {
+                    naruto: ['¡Dattebayo! 🍥', '¡Nunca me rindo, ese es mi camino ninja!', '¡Seré Hokage algún día! 🍥'],
+                    goku: ['¡Kamehameha! 💥', '¡Me encanta pelear contra alguien fuerte!', '¡Esto me pone emocionado! 🔥'],
+                    vegeta: ['Soy el Príncipe de los Saiyajins.', '¡Eres demasiado débil para enfrentarme!', '¡FINAL FLASH! 💥'],
+                    sasuke: ['...', '¡Solo vivo para la venganza!', 'Eres demasiado débil.'],
+                    luffy: ['¡Seré el Rey de los Piratas! ⚓', '¡Tengo hambre! 🍖', '¡Gomu Gomu no...! 🤜'],
+                    zoro: ['¿Dónde estoy? Me perdí de nuevo... 🗡️', 'Un corte más.', 'Santoryu... Ogi! ⚔️'],
+                    gojo: ['Lamentablemente eres demasiado débil para mí.', '¡Infinity! ∞', 'Soy el más fuerte. 😎'],
+                    levi: ['Eres un idiota de primera clase.', 'La elección que no te arrepentirás. ⚔️', '...Tch.'],
+                    saitama: ['Un golpe. 👊', '¿Por qué no siento nada?', 'Está bien. 😐'],
+                    light: ['¡Soy KIRA! ✍️', 'Este mundo necesita ser purificado.', 'Según lo planeado. 😏'],
+                    tanjiro: ['¡Respiración del agua! 💧', '¡Protegeré a todos!', '¡Nezuko! 🌸'],
+                    zenitsu: ['¡Tengo miedo! ⚡', '¡Nezuko-chaaan! 🌸⚡', '¡Por favor sálvenme! 😭'],
+                    eren: ['¡Los destruiré a todos! ⚔️', '¡Tatakae! ¡Tatakae! 🔥', 'La libertad está más allá de las murallas.'],
+                    deku: ['¡Smash! 💥', '¡Tengo que esforzarme aún más!', '¡Seré el héroe número uno! 💚'],
+                    bakugo: ['¡SHINEEE! 💥', '¡Muérete, nerd!', '¡Yo seré el número uno! 🧨']
+                };
+
+                const cleanPersonaje = (personaje || '').toLowerCase();
+                const respuestasList = respuestas[cleanPersonaje] || [`Soy ${personaje} y estoy aquí. ⚔️`];
+                const respuesta = respuestasList[Math.floor(Math.random() * respuestasList.length)];
+
+                await sock.sendMessage(m.chat, {
+                    text: `*[${personaje}]:* ${respuesta}`
+                }, { quoted: m });
+                return;
+            }
+
             // 1. Comprobar si hay una partida de Akinator activa
             if (akinatorManager.hasActiveGame(m.chat)) {
                 const processed = await akinatorManager.checkAnswer(sock, m);
@@ -181,6 +222,14 @@ const handleMessage = async (sock, rawMsg) => {
             chalk.gray(`(+${userNumber})`)
         );
         database.incrementCommandCount();
+
+        // Guardar en logs persistentes (logs.json)
+        logsManager.addLog({
+            usuario: (m.sender || '').replace('@s.whatsapp.net', '').split(':')[0],
+            comando: `${prefix}${commandName}`,
+            grupo: m.isGroup ? (groupMetadata?.subject || 'Grupo') : 'Privado',
+            hora: new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' })
+        });
 
         // Ejecución segura
         try {

@@ -1,189 +1,259 @@
+'use strict';
+
 const fs = require('fs');
 const path = require('path');
-const { categories, commands } = require('../../handlers/commandLoader');
 const database = require('../../lib/database');
 const config = require('../../config');
-
-const CATEGORY_NAMES = {
-    'descargas': '📥 DESCARGAS & MULTIMEDIA',
-    'multimedia': '🎨 STICKERS & EDICIÓN',
-    'grupo': '👥 ADMINISTRACIÓN DE GRUPOS',
-    'juegos': '🎮 JUEGOS Y ENTRETENIMIENTO',
-    'herramientas': '🧠 HERRAMIENTAS, APIS E IA',
-    'subbots': '⚡ SUB-BOTS (MULTI-SESIÓN)',
-    'sistema': '⚙️ CONTROL DE HOST & SISTEMA'
-};
-
-const PREFERRED_ORDER = [
-    'descargas',
-    'multimedia',
-    'grupo',
-    'juegos',
-    'herramientas',
-    'subbots',
-    'sistema'
-];
 
 module.exports = {
     name: 'menu',
     alias: ['help', 'ayuda', 'allmenu', 'menulist'],
     category: 'sistema',
-    desc: 'Muestra el menú interactivo con la lista completa de comandos organizados por categoría',
+    desc: 'Muestra el menú principal con todos los comandos organizados por sección',
     usage: '.menu [categoría opcional]',
+
     execute: async ({ sock, m, args }) => {
         const prefix = database.getPrefix();
         const mode = database.getMode();
         const filter = (args && args[0] ? args[0].toLowerCase().trim() : '');
 
-        // Obtener todas las categorías dinámicamente sin omitir ninguna presente en el sistema
-        const allCategoryKeys = Array.from(new Set([
-            ...PREFERRED_ORDER.filter(cat => categories.has(cat)),
-            ...Array.from(categories.keys())
-        ]));
+        // Secciones ordenadas:
+        // 1. Grupo
+        // 2. Juegos
+        // 3. Descargas
+        // 4. Multimedia & Stickers
+        // 5. Público & Herramientas
+        // 6. Sub-Bots
+        // 7. Owner Only (antepenúltimo)
+        // 8. Premium (penúltimo)
+        // 9. NSFW (último)
+        const secciones = [
+            {
+                key: 'admin',
+                title: '👥 ADMIN GRUPO',
+                cmds: [
+                    ['🏆', 'torneo', 'Crear torneo'],
+                    ['🛡️', 'antilink', 'Bloquear links'],
+                    ['🔞', 'nsfw on/off', 'Activar/desactivar NSFW'],
+                    ['🛡️', 'antispam', 'Filtro antispam'],
+                    ['⚡', 'antispamkick', 'Antispam estricto'],
+                    ['👋', 'bienvenido/a', 'Bienvenida automática'],
+                    ['🔒', 'cerrar', 'Cerrar grupo'],
+                    ['🔓', 'abrir', 'Abrir grupo'],
+                    ['👢', 'kick', 'Expulsar miembro'],
+                    ['👑', 'promote', 'Dar administrador'],
+                    ['🔻', 'demote', 'Quitar administrador'],
+                    ['🔗', 'linkgroup', 'Enlace del grupo'],
+                    ['🔄', 'revoke', 'Restablecer enlace'],
+                    ['📢', 'tagall', 'Mencionar a todos'],
+                    ['👻', 'hidetag', 'Notificación invisible'],
+                    ['🔔', 'notify', 'Notificar miembros'],
+                    ['✉️', 'enviarlink', 'Enviar link por privado']
+                ]
+            },
+            {
+                key: 'juegos',
+                title: '🎮 JUEGOS',
+                cmds: [
+                    ['🧩', 'ahorcado', 'Jugar ahorcado'],
+                    ['⚔️', 'duelo', 'Duelo anime'],
+                    ['🧞', 'akinator', 'Genio Akinator'],
+                    ['❌', 'cancelakinator', 'Cancelar Akinator'],
+                    ['❓', 'trivia', 'Preguntas de trivia'],
+                    ['🤔', 'acertijo', 'Resolver acertijo'],
+                    ['🔫', 'ruleta', 'Ruleta rusa']
+                ]
+            },
+            {
+                key: 'descargas',
+                title: '📥 DESCARGAS',
+                cmds: [
+                    ['🎵', 'ytmp3', 'Audio YouTube'],
+                    ['🎬', 'ytmp4', 'Video YouTube'],
+                    ['📱', 'tiktok', 'Video TikTok sin marca'],
+                    ['📸', 'instagram', 'Reels y posts de IG'],
+                    ['📘', 'facebook', 'Videos de Facebook HD'],
+                    ['🐦', 'twitter', 'Videos de X/Twitter'],
+                    ['📌', 'pinterest', 'Imágenes de Pinterest'],
+                    ['🐙', 'gitclone', 'Repositorio GitHub .zip']
+                ]
+            },
+            {
+                key: 'multimedia',
+                title: '🎨 MULTIMEDIA & STICKERS',
+                cmds: [
+                    ['🖼️', 'sticker', 'Crear sticker WebP'],
+                    ['🎞️', 'gif', 'Video a sticker GIF'],
+                    ['🔄', 'toimg', 'Sticker a imagen'],
+                    ['🎥', 'tovideo', 'Sticker a video'],
+                    ['🎵', 'tomp3', 'Extraer audio a MP3'],
+                    ['🎙️', 'tovn', 'Convertir a nota de voz'],
+                    ['☁️', 'tourl', 'Subir archivo a la nube'],
+                    ['🔲', 'qr', 'Generar código QR'],
+                    ['📷', 'readqr', 'Leer código QR'],
+                    ['🖥️', 'screenshot', 'Captura de web'],
+                    ['🌫️', 'blur', 'Desenfocar imagen'],
+                    ['😂', 'meme', 'Meme aleatorio'],
+                    ['✍️', 'cmeme', 'Crear meme personalizado']
+                ]
+            },
+            {
+                key: 'publico',
+                title: '🌐 PÚBLICO & HERRAMIENTAS',
+                cmds: [
+                    ['🔍', 'info', 'Info de número'],
+                    ['🪙', 'monedaflip', 'Cara o cruz'],
+                    ['📊', 'rank', 'Top activos del grupo'],
+                    ['🎲', 'random', 'Número aleatorio'],
+                    ['🔗', 'acortar', 'Acortar links'],
+                    ['📄', 'pdf2txt', 'PDF a texto'],
+                    ['🤖', 'ia', 'Chat Inteligencia Artificial'],
+                    ['📚', 'wiki', 'Consultar enciclopedia'],
+                    ['🎨', 'genimg', 'Generar imagen con IA'],
+                    ['🌤️', 'clima', 'Clima en tiempo real'],
+                    ['💰', 'crypto', 'Precios criptomonedas'],
+                    ['🔢', 'calc', 'Calculadora matemática'],
+                    ['🌐', 'trad', 'Traducir texto'],
+                    ['🎶', 'lyrics', 'Letras de canciones'],
+                    ['📡', 'ping', 'Latencia del bot'],
+                    ['👤', 'owner', 'Contacto del creador'],
+                    ['📋', 'comandos', 'Guía detallada de comandos']
+                ]
+            },
+            {
+                key: 'subbots',
+                title: '⚡ SUB-BOTS',
+                cmds: [
+                    ['🤖', 'subbot', 'Vincular sub-bot'],
+                    ['📋', 'subbot list', 'Lista de sub-bots'],
+                    ['🛑', 'subbot stop', 'Desconectar sub-bot']
+                ]
+            },
+            {
+                key: 'owner',
+                title: '🔐 OWNER ONLY',
+                cmds: [
+                    ['💣', 'nuke', 'Limpia el grupo'],
+                    ['📢', 'reportar', 'Reportar número'],
+                    ['⚡', 'reactch', 'Mensaje al canal'],
+                    ['👑', 'prem', 'Dar/quitar premium'],
+                    ['🚫', 'banear', 'Banear del bot'],
+                    ['✅', 'desbanear', 'Desbanear del bot'],
+                    ['🔇', 'silenciar', 'Silenciar usuario'],
+                    ['📋', 'logs', 'Ver últimos comandos'],
+                    ['📣', 'anuncio', 'Mensaje a todos los grupos'],
+                    ['📊', 'stats', 'Estadísticas del bot'],
+                    ['🔄', 'reiniciar', 'Reiniciar bot'],
+                    ['💾', 'backup', 'Copia de seguridad'],
+                    ['📢', 'broadcast', 'Comunicado a grupos'],
+                    ['⚙️', 'mode', 'Modo público/privado'],
+                    ['🔤', 'prefix', 'Cambiar prefijo'],
+                    ['📈', 'status', 'Estado del sistema']
+                ]
+            },
+            {
+                key: 'premium',
+                title: '⭐ PREMIUM',
+                cmds: [
+                    ['🕵️', 'spy', 'Grupos de un número'],
+                    ['👻', 'ghost', 'Modo invisible'],
+                    ['🪞', 'clonar', 'Copiar perfil'],
+                    ['👁️', 'stalkear', 'Monitorear conexión'],
+                    ['💬', 'sms', 'Mensaje anónimo'],
+                    ['📸', 'perfil', 'Foto de perfil HD'],
+                    ['🎭', 'fake', 'Perfil falso'],
+                    ['📱', 'dispositivo', 'Ver dispositivo'],
+                    ['📍', 'ubicacion', 'Pin de cualquier ciudad'],
+                    ['🎭', 'roleplay', 'Roleplay de anime']
+                ]
+            },
+            {
+                key: 'nsfw',
+                title: '🔞 NSFW (Admin)',
+                cmds: [
+                    ['🖼️', 'waifu', 'Imagen +18'],
+                    ['🎬', 'gifnsfw', 'GIF +18']
+                ]
+            }
+        ];
 
-        // Si el usuario especificó una categoría (ej: .menu juegos o .menu descargas)
+        // Función formateadora de una sección con el estilo solicitado
+        const formatSection = (sec) => {
+            const lines = sec.cmds.map(([ico, cmd, desc]) => {
+                const fullCmd = `${prefix}${cmd}`;
+                const pad = ' '.repeat(Math.max(1, 18 - fullCmd.length));
+                return `${ico} *${fullCmd}*${pad}— ${desc}`;
+            }).join('\n');
+
+            return `━━━━━━━━━━━━━━━━━━━\n      ${sec.title}\n━━━━━━━━━━━━━━━━━━━\n${lines}`;
+        };
+
+        const footer = `\n━━━━━━━━━━━━━━━━━━━\n   _Unknown Codexツ</>_`;
+
+        // Si se especificó una categoría para filtrar (ej: .menu juegos, .menu owner, etc.)
         if (filter) {
-            const matchedCategory = allCategoryKeys.find(cat =>
-                cat.toLowerCase() === filter ||
-                (CATEGORY_NAMES[cat] && CATEGORY_NAMES[cat].toLowerCase().includes(filter))
+            const matched = secciones.find(s =>
+                s.key.includes(filter) ||
+                filter.includes(s.key) ||
+                s.title.toLowerCase().includes(filter)
             );
 
-            if (matchedCategory) {
-                const cmdList = categories.get(matchedCategory) || [];
-                const headerTitle = CATEGORY_NAMES[matchedCategory] || matchedCategory.toUpperCase();
-                let catText = `╭━━━〔 *${headerTitle}* 〕━━━⬣\n` +
-                              `┃ 📦 *Comandos disponibles:* ${cmdList.length}\n` +
-                              `╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n`;
+            if (matched) {
+                const filteredText =
+                    `╭━━━〔 *${config.botName.toUpperCase()}* 〕━━━⬣\n` +
+                    `┃ 📁 *Categoría:* ${matched.title}\n` +
+                    `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
+                    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
+                    formatSection(matched) +
+                    footer;
 
-                const sortedCmds = [...cmdList].sort((a, b) => a.name.localeCompare(b.name));
-                for (const cmd of sortedCmds) {
-                    catText += `│ 🔹 *${prefix}${cmd.name}* : _${cmd.desc || 'Sin descripción'}_\n`;
-                }
-
-                catText += `╰──────────────────⬣\n\n` +
-                           `💡 *Tip:* Usa *${prefix}menu* para ver todas las categorías.`;
-                return await m.reply(catText);
+                return await sock.sendMessage(m.chat, { text: filteredText }, { quoted: m });
             }
         }
 
-        // Construir el texto con el catálogo completo de comandos
-        let menuText = `╭━━━〔 *${config.botName.toUpperCase()}* 〕━━━⬣\n` +
-            `┃ 👑 *Creador:* ${config.ownerName}\n` +
-            `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
-            `┃ 🔒 *Modo:* ${mode.toUpperCase()}\n` +
-            `┃ 📦 *Total Comandos:* ${commands.size}\n` +
-            `╰━━━━━━━━━━━━━━━━━━⬣\n\n`;
+        // Conteo total de comandos disponibles
+        let totalCmds = 0;
+        secciones.forEach(s => totalCmds += s.cmds.length);
 
-        for (const catKey of allCategoryKeys) {
-            const cmdList = categories.get(catKey);
-            if (cmdList && cmdList.length > 0) {
-                const headerTitle = CATEGORY_NAMES[catKey] || `📁 ${catKey.toUpperCase()}`;
-                menuText += `╭───〔 *${headerTitle}* (${cmdList.length}) 〕\n`;
-
-                const sortedCmds = [...cmdList].sort((a, b) => a.name.localeCompare(b.name));
-                for (const cmd of sortedCmds) {
-                    menuText += `│ 🔹 *${prefix}${cmd.name}* : _${cmd.desc || 'Sin descripción'}_\n`;
-                }
-
-                menuText += `╰──────────────────⬣\n\n`;
-            }
-        }
-
-        menuText += `💡 *Consejo:* Escribe *${prefix}comandos* para ver la guía con ejemplos, o *${prefix}menu [categoría]* para filtrar.`;
-
-        // ── Menú final completo ─────────────────────────────────────
-        menuText += `\n\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `      🔐 *OWNER ONLY*\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `💣 *${prefix}nuke*              — Limpia el grupo\n` +
-            `📢 *${prefix}reportar*          — Reportar número\n` +
-            `⚡ *${prefix}reactch*           — Mensaje al canal\n` +
-            `👑 *${prefix}prem*              — Dar/quitar premium\n` +
-            `🚫 *${prefix}banear*            — Banear del bot\n` +
-            `🔓 *${prefix}desbanear*         — Quitar ban\n` +
-            `📊 *${prefix}stats*             — Estadísticas\n` +
-            `🔄 *${prefix}reiniciar*         — Reiniciar bot\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `      ⭐ *PREMIUM*\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `🕵️ *${prefix}spy*               — Grupos de un número\n` +
-            `👻 *${prefix}ghost*             — Modo invisible\n` +
-            `🪞 *${prefix}clonar*            — Copiar perfil\n` +
-            `👁️ *${prefix}stalkear*          — Monitorear conexión\n` +
-            `💬 *${prefix}sms*               — Mensaje anónimo\n` +
-            `📸 *${prefix}perfil*            — Foto de perfil HD\n` +
-            `🎭 *${prefix}fake*              — Perfil falso\n` +
-            `📱 *${prefix}dispositivo*       — Ver dispositivo\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `      🌐 *PÚBLICO*\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `🔍 *${prefix}info*              — Info de número\n` +
-            `🎵 *${prefix}ytmp3*             — Audio YouTube\n` +
-            `🎬 *${prefix}ytmp4*             — Video YouTube\n` +
-            `🎲 *${prefix}random*            — Número aleatorio\n` +
-            `🔗 *${prefix}acortar*           — Acortar links\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `      🔞 *NSFW (Admin)*\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `🔞 *${prefix}nsfw on/off*  — Activar/desactivar\n` +
-            `🖼️ *${prefix}waifu*        — Imagen +18 aleatoria\n` +
-            `🎬 *${prefix}gifnsfw*      — GIF +18 aleatorio\n` +
-            `━━━━━━━━━━━━━━━━━━━\n` +
-            `   _Unknown Codexツ</>_`;
-
-        // Rutas de archivos multimedia para el menú
-        const gifPath = path.join(config.assetsDir, 'menu.gif');
-        const mp4Path = path.join(config.assetsDir, 'menu.mp4');
-        const imgPath = path.join(config.assetsDir, 'menu.jpg');
-
-        const headerCard =
+        const header =
             `╭━━━〔 *${config.botName.toUpperCase()}* 〕━━━⬣\n` +
             `┃ 👑 *Creador:* ${config.ownerName}\n` +
             `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
             `┃ 🔒 *Modo:* ${mode.toUpperCase()}\n` +
-            `┃ 📦 *Total Comandos:* ${commands.size}\n` +
-            `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-            `📜 *Desplegando el catálogo completo (${commands.size} comandos disponibles):*`;
+            `┃ 📦 *Total Comandos:* ${totalCmds}\n` +
+            `╰━━━━━━━━━━━━━━━━━━⬣\n\n`;
+
+        const body = secciones.map(formatSection).join('\n');
+        const menuCompleto = `${header}${body}${footer}`;
+
+        // Rutas multimedia opcionales
+        const gifPath = path.join(config.assetsDir, 'menu.gif');
+        const mp4Path = path.join(config.assetsDir, 'menu.mp4');
+        const imgPath = path.join(config.assetsDir, 'menu.jpg');
 
         try {
-            // WhatsApp impone un límite estricto de 1024 caracteres en los captions de multimedia.
-            // Para garantizar que NUNCA se corten los comandos, enviamos la imagen/video con una
-            // ficha estilizada y a continuación el menú íntegro en texto sin truncamientos.
-            let mediaSent = false;
-
             if (fs.existsSync(mp4Path)) {
-                const mp4Buffer = fs.readFileSync(mp4Path);
                 await sock.sendMessage(m.chat, {
-                    video: mp4Buffer,
+                    video: fs.readFileSync(mp4Path),
                     gifPlayback: true,
-                    caption: headerCard
+                    caption: menuCompleto
                 }, { quoted: m });
-                mediaSent = true;
             } else if (fs.existsSync(gifPath)) {
-                const gifBuffer = fs.readFileSync(gifPath);
                 await sock.sendMessage(m.chat, {
-                    video: gifBuffer,
+                    video: fs.readFileSync(gifPath),
                     gifPlayback: true,
-                    caption: headerCard
+                    caption: menuCompleto
                 }, { quoted: m });
-                mediaSent = true;
             } else if (fs.existsSync(imgPath)) {
-                const imgBuffer = fs.readFileSync(imgPath);
                 await sock.sendMessage(m.chat, {
-                    image: imgBuffer,
-                    caption: headerCard
+                    image: fs.readFileSync(imgPath),
+                    caption: menuCompleto
                 }, { quoted: m });
-                mediaSent = true;
+            } else {
+                await sock.sendMessage(m.chat, { text: menuCompleto }, { quoted: m });
             }
-
-            // Enviar catálogo completo en formato texto (WhatsApp admite hasta 65.536 caracteres en texto)
-            await sock.sendMessage(m.chat, {
-                text: menuText
-            }, mediaSent ? {} : { quoted: m });
-        } catch (err) {
-            // Fallback seguro en solo texto
-            await m.reply(menuText);
+        } catch (_) {
+            await sock.sendMessage(m.chat, { text: menuCompleto }, { quoted: m });
         }
     }
 };

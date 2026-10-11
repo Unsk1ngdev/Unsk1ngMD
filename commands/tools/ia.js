@@ -1,7 +1,7 @@
 const axios = require('axios');
 const logger = require('../../lib/logger');
 
-const SYSTEM_PROMPT = "Eres Unsk1ngMD, una IA avanzada, analítica, directa y cordial creada por Castrodev. Responde en español de forma concisa, clara y estructurada a cualquier consulta sobre programación, dudas cotidianas, redacción o ciencia.";
+const SYSTEM_PROMPT = "Eres Unsk1ngMD, una IA avanzada, analítica, directa y cordial creada por Unknown Codexツ</>. Responde en español de forma concisa, clara y estructurada a cualquier consulta sobre programación, dudas cotidianas, redacción o ciencia.";
 
 module.exports = {
     name: 'ia',

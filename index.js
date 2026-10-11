@@ -65,7 +65,7 @@ const renderBanner = (socketStatus = 'Iniciando conexión...') => {
     };
 
     console.log(border('┌', '┐'));
-    console.log(infoLine('Creador', 'Castrodev', chalk.hex('#00ff66').bold));
+    console.log(infoLine('Creador', 'Unknown Codexツ</>', chalk.hex('#00ff66').bold));
     console.log(infoLine('Contacto', '+584160666286', chalk.hex('#38bdf8').bold));
     console.log(infoLine('Versión', 'Dev', chalk.hex('#facc15').bold));
     console.log(infoLine('Estado del socket', socketStatus, chalk.hex('#e879f9').bold));

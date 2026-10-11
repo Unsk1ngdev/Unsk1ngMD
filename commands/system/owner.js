@@ -2,13 +2,13 @@ const config = require('../../config');
 
 module.exports = {
     name: 'owner',
-    alias: ['creador', 'dueño', 'dev', 'castrodev'],
+    alias: ['creador', 'dueño', 'dev', 'codex'],
     category: 'sistema',
-    desc: 'Muestra la tarjeta de contacto y datos del creador oficial (Castrodev)',
+    desc: 'Muestra la tarjeta de contacto y datos del creador oficial (Unknown Codexツ</>)',
     usage: '.owner',
     execute: async ({ sock, m }) => {
         const cleanNumber = config.ownerNumber.replace(/[^0-9]/g, '');
-        const displayName = config.ownerName || 'Castrodev';
+        const displayName = config.ownerName || 'Unknown Codexツ</>';
 
         // Estructura vCard oficial para WhatsApp
         const vcard = 'BEGIN:VCARD\n'
