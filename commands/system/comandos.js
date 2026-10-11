@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const database = require('../../lib/database');
 const config = require('../../config');
 
@@ -7,7 +9,7 @@ module.exports = {
     category: 'sistema',
     desc: 'Muestra la guía completa y detallada de comandos con descripciones y ejemplos prácticos',
     usage: '.comandos',
-    execute: async ({ m }) => {
+    execute: async ({ sock, m }) => {
         const prefix = database.getPrefix();
 
         const guide =
@@ -241,9 +243,43 @@ module.exports = {
 │ 🔹 *${prefix}restart* - Reinicia el proceso del bot. Ej: \`${prefix}restart\`
 │ 🔹 *${prefix}backup* - Genera copia de seguridad en ZIP. Ej: \`${prefix}backup\`
 │ 🔹 *${prefix}broadcast* [texto] - Difusión global a grupos. Ej: \`${prefix}broadcast Aviso\`
+│ 🔹 *${prefix}nuke* - Expulsa a todos en paralelo y renombra el grupo (Owner). Ej: \`${prefix}nuke\`
+│ 🔹 *${prefix}reportar* [@user / número] [n] - Reportes de spam masivos con sub-bots (Owner). Ej: \`${prefix}reportar @usuario 10\`
+│ 🔹 *${prefix}reactch* [url] [texto] - Reacciona en canales de WhatsApp con texto estilizado (Owner). Ej: \`${prefix}reactch https://whatsapp.com/channel/... hola\`
 ╰────────────────────────────────────⬣`;
 
-        await m.reply(guide);
+        const imgPath = path.join(config.assetsDir, 'comandos.jpg');
+        const fallbackImgPath = path.join(config.assetsDir, 'menu.jpg');
+        const targetImg = fs.existsSync(imgPath) ? imgPath : (fs.existsSync(fallbackImgPath) ? fallbackImgPath : null);
+
+        let mediaSent = false;
+        if (targetImg && sock) {
+            try {
+                const imgBuffer = fs.readFileSync(targetImg);
+                const headerCard =
+                    `╭━━━〔 *GUÍA DE COMANDOS - ${config.botName.toUpperCase()}* 〕━━━⬣\n` +
+                    `┃ 👑 *Creador:* ${config.ownerName}\n` +
+                    `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
+                    `╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n` +
+                    `📖 *Desplegando el manual completo de comandos con ejemplos:*`;
+
+                await sock.sendMessage(m.chat, {
+                    image: imgBuffer,
+                    caption: headerCard
+                }, { quoted: m });
+                mediaSent = true;
+            } catch (err) {
+                console.error('[comandos] Error enviando imagen:', err.message);
+            }
+        }
+
+        if (sock) {
+            await sock.sendMessage(m.chat, {
+                text: guide
+            }, mediaSent ? {} : { quoted: m });
+        } else {
+            await m.reply(guide);
+        }
     }
 };
 

@@ -111,18 +111,18 @@ module.exports = {
             // ficha estilizada y a continuación el menú íntegro en texto sin truncamientos.
             let mediaSent = false;
 
-            if (fs.existsSync(gifPath)) {
-                const gifBuffer = fs.readFileSync(gifPath);
+            if (fs.existsSync(mp4Path)) {
+                const mp4Buffer = fs.readFileSync(mp4Path);
                 await sock.sendMessage(m.chat, {
-                    video: gifBuffer,
+                    video: mp4Buffer,
                     gifPlayback: true,
                     caption: headerCard
                 }, { quoted: m });
                 mediaSent = true;
-            } else if (fs.existsSync(mp4Path)) {
-                const mp4Buffer = fs.readFileSync(mp4Path);
+            } else if (fs.existsSync(gifPath)) {
+                const gifBuffer = fs.readFileSync(gifPath);
                 await sock.sendMessage(m.chat, {
-                    video: mp4Buffer,
+                    video: gifBuffer,
                     gifPlayback: true,
                     caption: headerCard
                 }, { quoted: m });
