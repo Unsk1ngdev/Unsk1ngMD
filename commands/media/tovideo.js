@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
-const ffmpegStatic = require('ffmpeg-static');
+const { getFfmpegPath } = require('../../lib/ffmpeg');
 const logger = require('../../lib/logger');
 
 const tmpDir = path.join(process.cwd(), 'tmp');
@@ -23,8 +23,14 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // 2. Usar ffmpeg-static directamente
-        const ffmpegBin = (ffmpegStatic && fs.existsSync(ffmpegStatic)) ? ffmpegStatic : 'ffmpeg';
+        // 2. Resolver binario universal de FFmpeg
+        const ffmpegBin = getFfmpegPath();
+        if (!ffmpegBin) {
+            await m.react('❌');
+            return await sock.sendMessage(jid, {
+                text: '⚠️ El conversor multimedia (FFmpeg) no está disponible en este servidor. En Termux ejecuta: *pkg install ffmpeg*'
+            }, { quoted: m });
+        }
 
         await m.react('⏳');
 
