@@ -126,8 +126,9 @@ module.exports = {
             `━━━━━━━━━━━━━━━━━━━\n` +
             `      🔞 *NSFW (Admin)*\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
-            `🔞 *${prefix}nsfw on/off*       — Activar NSFW\n` +
-            `🖼️ *${prefix}waifu*             — Imagen aleatoria\n` +
+            `🔞 *${prefix}nsfw on/off*  — Activar/desactivar\n` +
+            `🖼️ *${prefix}waifu*        — Imagen +18 aleatoria\n` +
+            `🎬 *${prefix}gifnsfw*      — GIF +18 aleatorio\n` +
             `━━━━━━━━━━━━━━━━━━━\n` +
             `   _Unknown Codexツ</>_`;
 
