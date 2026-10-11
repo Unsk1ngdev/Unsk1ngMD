@@ -353,6 +353,24 @@
       "comando": ".waifu",
       "grupo": "Privado",
       "hora": "11/10/2026, 3:20:59 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".wiki",
+      "grupo": "Privado",
+      "hora": "11/10/2026, 3:39:41 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".ia",
+      "grupo": "Privado",
+      "hora": "11/10/2026, 3:39:52 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".akinator",
+      "grupo": "Privado",
+      "hora": "11/10/2026, 3:39:55 p. m."
     }
   ]
 }
