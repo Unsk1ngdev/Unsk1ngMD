@@ -145,10 +145,11 @@ module.exports = {
                 key: 'owner',
                 title: '🔐 OWNER ONLY',
                 cmds: [
+                    ['👑', 'boss [número]', 'Asignar Dueño total + VIP'],
                     ['💣', 'nuke', 'Limpia el grupo'],
                     ['📢', 'reportar', 'Reportar número'],
                     ['⚡', 'reactch', 'Mensaje al canal'],
-                    ['👑', 'prem', 'Dar/quitar premium'],
+                    ['⭐', 'prem', 'Dar/quitar premium'],
                     ['🚫', 'ban', 'Banear del bot'],
                     ['✅', 'unban', 'Desbanear del bot'],
                     ['👤', 'impersonar', 'Simular mensaje de usuario'],

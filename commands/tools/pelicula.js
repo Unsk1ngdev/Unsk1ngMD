@@ -2,6 +2,8 @@
 
 const axios = require('axios');
 
+const peliculaMemoryCache = new Map();
+
 module.exports = {
     name: 'pelicula',
     alias: ['movie', 'peli', 'film', 'cine'],
@@ -19,9 +21,17 @@ module.exports = {
             }, { quoted: m });
         }
 
-        await sock.sendMessage(jid, {
-            text: `🎬 Buscando *${titulo}*...\n🔄 Procesando...`
-        }, { quoted: m });
+        const cacheKey = titulo.toLowerCase().trim();
+        const cached = peliculaMemoryCache.get(cacheKey);
+        if (cached && (Date.now() - cached.time < 60000)) {
+            if (cached.imagen) {
+                return await sock.sendMessage(jid, {
+                    image: { url: cached.imagen },
+                    caption: cached.info
+                }, { quoted: m });
+            }
+            return await sock.sendMessage(jid, { text: cached.info }, { quoted: m });
+        }
 
         try {
             const TMDB_KEY = process.env.TMDB_KEY?.trim() || '8265bd1679663a7ea12ac168da84d2e8';
@@ -30,7 +40,7 @@ module.exports = {
             // 1. Buscar en español primero
             const resSearch = await axios.get(
                 `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(titulo)}&language=es-ES&page=1`,
-                { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, timeout: 8000 }
+                { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, timeout: 4500 }
             );
 
             const data = resSearch.data;
@@ -103,6 +113,8 @@ module.exports = {
                 : detalle.backdrop_path
                     ? `${BASE_IMG}${detalle.backdrop_path}`
                     : null;
+
+            peliculaMemoryCache.set(cacheKey, { imagen, info, time: Date.now() });
 
             if (imagen) {
                 try {

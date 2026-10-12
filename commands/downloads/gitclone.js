@@ -19,42 +19,53 @@ module.exports = {
         const user = match[1];
         let repo = match[2].replace(/\.git$/i, '');
 
-        await m.react('⏳');
+        m.react('⏳').catch(() => {});
 
         try {
             // Verificar datos del repositorio
             const repoInfoUrl = `https://api.github.com/repos/${user}/${repo}`;
             const infoRes = await axios.get(repoInfoUrl, {
-                timeout: 15000,
+                timeout: 4500,
                 headers: { 'User-Agent': 'WhatsApp-Bot-Downloader' }
             });
 
             const repoData = infoRes.data;
             const defaultBranch = repoData.default_branch || 'main';
             const zipUrl = `https://api.github.com/repos/${user}/${repo}/zipball/${defaultBranch}`;
-
-            const zipRes = await axios.get(zipUrl, {
-                responseType: 'arraybuffer',
-                timeout: 60000,
-                maxContentLength: 50 * 1024 * 1024, // Máximo 50MB
-                headers: { 'User-Agent': 'WhatsApp-Bot-Downloader' }
-            });
+            const fileName = `${repo}-${defaultBranch}.zip`;
 
             const caption = `📦 *Repositorio:* ${user}/${repo}\n` +
                 `⭐ *Estrellas:* ${repoData.stargazers_count}\n` +
                 `🌿 *Rama:* ${defaultBranch}\n` +
                 (repoData.description ? `📝 *Descripción:* ${repoData.description}\n` : '');
 
-            await sock.sendMessage(m.chat, {
-                document: Buffer.from(zipRes.data),
-                mimetype: 'application/zip',
-                fileName: `${repo}-${defaultBranch}.zip`,
-                caption: caption
-            }, { quoted: m });
+            // Enviar documento directamente por URL sin saturar la RAM con buffers de 50MB
+            try {
+                await sock.sendMessage(m.chat, {
+                    document: { url: zipUrl },
+                    mimetype: 'application/zip',
+                    fileName: fileName,
+                    caption: caption
+                }, { quoted: m });
+            } catch (_) {
+                // Fallback con buffer sólo si el streaming directo falla
+                const zipRes = await axios.get(zipUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 30000,
+                    maxContentLength: 45 * 1024 * 1024,
+                    headers: { 'User-Agent': 'WhatsApp-Bot-Downloader' }
+                });
+                await sock.sendMessage(m.chat, {
+                    document: Buffer.from(zipRes.data),
+                    mimetype: 'application/zip',
+                    fileName: fileName,
+                    caption: caption
+                }, { quoted: m });
+            }
 
-            await m.react('✅');
+            m.react('✅').catch(() => {});
         } catch (err) {
-            await m.react('❌');
+            m.react('❌').catch(() => {});
             if (err.response && err.response.status === 404) {
                 return await m.reply(`❌ El repositorio "${user}/${repo}" no existe o es privado.`);
             }

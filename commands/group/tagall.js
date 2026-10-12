@@ -12,14 +12,9 @@ module.exports = {
         }
 
         const reason = text ? `\n📌 *Motivo:* ${text}\n` : '';
-        let messageText = `📢 *ATENCIÓN GRUPO: ${groupMetadata?.subject || ''}*${reason}\n👥 *Total:* ${participants.length} miembros\n\n`;
-
-        const mentions = [];
-        for (const p of participants) {
-            const user = p.id;
-            mentions.push(user);
-            messageText += `🔹 @${user.split('@')[0]}\n`;
-        }
+        const mentions = participants.map(p => p.id);
+        const membersList = mentions.map(u => `🔹 @${u.split('@')[0]}`).join('\n');
+        const messageText = `📢 *ATENCIÓN GRUPO: ${groupMetadata?.subject || ''}*${reason}\n👥 *Total:* ${participants.length} miembros\n\n${membersList}`;
 
         await sock.sendMessage(m.chat, {
             text: messageText,

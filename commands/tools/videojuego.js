@@ -2,6 +2,8 @@
 
 const axios = require('axios');
 
+const videojuegoMemoryCache = new Map();
+
 module.exports = {
     name: 'videojuego',
     alias: ['juego', 'game', 'videogame', 'gamesearch'],
@@ -19,9 +21,17 @@ module.exports = {
             }, { quoted: m });
         }
 
-        await sock.sendMessage(jid, {
-            text: `🎮 Buscando *${nombre}*...\n🔄 Procesando...`
-        }, { quoted: m });
+        const cacheKey = nombre.toLowerCase().trim();
+        const cached = videojuegoMemoryCache.get(cacheKey);
+        if (cached && (Date.now() - cached.time < 60000)) {
+            if (cached.imagen && typeof cached.imagen === 'string' && cached.imagen.startsWith('http')) {
+                return await sock.sendMessage(jid, {
+                    image: { url: cached.imagen },
+                    caption: cached.info
+                }, { quoted: m });
+            }
+            return await sock.sendMessage(jid, { text: cached.info }, { quoted: m });
+        }
 
         try {
             const RAWG_KEY = process.env.RAWG_KEY?.trim() || 'c542e67aec3a4340908f9de9e86038af';
@@ -29,7 +39,7 @@ module.exports = {
             // 1. Buscar el juego
             const resSearch = await axios.get(
                 `https://api.rawg.io/api/games?key=${RAWG_KEY}&search=${encodeURIComponent(nombre)}&page_size=1`,
-                { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, timeout: 8000 }
+                { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }, timeout: 4500 }
             );
 
             const data = resSearch.data;
@@ -106,6 +116,8 @@ module.exports = {
                 `⏱️ *Tiempo de juego:* ${tiempoJuego}\n\n` +
                 `📝 *Descripción:*\n_${descripcion}_\n\n` +
                 `_Unknown Codexツ</>_`;
+
+            videojuegoMemoryCache.set(cacheKey, { imagen, info, time: Date.now() });
 
             if (imagen && typeof imagen === 'string' && imagen.startsWith('http')) {
                 try {

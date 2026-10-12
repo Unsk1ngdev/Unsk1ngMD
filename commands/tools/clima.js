@@ -1,5 +1,9 @@
 const axios = require('axios');
 
+// Caché en memoria para respuestas meteorológicas con TTL de 60 segundos
+const climaMemoryCache = new Map();
+const CLIMA_CACHE_TTL = 60 * 1000;
+
 module.exports = {
     name: 'clima',
     alias: ['weather', 'tiempo'],
@@ -11,12 +15,18 @@ module.exports = {
             return await m.reply('❌ Por favor, escribe la ciudad que deseas consultar.\nEjemplo: *.clima Madrid* o *.clima Buenos Aires*');
         }
 
-        await m.react('⛅');
+        const queryKey = text.trim().toLowerCase();
+        const cached = climaMemoryCache.get(queryKey);
+        if (cached && (Date.now() - cached.timestamp < CLIMA_CACHE_TTL)) {
+            return await m.reply(cached.data);
+        }
+
+        m.react('⛅').catch(() => {});
 
         try {
             const url = `https://wttr.in/${encodeURIComponent(text)}?format=j1&lang=es`;
             const response = await axios.get(url, {
-                timeout: 15000,
+                timeout: 4500,
                 headers: { 'User-Agent': 'curl/7.68.0' }
             });
 
@@ -44,10 +54,15 @@ module.exports = {
                 `💨 *Viento:* ${wind} km/h\n` +
                 `📋 *Condición:* ${desc}`;
 
+            climaMemoryCache.set(queryKey, {
+                timestamp: Date.now(),
+                data: weatherMsg
+            });
+
             await m.reply(weatherMsg);
-            await m.react('✅');
+            m.react('✅').catch(() => {});
         } catch (err) {
-            await m.react('❌');
+            m.react('❌').catch(() => {});
             throw new Error(`No se pudo obtener el clima de "${text}": ${err.message}`);
         }
     }

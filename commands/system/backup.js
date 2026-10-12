@@ -7,17 +7,12 @@ module.exports = {
     name: 'backup',
     alias: ['copiadeseguridad', 'respaldo', 'backupbot'],
     category: 'sistema',
-    desc: 'Comprime la sesión auth_info en .zip y la envía como documento al chat privado del Owner (+584160666286)',
+    desc: 'Comprime la sesión auth_info en .zip y la envía como documento al chat privado del Owner',
     usage: '.backup',
     ownerOnly: true,
-    execute: async ({ sock, m }) => {
-        // Restricción exclusiva al Owner (+584160666286)
-        const primaryOwnerPhone = '584160666286';
-        const primaryOwnerJid = `${primaryOwnerPhone}@s.whatsapp.net`;
-        const senderClean = m.sender.replace(/[^0-9]/g, '');
-
-        if (senderClean !== primaryOwnerPhone && !database.isOwner(m.sender)) {
-            return await m.reply('❌ Este comando está restringido exclusivamente al Owner (+584160666286).');
+    execute: async ({ sock, m, isOwner }) => {
+        if (!isOwner && !database.isOwner(m.sender, sock)) {
+            return await m.reply('❌ Este comando está restringido exclusivamente a los Owners.');
         }
 
         const sessionFolder = config.sessionDir;
@@ -41,7 +36,10 @@ module.exports = {
             });
 
             const zipBuffer = Buffer.concat(memoryChunks);
-            const targetRecipient = primaryOwnerJid;
+            // Destinatario: el chat privado del dueño que ejecutó el comando
+            const targetRecipient = m.isGroup 
+                ? (m.sender.endsWith('@s.whatsapp.net') ? m.sender : config.ownerJid) 
+                : m.chat;
 
             // Enviar directamente como documento Backup-Unsk1ngMD.zip
             await sock.sendMessage(targetRecipient, {

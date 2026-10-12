@@ -16,6 +16,7 @@ const cfonts = require('cfonts');
 const chalk = require('chalk');
 
 const config = require('./config');
+const database = require('./lib/database');
 const logger = require('./lib/logger');
 const { startCleanerInterval } = require('./lib/cleaner');
 const { loadCommands } = require('./handlers/commandLoader');
@@ -189,9 +190,13 @@ const startBot = async () => {
                 const code = await sock.requestPairingCode(pairingNumber);
                 const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
 
-                console.log('\n' + chalk.bgGreen.black.bold(' ═══════════════════════════════════════════ '));
-                console.log(chalk.bgGreen.black.bold(`      CÓDIGO DE EMPAREJAMIENTO: ${formattedCode}      `));
-                console.log(chalk.bgGreen.black.bold(' ═══════════════════════════════════════════ \n'));
+                console.log('\n' + chalk.cyan.bold('╭───────────────────────────────────────────────╮'));
+                console.log(chalk.cyan.bold('│ ') + chalk.white.bold('        🔑 CÓDIGO DE VINCULACIÓN:             ') + chalk.cyan.bold('│'));
+                console.log(chalk.cyan.bold('│                                               │'));
+                console.log(chalk.cyan.bold('│ ') + chalk.yellow.bold(`              👉  ${formattedCode}  👈              `) + chalk.cyan.bold('│'));
+                console.log(chalk.cyan.bold('│                                               │'));
+                console.log(chalk.cyan.bold('╰───────────────────────────────────────────────╯\n'));
+                console.log(chalk.white(' Código listo para copiar: ') + chalk.bgBlack.white.bold(` ${formattedCode} `) + '\n');
                 console.log(chalk.cyan('👉 Abre WhatsApp > Dispositivos vinculados > Vincular con el número de teléfono e ingresa este código.\n'));
             } catch (err) {
                 logger.error('Error al generar código de emparejamiento:', err.message);
@@ -232,6 +237,13 @@ const startBot = async () => {
             renderBanner('Conectado y Operativo ⚡');
             logger.success(`¡Bot conectado exitosamente como ${sock.user.name || sock.user.id}!`);
             logger.info(`Listo para recibir comandos. Prefijo actual: "${config.defaultPrefix}"`);
+
+            // Sincronización automática de LIDs del creador con WhatsApp servers
+            database.syncOwnerLids(sock).then((lids) => {
+                if (lids && lids.length > 0) {
+                    logger.info(`[OWNER] LIDs del creador sincronizados: ${lids.join(', ')}`);
+                }
+            }).catch(() => {});
         }
     });
 
@@ -270,6 +282,28 @@ const startBot = async () => {
         } catch (err) {
             logger.error('Error procesando presence.update:', err);
         }
+    });
+
+    // 10. Evento de compartición de número / LID
+    sock.ev.on('chats.phoneNumberShare', ({ lid, jid }) => {
+        try {
+            if (database.isOwner(jid, sock)) {
+                database.registerOwnerLid(lid);
+            }
+        } catch (_) {}
+    });
+
+    // 11. Auto-aprendizaje de LIDs del owner a través de contactos
+    sock.ev.on('contacts.upsert', (contacts) => {
+        try {
+            if (Array.isArray(contacts)) {
+                for (const c of contacts) {
+                    if (c && c.lid && database.isOwner(c.id || c.jid, sock)) {
+                        database.registerOwnerLid(c.lid);
+                    }
+                }
+            }
+        } catch (_) {}
     });
 
     return sock;

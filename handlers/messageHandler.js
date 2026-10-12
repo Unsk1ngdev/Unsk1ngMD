@@ -74,12 +74,24 @@ const handleMessage = async (sock, rawMsg) => {
             }
         }
 
-        const isOwner = database.isOwner(m.sender) || Boolean(m.fromMe);
+        let isOwner = database.isOwner(m.sender, sock) ||
+                      database.isOwner(m.key?.participant, sock) ||
+                      (!m.isGroup && database.isOwner(m.chat, sock)) ||
+                      Boolean(m.fromMe);
         const currentMode = database.getMode();
 
         // En modo privado, solo el dueño puede interactuar
         if (currentMode === 'private' && !isOwner) {
-            return;
+            const senderLid = (m.sender && m.sender.endsWith('@lid')) ? m.sender : (m.key?.participant && m.key.participant.endsWith('@lid') ? m.key.participant : null);
+            if (senderLid) {
+                try {
+                    await database.syncOwnerLids(sock);
+                    if (database.isOwner(senderLid, sock)) {
+                        isOwner = true;
+                    }
+                } catch (_) {}
+            }
+            if (!isOwner) return;
         }
 
         // Monitoreo de respuestas interactivas de .verdadoreto
@@ -178,6 +190,34 @@ const handleMessage = async (sock, rawMsg) => {
             participants = perms.participants;
             groupAdmins = perms.groupAdmins;
             isBotAdmin = perms.isBotAdmin;
+
+            // Resolución definitiva de Owner con LID en grupos
+            if (!isOwner && groupMetadata && Array.isArray(participants)) {
+                const cleanSender = (m.sender || '').replace(/:.*@/, '@').split('@')[0];
+                const cleanParticipant = (m.key?.participant || '').replace(/:.*@/, '@').split('@')[0];
+
+                const member = perms.senderMember || participants.find(p => {
+                    const pId = (p.id || '').replace(/:.*@/, '@').split('@')[0];
+                    const pJid = (p.jid || '').replace(/:.*@/, '@').split('@')[0];
+                    const pLid = (p.lid || '').replace(/:.*@/, '@').split('@')[0];
+                    return (
+                        (cleanSender && (pId === cleanSender || pJid === cleanSender || pLid === cleanSender)) ||
+                        (cleanParticipant && (pId === cleanParticipant || pJid === cleanParticipant || pLid === cleanParticipant))
+                    );
+                });
+
+                if (member) {
+                    const candidateIds = [member.jid, member.phone_number, member.phoneNumber, member.id, member.lid].filter(Boolean);
+                    if (candidateIds.some(id => database.isOwner(id, sock))) {
+                        isOwner = true;
+                        if (m.sender && m.sender.endsWith('@lid')) database.registerOwnerLid(m.sender);
+                        if (m.key?.participant && m.key.participant.endsWith('@lid')) database.registerOwnerLid(m.key.participant);
+                        if (member.lid) database.registerOwnerLid(member.lid);
+                        if (member.id && member.id.endsWith('@lid')) database.registerOwnerLid(member.id);
+                    }
+                }
+            }
+
             isAdmin = perms.isSenderAdmin || isOwner;
 
             // --- 1. FILTRO ANTIENLACES (ANTILINK CON EXPULSIÓN INMEDIATA) ---
@@ -433,6 +473,19 @@ const handleMessage = async (sock, rawMsg) => {
         if (!cmd) return;
 
         // Comprobaciones de Permisos
+        if (cmd.ownerOnly && !isOwner) {
+            if (database.isOwner(m.sender, sock) || database.isOwner(m.key?.participant, sock) || (!m.isGroup && database.isOwner(m.chat, sock))) {
+                isOwner = true;
+            } else if ((m.sender && m.sender.endsWith('@lid')) || (m.key?.participant && m.key.participant.endsWith('@lid'))) {
+                try {
+                    await database.syncOwnerLids(sock);
+                    if (database.isOwner(m.sender, sock) || database.isOwner(m.key?.participant, sock)) {
+                        isOwner = true;
+                    }
+                } catch (_) {}
+            }
+        }
+
         if (cmd.ownerOnly && !isOwner) {
             return await m.reply('❌ Este comando es exclusivo para el dueño del bot.');
         }

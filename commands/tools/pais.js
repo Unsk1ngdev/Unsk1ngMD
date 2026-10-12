@@ -4,11 +4,12 @@ const axios = require('axios');
 
 // Cache local en memoria para no descargar la base de países repetidamente
 let countriesCache = null;
+const paisMemoryCache = new Map();
 
 const loadCountriesBackup = async () => {
     if (countriesCache && countriesCache.length > 0) return countriesCache;
     try {
-        const res = await axios.get('https://cdn.jsdelivr.net/gh/mledoze/countries@master/countries.json', { timeout: 7000 });
+        const res = await axios.get('https://cdn.jsdelivr.net/gh/mledoze/countries@master/countries.json', { timeout: 4500 });
         if (Array.isArray(res.data) && res.data.length > 0) {
             countriesCache = res.data;
             return countriesCache;
@@ -34,19 +35,27 @@ module.exports = {
             }, { quoted: m });
         }
 
-        await sock.sendMessage(jid, {
-            text: `🌍 Buscando *${nombre}*...\n🔄 Procesando...`
-        }, { quoted: m });
-
         try {
+            const cacheKey = nombre.toLowerCase().trim();
+            const cached = paisMemoryCache.get(cacheKey);
+            if (cached && (Date.now() - cached.time < 60000)) {
+                if (cached.bandera && cached.bandera.startsWith('http')) {
+                    return await sock.sendMessage(jid, {
+                        image: { url: cached.bandera },
+                        caption: cached.info
+                    }, { quoted: m });
+                }
+                return await sock.sendMessage(jid, { text: cached.info }, { quoted: m });
+            }
+
             let pais = null;
 
             // 1. Intento con RestCountries API v3.1
             try {
                 let res = await axios.get(`https://restcountries.com/v3.1/translation/${encodeURIComponent(nombre)}`, {
                     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                    timeout: 5000
-                });
+                    timeout: 4500
+                }).catch(() => null);
                 if (Array.isArray(res.data) && res.data.length > 0) {
                     pais = res.data[0];
                 } else {
@@ -142,6 +151,8 @@ module.exports = {
                 `📞 *Código tel:* ${codigoTel}\n` +
                 `🕐 *Zona horaria:* ${zonas}\n\n` +
                 `_Unknown Codexツ</>_`;
+
+            paisMemoryCache.set(cacheKey, { bandera, info, time: Date.now() });
 
             if (bandera && bandera.startsWith('http')) {
                 try {

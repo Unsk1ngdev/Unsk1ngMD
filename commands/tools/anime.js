@@ -2,6 +2,8 @@
 
 const axios = require('axios');
 
+const animeMemoryCache = new Map();
+
 module.exports = {
     name: 'anime',
     alias: ['animesearch', 'mal', 'jikan'],
@@ -19,9 +21,17 @@ module.exports = {
             }, { quoted: m });
         }
 
-        await sock.sendMessage(jid, {
-            text: `📺 Buscando anime *${nombre}*...\n🔄 Procesando...`
-        }, { quoted: m });
+        const cacheKey = nombre.toLowerCase().trim();
+        const cached = animeMemoryCache.get(cacheKey);
+        if (cached && (Date.now() - cached.time < 60000)) {
+            if (cached.image && cached.image.startsWith('http')) {
+                return await sock.sendMessage(jid, {
+                    image: { url: cached.image },
+                    caption: cached.info
+                }, { quoted: m });
+            }
+            return await sock.sendMessage(jid, { text: cached.info }, { quoted: m });
+        }
 
         let animeInfo = null;
 
@@ -29,7 +39,7 @@ module.exports = {
         try {
             const res = await axios.get(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(nombre)}&limit=1`, {
                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                timeout: 7000,
+                timeout: 4500,
                 family: 4
             });
             const item = res.data?.data?.[0];
@@ -135,6 +145,8 @@ module.exports = {
             `📅 *Estreno:* ${animeInfo.aired}\n\n` +
             `📝 *Sinopsis:*\n_${animeInfo.synopsis}_\n\n` +
             `_Unknown Codexツ</>_`;
+
+        animeMemoryCache.set(cacheKey, { image: animeInfo.image, info, time: Date.now() });
 
         if (animeInfo.image && animeInfo.image.startsWith('http')) {
             try {

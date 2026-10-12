@@ -279,71 +279,67 @@ async function buscarPostPersonaje(tags) {
     };
 
     for (const tag of tags) {
-        // Fuente 1: Yande.re (Filtro explícito del personaje)
-        try {
-            const res = await axios.get(
+        // Ejecutar las fuentes en paralelo con timeout controlado
+        const fuentes = [
+            // Fuente 1: Yande.re (Filtro explícito del personaje)
+            axios.get(
                 `https://yande.re/post.json?tags=${encodeURIComponent(tag)}+rating:explicit&limit=25`,
-                { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 }
-            );
-            const validos = filtrarValidos(res.data);
-            if (validos.length > 0) {
-                const post = validos[Math.floor(Math.random() * validos.length)];
-                return {
-                    url: post.sample_url || post.file_url || post.jpeg_url,
-                    tag
-                };
-            }
-        } catch (_) {}
+                { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 4500 }
+            ).then(res => {
+                const validos = filtrarValidos(res.data);
+                if (validos.length > 0) {
+                    const post = validos[Math.floor(Math.random() * validos.length)];
+                    return { url: post.sample_url || post.file_url || post.jpeg_url, tag };
+                }
+                return null;
+            }).catch(() => null),
 
-        // Fuente 2: Konachan (Filtro explícito del personaje)
-        try {
-            const res = await axios.get(
+            // Fuente 2: Konachan (Filtro explícito del personaje)
+            axios.get(
                 `https://konachan.com/post.json?tags=${encodeURIComponent(tag)}+rating:explicit&limit=25`,
-                { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 }
-            );
-            const validos = filtrarValidos(res.data);
-            if (validos.length > 0) {
-                const post = validos[Math.floor(Math.random() * validos.length)];
-                return {
-                    url: post.sample_url || post.file_url,
-                    tag
-                };
-            }
-        } catch (_) {}
+                { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 4500 }
+            ).then(res => {
+                const validos = filtrarValidos(res.data);
+                if (validos.length > 0) {
+                    const post = validos[Math.floor(Math.random() * validos.length)];
+                    return { url: post.sample_url || post.file_url, tag };
+                }
+                return null;
+            }).catch(() => null),
 
-        // Fuente 3: Rule34 API
-        try {
-            const pid = Math.floor(Math.random() * 5);
-            const res = await axios.get(
-                `https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=25&pid=${pid}&tags=${encodeURIComponent(tag)}`,
-                { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 }
-            );
-            const json = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-            const validos = filtrarValidos(json);
-            if (validos.length > 0) {
-                const post = validos[Math.floor(Math.random() * validos.length)];
-                return {
-                    url: post.file_url,
-                    tag
-                };
-            }
-        } catch (_) {}
+            // Fuente 3: Rule34 API
+            (async () => {
+                const pid = Math.floor(Math.random() * 5);
+                const res = await axios.get(
+                    `https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=25&pid=${pid}&tags=${encodeURIComponent(tag)}`,
+                    { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 4500 }
+                );
+                const json = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+                const validos = filtrarValidos(json);
+                if (validos.length > 0) {
+                    const post = validos[Math.floor(Math.random() * validos.length)];
+                    return { url: post.file_url, tag };
+                }
+                return null;
+            })().catch(() => null),
 
-        // Fuente 4: Búsqueda flexible sin rating:explicit en Yande.re
-        try {
-            const res = await axios.get(
+            // Fuente 4: Búsqueda flexible sin rating:explicit en Yande.re
+            axios.get(
                 `https://yande.re/post.json?tags=${encodeURIComponent(tag)}&limit=25`,
-                { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 }
-            );
-            const validos = filtrarValidos(res.data);
-            if (validos.length > 0) {
-                const post = validos[Math.floor(Math.random() * validos.length)];
-                return {
-                    url: post.sample_url || post.file_url,
-                    tag
-                };
-            }
-        } catch (_) {}
+                { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 4500 }
+            ).then(res => {
+                const validos = filtrarValidos(res.data);
+                if (validos.length > 0) {
+                    const post = validos[Math.floor(Math.random() * validos.length)];
+                    return { url: post.sample_url || post.file_url, tag };
+                }
+                return null;
+            }).catch(() => null)
+        ];
+
+        const resultados = await Promise.all(fuentes);
+        const match = resultados.find(r => r && r.url);
+        if (match) return match;
     }
 
     return null;
@@ -385,9 +381,7 @@ module.exports = {
             }, { quoted: m });
         }
 
-        await sock.sendMessage(jid, {
-            text: `🔞 Buscando contenido específico de *${personaje}*...\n🔄 Procesando resolución inteligente de tags...`
-        }, { quoted: m });
+        m.react('🔞').catch(() => {});
 
         try {
             // Resolver tags inteligentes basados en el personaje solicitado
