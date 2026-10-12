@@ -1,0 +1,14 @@
+{
+  "123456789-987654321@g.us": {
+    "mensaje": "Adiós {usuario} de {grupo}!",
+    "activo": true
+  },
+  "120363407455196754@g.us": {
+    "mensaje": "on",
+    "activo": true
+  },
+  "123@g.us": {
+    "mensaje": "Hasta la vista {usuario}!",
+    "activo": false
+  }
+}

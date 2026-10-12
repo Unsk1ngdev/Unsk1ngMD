@@ -72,6 +72,70 @@ const handleMessage = async (sock, rawMsg) => {
             return;
         }
 
+        // Monitoreo de respuestas interactivas de .verdadoreto
+        if (global.vdrEsperando && global.vdrEsperando[m.chat]) {
+            const esperando = global.vdrEsperando[m.chat];
+            const stanzaId = m.quoted?.id || m.message?.extendedTextMessage?.contextInfo?.stanzaId;
+            const isReply = Boolean(stanzaId && stanzaId === esperando.msgId);
+
+            const cleanSender = (m.sender || '').replace(/:\d+@/, '@').trim();
+            const cleanEsperando = (esperando.jid || '').replace(/:\d+@/, '@').trim();
+            const esElElegido = cleanSender === cleanEsperando;
+
+            if (isReply && esElElegido) {
+                const respuesta = (m.body || '').toLowerCase().trim();
+                if (esperando.timer) clearTimeout(esperando.timer);
+                delete global.vdrEsperando[m.chat];
+
+                // Determinar emoji y comentario según respuesta
+                let emoji = '👀';
+                let comentario = '';
+
+                if (respuesta.includes('paso') || respuesta.includes('no quiero') || respuesta === 'no') {
+                    emoji = '😤';
+                    comentario = '¡Se rajó! 😤 Nuevo turno...';
+                } else if (respuesta.length < 10) {
+                    emoji = '😒';
+                    comentario = '¡Qué respuesta tan corta! 😒';
+                } else if (
+                    respuesta.includes('jaja') || respuesta.includes('lol') ||
+                    respuesta.includes('jeje') || respuesta.includes('😂')
+                ) {
+                    emoji = '😂';
+                    comentario = '¡Jajaja esa respuesta! 😂🔥';
+                } else if (
+                    respuesta.includes('nunca') || respuesta.includes('jamás') ||
+                    respuesta.includes('jamas') || respuesta.includes('claro') ||
+                    respuesta.includes('sí') || respuesta.includes('si')
+                ) {
+                    emoji = '💪';
+                    comentario = '¡Valiente la respuesta! 💪';
+                } else if (
+                    respuesta.includes('vergüenza') || respuesta.includes('verguenza') ||
+                    respuesta.includes('no sé') || respuesta.includes('no se') ||
+                    respuesta.includes('ay') || respuesta.includes('😳')
+                ) {
+                    emoji = '👀';
+                    comentario = '¡Ooooh qué vergüenza! 👀😳';
+                } else {
+                    emoji = '✅';
+                    comentario = '¡Respondió! ✅';
+                }
+
+                // Reaccionar al mensaje del participante
+                try {
+                    await sock.sendMessage(m.chat, {
+                        react: { text: emoji, key: m.key }
+                    });
+                } catch (_) {}
+
+                await sock.sendMessage(m.chat, {
+                    text: `${comentario}\n\n_Unknown Codexツ</>_`
+                }, { quoted: m });
+                return;
+            }
+        }
+
         // Obtener metadatos y permisos en grupos usando el helper normalizado
         let groupMetadata = null;
         let participants = [];

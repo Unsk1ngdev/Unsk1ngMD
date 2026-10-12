@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../lib/logger');
 const groupSettings = require('../lib/groupSettings');
 const database = require('../lib/database');
+const despedidaManager = require('../lib/despedida');
 
 /**
  * Manejador de eventos de participantes de grupo (entradas, salidas, ascensos)
@@ -10,6 +11,32 @@ const database = require('../lib/database');
 const handleGroupUpdate = async (sock, update) => {
     try {
         const { id, participants, action } = update;
+
+        // Manejo de Despedida cuando alguien sale o es expulsado
+        if (action === 'remove' || action === 'leave') {
+            const configDespedida = despedidaManager.getConfig(id);
+            if (configDespedida && configDespedida.activo) {
+                let groupMeta = null;
+                try {
+                    groupMeta = await sock.groupMetadata(id);
+                } catch (_) {}
+                const nombreGrupo = groupMeta?.subject || 'el grupo';
+
+                for (const participante of participants) {
+                    const numero = participante.replace(/:\d+@/, '@').split('@')[0];
+                    const mensaje = configDespedida.mensaje
+                        .replace(/{usuario}/g, `+${numero}`)
+                        .replace(/{grupo}/g, nombreGrupo);
+
+                    await sock.sendMessage(id, {
+                        text: mensaje,
+                        mentions: [participante]
+                    }).catch(() => {});
+                }
+            }
+            return;
+        }
+
         const isWelcomeActive = groupSettings.isBienvenidaEnabled(id) || database.getGroup(id)?.welcome;
 
         if (!isWelcomeActive || action !== 'add') {

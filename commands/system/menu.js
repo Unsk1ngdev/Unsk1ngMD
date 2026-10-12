@@ -34,6 +34,9 @@ module.exports = {
                 cmds: [
                     ['🏆', 'torneo', 'Crear torneo'],
                     ['🛡️', 'antilink', 'Bloquear links'],
+                    ['📝', 'reglas', 'Reglas del grupo'],
+                    ['🚪', 'despedida', 'Mensaje de despedida'],
+                    ['🕐', 'inactivos', 'Ver/expulsar inactivos'],
                     ['🔞', 'nsfw on/off', 'Activar/desactivar NSFW'],
                     ['🛡️', 'antispam', 'Filtro antispam'],
                     ['⚡', 'antispamkick', 'Antispam estricto'],
@@ -55,6 +58,8 @@ module.exports = {
                 key: 'juegos',
                 title: '🎮 JUEGOS',
                 cmds: [
+                    ['🎰', 'slots', 'Tragamonedas'],
+                    ['🎭', 'verdadoreto', 'Verdad o reto'],
                     ['🧩', 'ahorcado', 'Jugar ahorcado'],
                     ['⚔️', 'duelo', 'Duelo anime'],
                     ['🧞', 'akinator', 'Genio Akinator'],
@@ -103,6 +108,9 @@ module.exports = {
                 cmds: [
                     ['🔍', 'info', 'Info de número'],
                     ['🪙', 'monedaflip', 'Cara o cruz'],
+                    ['🎬', 'pelicula', 'Info de película'],
+                    ['📺', 'anime', 'Info de anime'],
+                    ['🎮', 'videojuego', 'Info de videojuego'],
                     ['📊', 'rank', 'Top activos del grupo'],
                     ['🎲', 'random', 'Número aleatorio'],
                     ['🔗', 'acortar', 'Acortar links'],
@@ -172,7 +180,8 @@ module.exports = {
                 title: '🔞 NSFW (Admin)',
                 cmds: [
                     ['🖼️', 'waifu', 'Imagen +18'],
-                    ['🎬', 'gifnsfw', 'GIF +18']
+                    ['🎬', 'gifnsfw', 'GIF +18'],
+                    ['😈', 'dark', 'Contenido dark +18']
                 ]
             }
         ];
