@@ -2,495 +2,603 @@
   "logs": [
     {
       "usuario": "18494509905",
-      "comando": ".waifu",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:22:14 p. m."
+      "comando": ".carta",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:25:34 p. m."
     },
     {
       "usuario": "18494509905",
+      "comando": ".carta",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:26:11 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".carta",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:26:29 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".carta",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:27:44 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".chismografo",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:28:08 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".chismografo",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:28:20 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".impersonar",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:29:30 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".impersonar",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:29:43 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".analizar",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:30:04 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".analizar",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:30:15 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".analizar",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:30:30 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".ban",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:30:51 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".unban",
+      "grupo": "support",
+      "hora": "11/10/2026, 10:30:56 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".carta",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:31:28 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".prem",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:31:36 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".prem",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:31:42 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".carta",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:31:52 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".menu",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:32:28 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".acertijo",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:32:40 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".nsfw",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:33:19 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".nsfw",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:33:32 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".hentai",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:34:35 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".trivia",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:35:35 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".personalidad",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:35:37 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".screenshot",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:38:52 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".nsfw",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:40:03 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".nsfw",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:40:12 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".dark",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:41:39 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".dark",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:42:53 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".anime",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:45:12 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
       "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:22:29 p. m."
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:45:25 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".gifnsfw",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:46:20 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".ia",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:48:20 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".roleplay",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:50:10 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".roleplay",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:50:21 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".roleplay",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:51:25 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".verdadoreto",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:53:47 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".verdadoreto",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:55:00 p. m."
     },
     {
       "usuario": "18494509905",
       "comando": ".menu",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:22:49 p. m."
+      "hora": "11/10/2026, 10:57:21 p. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".torneo",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:23:16 p. m."
+      "comando": ".notify",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:57:53 p. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".torneo",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:23:26 p. m."
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:58:23 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".notify",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:58:29 p. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".torneo",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:23:38 p. m."
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:58:47 p. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".torneo",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:23:50 p. m."
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:59:03 p. m."
     },
     {
-      "usuario": "160344819413025@lid",
-      "comando": ".torneo",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:23:50 p. m."
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:59:17 p. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".ahorcado",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:59:22 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:59:30 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:59:35 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:59:44 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 10:59:53 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:02 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:08 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:17 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:23 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:28 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:32 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:39 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:44 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:47 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:51 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:00:56 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:00 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:03 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:05 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:10 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:17 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:21 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:26 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:31 p. m."
+    },
+    {
+      "usuario": "13636772884486@lid",
+      "comando": ".slots",
+      "grupo": "ラウル×ジェネシス",
+      "hora": "11/10/2026, 11:01:37 p. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".menu",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:24:24 p. m."
+      "hora": "12/10/2026, 1:02:54 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".ubicacion",
+      "comando": ".debatir",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:25:02 p. m."
+      "hora": "12/10/2026, 1:04:14 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".ubicacion",
+      "comando": ".debatir",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:25:14 p. m."
+      "hora": "12/10/2026, 1:04:56 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".ahorcado",
+      "comando": ".debatir",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:26:00 p. m."
+      "hora": "12/10/2026, 1:08:56 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".ahorcado",
+      "comando": ".personalidad",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:26:14 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".ahorcado",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:26:28 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".pdf2txt",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:26:55 p. m."
+      "hora": "12/10/2026, 1:09:21 a. m."
     },
     {
       "usuario": "18494509905",
       "comando": ".roleplay",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:27:40 p. m."
+      "hora": "12/10/2026, 1:16:18 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".waifu",
+      "comando": ".roleplay",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:38:22 p. m."
+      "hora": "12/10/2026, 1:16:32 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".gifnsfw",
+      "comando": ".roleplay",
       "grupo": "Privado",
-      "hora": "11/10/2026, 2:38:29 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".waifu",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:38:44 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:39:32 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".pdf2txt",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:40:48 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:44:41 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:45:07 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:45:31 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".waifu",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:50:03 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:50:22 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:50:50 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:51:20 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:52:54 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".pdf2txt",
-      "grupo": "support",
-      "hora": "11/10/2026, 2:54:20 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".menu",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:57:33 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".waifu",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:59:09 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 2:59:22 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:00:22 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:00:55 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:01:22 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".menu",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:02:26 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:07:26 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:07:48 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:08:13 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:08:40 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:09:42 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:10:04 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:10:30 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:11:23 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:13:12 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".menu",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:14:22 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:15:02 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".ytmp3",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:15:32 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".ytmp4",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:16:03 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".comandos",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:16:07 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".hidetag",
-      "grupo": "support",
-      "hora": "11/10/2026, 3:16:42 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".cerrar",
-      "grupo": "support",
-      "hora": "11/10/2026, 3:16:46 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".abrir",
-      "grupo": "support",
-      "hora": "11/10/2026, 3:16:50 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".notify",
-      "grupo": "support",
-      "hora": "11/10/2026, 3:17:01 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".monedaflip",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:17:35 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".akinator",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:18:14 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".gifnsfw",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:18:28 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".waifu",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:20:59 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".wiki",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:39:41 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".ia",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:39:52 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".akinator",
-      "grupo": "Privado",
-      "hora": "11/10/2026, 3:39:55 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".slot",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:35:17 p. m."
+      "hora": "12/10/2026, 1:17:16 a. m."
     },
     {
       "usuario": "18494509905",
       "comando": ".verdadoreto",
       "grupo": "support",
-      "hora": "11/10/2026, 8:35:39 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".verdadoreto",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:36:05 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".verdadoreto",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:36:25 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".pelicula",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:36:46 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".anime",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:37:10 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".videojuego",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:37:39 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".despedida",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:38:10 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".inactivos",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:38:25 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".dark",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:38:39 p. m."
+      "hora": "12/10/2026, 1:17:40 a. m."
     },
     {
       "usuario": "18494509905",
       "comando": ".menu",
       "grupo": "Privado",
-      "hora": "11/10/2026, 8:38:55 p. m."
+      "hora": "12/10/2026, 1:18:53 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".dark",
+      "comando": ".roleplay",
       "grupo": "Privado",
-      "hora": "11/10/2026, 8:42:55 p. m."
+      "hora": "12/10/2026, 1:36:32 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".gifnsfw",
+      "comando": ".roleplay",
       "grupo": "Privado",
-      "hora": "11/10/2026, 8:47:20 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".inactivos",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:57:17 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".despedida",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:57:32 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".pelicula",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:57:50 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".videojuego",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:58:12 p. m."
-    },
-    {
-      "usuario": "18494509905",
-      "comando": ".videojuego",
-      "grupo": "support",
-      "hora": "11/10/2026, 8:58:38 p. m."
+      "hora": "12/10/2026, 1:37:12 a. m."
     },
     {
       "usuario": "18494509905",
       "comando": ".verdadoreto",
       "grupo": "support",
-      "hora": "11/10/2026, 8:59:04 p. m."
+      "hora": "12/10/2026, 1:37:35 a. m."
     },
     {
       "usuario": "18494509905",
-      "comando": ".dark",
+      "comando": ".hentai",
       "grupo": "Privado",
-      "hora": "11/10/2026, 8:59:41 p. m."
+      "hora": "12/10/2026, 1:38:05 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:39:17 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".carta",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:39:59 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".menu",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:40:22 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:44:02 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:44:11 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:44:27 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:44:45 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:45:12 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:45:34 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:45:58 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:46:08 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:49:02 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:57:10 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:58:04 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".hentai",
+      "grupo": "Privado",
+      "hora": "12/10/2026, 1:59:08 a. m."
+    },
+    {
+      "usuario": "18494509905",
+      "comando": ".menu",
+      "grupo": "support",
+      "hora": "12/10/2026, 2:01:40 a. m."
     }
   ]
 }

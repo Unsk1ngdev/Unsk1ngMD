@@ -60,6 +60,8 @@ module.exports = {
                 cmds: [
                     ['🎰', 'slots', 'Tragamonedas'],
                     ['🎭', 'verdadoreto', 'Verdad o reto'],
+                    ['🧠', 'personalidad', 'Test de personalidad'],
+                    ['🎭', 'roleplay', 'Roleplay de anime'],
                     ['🧩', 'ahorcado', 'Jugar ahorcado'],
                     ['⚔️', 'duelo', 'Duelo anime'],
                     ['🧞', 'akinator', 'Genio Akinator'],
@@ -107,6 +109,8 @@ module.exports = {
                 title: '🌐 PÚBLICO & HERRAMIENTAS',
                 cmds: [
                     ['🔍', 'info', 'Info de número'],
+                    ['🌍', 'pais', 'Info y bandera de país'],
+                    ['🤫', 'chismografo', 'Chisme falso entre dos'],
                     ['🪙', 'monedaflip', 'Cara o cruz'],
                     ['🎬', 'pelicula', 'Info de película'],
                     ['📺', 'anime', 'Info de anime'],
@@ -145,8 +149,10 @@ module.exports = {
                     ['📢', 'reportar', 'Reportar número'],
                     ['⚡', 'reactch', 'Mensaje al canal'],
                     ['👑', 'prem', 'Dar/quitar premium'],
-                    ['🚫', 'banear', 'Banear del bot'],
-                    ['✅', 'desbanear', 'Desbanear del bot'],
+                    ['🚫', 'ban', 'Banear del bot'],
+                    ['✅', 'unban', 'Desbanear del bot'],
+                    ['👤', 'impersonar', 'Simular mensaje de usuario'],
+                    ['🔬', 'analizar', 'Análisis oficial con IA'],
                     ['🔇', 'silenciar', 'Silenciar usuario'],
                     ['📋', 'logs', 'Ver últimos comandos'],
                     ['📣', 'anuncio', 'Mensaje a todos los grupos'],
@@ -164,6 +170,8 @@ module.exports = {
                 title: '⭐ PREMIUM',
                 cmds: [
                     ['🕵️', 'spy', 'Grupos de un número'],
+                    ['⚔️', 'debatir', 'Debate interactivo de 5 rondas'],
+                    ['💌', 'carta', 'Carta emotiva personalizada'],
                     ['👻', 'ghost', 'Modo invisible'],
                     ['🪞', 'clonar', 'Copiar perfil'],
                     ['👁️', 'stalkear', 'Monitorear conexión'],
@@ -171,17 +179,18 @@ module.exports = {
                     ['📸', 'perfil', 'Foto de perfil HD'],
                     ['🎭', 'fake', 'Perfil falso'],
                     ['📱', 'dispositivo', 'Ver dispositivo'],
-                    ['📍', 'ubicacion', 'Pin de cualquier ciudad'],
-                    ['🎭', 'roleplay', 'Roleplay de anime']
+                    ['📍', 'ubicacion', 'Pin de cualquier ciudad']
                 ]
             },
             {
                 key: 'nsfw',
                 title: '🔞 NSFW (Admin)',
                 cmds: [
-                    ['🖼️', 'waifu', 'Imagen +18'],
-                    ['🎬', 'gifnsfw', 'GIF +18'],
-                    ['😈', 'dark', 'Contenido dark +18']
+                    ['🔞', 'nsfw on/off', 'Activar/desactivar'],
+                    ['🖼️', 'waifu', 'Imagen +18 aleatoria'],
+                    ['🎬', 'gifnsfw', 'GIF +18 aleatorio'],
+                    ['😈', 'dark', 'Contenido dark +18'],
+                    ['🎭', 'hentai [personaje]', 'Hentai de personaje']
                 ]
             }
         ];
@@ -235,6 +244,8 @@ module.exports = {
         const body = secciones.map(formatSection).join('\n');
         const menuCompleto = `${header}${body}${footer}`;
 
+        const chatId = m.chat || m.key?.remoteJid;
+
         // Rutas multimedia opcionales
         const gifPath = path.join(config.assetsDir, 'menu.gif');
         const mp4Path = path.join(config.assetsDir, 'menu.mp4');
@@ -242,27 +253,27 @@ module.exports = {
 
         try {
             if (fs.existsSync(mp4Path)) {
-                await sock.sendMessage(m.chat, {
+                await sock.sendMessage(chatId, {
                     video: fs.readFileSync(mp4Path),
                     gifPlayback: true,
                     caption: menuCompleto
                 }, { quoted: m });
             } else if (fs.existsSync(gifPath)) {
-                await sock.sendMessage(m.chat, {
+                await sock.sendMessage(chatId, {
                     video: fs.readFileSync(gifPath),
                     gifPlayback: true,
                     caption: menuCompleto
                 }, { quoted: m });
             } else if (fs.existsSync(imgPath)) {
-                await sock.sendMessage(m.chat, {
+                await sock.sendMessage(chatId, {
                     image: fs.readFileSync(imgPath),
                     caption: menuCompleto
                 }, { quoted: m });
             } else {
-                await sock.sendMessage(m.chat, { text: menuCompleto }, { quoted: m });
+                await sock.sendMessage(chatId, { text: menuCompleto }, { quoted: m });
             }
         } catch (_) {
-            await sock.sendMessage(m.chat, { text: menuCompleto }, { quoted: m });
+            await sock.sendMessage(chatId, { text: menuCompleto }, { quoted: m });
         }
     }
 };

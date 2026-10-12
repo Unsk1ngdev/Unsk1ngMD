@@ -5,7 +5,7 @@ const nsfwManager = require('../../lib/nsfw');
 
 module.exports = {
     name: 'waifu',
-    alias: ['waifunsfw', 'hentai', 'nsfwpic'],
+    alias: ['waifunsfw', 'nsfwpic'],
     category: 'multimedia',
     desc: 'Envía una imagen anime +18 en grupos con NSFW activo',
     usage: '.waifu',

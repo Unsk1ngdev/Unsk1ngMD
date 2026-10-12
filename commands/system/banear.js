@@ -4,11 +4,11 @@ const bannedManager = require('../../lib/banned');
 const config = require('../../config');
 
 module.exports = {
-    name: 'banear',
-    alias: ['ban', 'blacklist'],
+    name: 'ban',
+    alias: ['banear', 'blacklist'],
     category: 'sistema',
     desc: 'Banea a un usuario de usar el bot o gestiona la lista negra (solo owner)',
-    usage: '.banear @usuario | .banear remove @usuario | .banear list',
+    usage: '.ban @usuario | .ban remove @usuario | .ban list',
     ownerOnly: true,
 
     execute: async ({ sock, m, args, isOwner }) => {

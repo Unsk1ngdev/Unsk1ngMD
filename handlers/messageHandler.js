@@ -14,6 +14,9 @@ const bannedManager = require('../lib/banned');
 const silenciadosManager = require('../lib/silenciados');
 const rankManager = require('../lib/rank');
 const logsManager = require('../lib/logs');
+const roleplayEngine = require('../lib/roleplayEngine');
+const personalidadEngine = require('../lib/personalidadEngine');
+const debateEngine = require('../lib/debateEngine');
 
 // Cache simple de metadatos de grupos con TTL de 30 segundos
 const groupCache = new Map();
@@ -42,7 +45,14 @@ const handleMessage = async (sock, rawMsg) => {
         if (rawMsg.key && rawMsg.key.remoteJid === 'status@broadcast') return;
 
         const m = serialize(sock, rawMsg);
-        if (!m.body) return;
+        const hasMedia = Boolean(
+            m.message?.imageMessage ||
+            m.message?.videoMessage ||
+            m.message?.audioMessage ||
+            m.message?.stickerMessage ||
+            m.message?.documentMessage
+        );
+        if (!m.body && !hasMedia) return;
 
         // Si el usuario está baneado, ignorar completamente todos sus mensajes
         if (bannedManager.isBanned(m.sender)) {
@@ -64,7 +74,7 @@ const handleMessage = async (sock, rawMsg) => {
             }
         }
 
-        const isOwner = database.isOwner(m.sender);
+        const isOwner = database.isOwner(m.sender) || Boolean(m.fromMe);
         const currentMode = database.getMode();
 
         // En modo privado, solo el dueño puede interactuar
@@ -78,51 +88,67 @@ const handleMessage = async (sock, rawMsg) => {
             const stanzaId = m.quoted?.id || m.message?.extendedTextMessage?.contextInfo?.stanzaId;
             const isReply = Boolean(stanzaId && stanzaId === esperando.msgId);
 
-            const cleanSender = (m.sender || '').replace(/:\d+@/, '@').trim();
-            const cleanEsperando = (esperando.jid || '').replace(/:\d+@/, '@').trim();
-            const esElElegido = cleanSender === cleanEsperando;
+            const senderDigits = (m.sender || '').replace(/[^0-9]/g, '');
+            const esperandoDigits = (esperando.jid || '').replace(/[^0-9]/g, '');
+            const botDigits = (sock.user?.id || sock.user?.jid || '').replace(/[^0-9]/g, '');
 
-            if (isReply && esElElegido) {
+            const senderMatches = Boolean(
+                (senderDigits && esperandoDigits && (senderDigits === esperandoDigits || senderDigits.endsWith(esperandoDigits) || esperandoDigits.endsWith(senderDigits))) ||
+                (m.fromMe && botDigits && esperandoDigits && (botDigits === esperandoDigits || botDigits.endsWith(esperandoDigits) || esperandoDigits.endsWith(botDigits))) ||
+                (m.sender && esperando.jid && m.sender.split('@')[0].split(':')[0] === esperando.jid.split('@')[0].split(':')[0])
+            );
+
+            const esElElegido = senderMatches;
+            const prefix = database.getPrefix();
+            const isAnotherCommand = m.body && prefix && m.body.startsWith(prefix) &&
+                !m.body.toLowerCase().startsWith(prefix + 'paso') &&
+                !m.body.toLowerCase().startsWith(prefix + 'no');
+
+            if ((esElElegido || isReply) && !isAnotherCommand) {
                 const respuesta = (m.body || '').toLowerCase().trim();
+                const hasEvidenceMedia = Boolean(
+                    m.message?.imageMessage ||
+                    m.message?.videoMessage ||
+                    m.message?.audioMessage ||
+                    m.message?.stickerMessage ||
+                    m.message?.documentMessage
+                );
+
                 if (esperando.timer) clearTimeout(esperando.timer);
                 delete global.vdrEsperando[m.chat];
 
-                // Determinar emoji y comentario según respuesta
                 let emoji = '👀';
                 let comentario = '';
 
-                if (respuesta.includes('paso') || respuesta.includes('no quiero') || respuesta === 'no') {
-                    emoji = '😤';
-                    comentario = '¡Se rajó! 😤 Nuevo turno...';
-                } else if (respuesta.length < 10) {
+                if (hasEvidenceMedia) {
+                    emoji = '🎉';
+                    comentario = '📸🎤 *¡RETO CUMPLIDO CON EVIDENCIA!* 💪🔥\n¡El participante no se acobardó y envió la prueba en vivo! ¡Respetos máximos del grupo!';
+                } else if (respuesta.includes('paso') || respuesta.includes('no quiero') || respuesta === 'no' || respuesta.includes('ni loco') || respuesta.includes('pena')) {
+                    emoji = '🐔';
+                    comentario = '🐔 *¡SE ACOBARDÓ!* 🐔\n¡No tuvo el valor de cumplirlo! El grupo exige penitencia o que elija al siguiente.';
+                } else if (respuesta.length > 50) {
+                    emoji = '🍿';
+                    comentario = '🍿 *¡QUÉ BOMBA ACABA DE SOLTAR!* 😱\n¡Confesión completa y sin filtros! El grupo entero ha quedado en shock.';
+                } else if (respuesta.length < 10 && !hasEvidenceMedia) {
                     emoji = '😒';
-                    comentario = '¡Qué respuesta tan corta! 😒';
+                    comentario = '😒 *¡Qué respuesta tan tímida!* Pero bueno... al menos no se rajó.';
                 } else if (
                     respuesta.includes('jaja') || respuesta.includes('lol') ||
                     respuesta.includes('jeje') || respuesta.includes('😂')
                 ) {
                     emoji = '😂';
-                    comentario = '¡Jajaja esa respuesta! 😂🔥';
-                } else if (
-                    respuesta.includes('nunca') || respuesta.includes('jamás') ||
-                    respuesta.includes('jamas') || respuesta.includes('claro') ||
-                    respuesta.includes('sí') || respuesta.includes('si')
-                ) {
-                    emoji = '💪';
-                    comentario = '¡Valiente la respuesta! 💪';
+                    comentario = '😂 *¡Jajajajaja excelente respuesta!* ¡Qué buen sentido del humor!';
                 } else if (
                     respuesta.includes('vergüenza') || respuesta.includes('verguenza') ||
-                    respuesta.includes('no sé') || respuesta.includes('no se') ||
                     respuesta.includes('ay') || respuesta.includes('😳')
                 ) {
-                    emoji = '👀';
-                    comentario = '¡Ooooh qué vergüenza! 👀😳';
+                    emoji = '😳';
+                    comentario = '😳 *¡Trágame tierra!* Se sintió la vergüenza hasta el otro lado de la pantalla.';
                 } else {
                     emoji = '✅';
-                    comentario = '¡Respondió! ✅';
+                    comentario = '✅ *¡Respuesta registrada con éxito!* El juego continúa.';
                 }
 
-                // Reaccionar al mensaje del participante
                 try {
                     await sock.sendMessage(m.chat, {
                         react: { text: emoji, key: m.key }
@@ -181,33 +207,188 @@ const handleMessage = async (sock, rawMsg) => {
         // --- COMPROBACIÓN DE JUEGOS ACTIVOS Y COMANDOS ---
         const prefix = database.getPrefix();
         if (!m.body.startsWith(prefix)) {
-            // 0. Modo Roleplay activo para el usuario
-            if (global.roleplayMode && global.roleplayMode[m.sender]) {
-                const personaje = global.roleplayMode[m.sender];
-                const respuestas = {
-                    naruto: ['¡Dattebayo! 🍥', '¡Nunca me rindo, ese es mi camino ninja!', '¡Seré Hokage algún día! 🍥'],
-                    goku: ['¡Kamehameha! 💥', '¡Me encanta pelear contra alguien fuerte!', '¡Esto me pone emocionado! 🔥'],
-                    vegeta: ['Soy el Príncipe de los Saiyajins.', '¡Eres demasiado débil para enfrentarme!', '¡FINAL FLASH! 💥'],
-                    sasuke: ['...', '¡Solo vivo para la venganza!', 'Eres demasiado débil.'],
-                    luffy: ['¡Seré el Rey de los Piratas! ⚓', '¡Tengo hambre! 🍖', '¡Gomu Gomu no...! 🤜'],
-                    zoro: ['¿Dónde estoy? Me perdí de nuevo... 🗡️', 'Un corte más.', 'Santoryu... Ogi! ⚔️'],
-                    gojo: ['Lamentablemente eres demasiado débil para mí.', '¡Infinity! ∞', 'Soy el más fuerte. 😎'],
-                    levi: ['Eres un idiota de primera clase.', 'La elección que no te arrepentirás. ⚔️', '...Tch.'],
-                    saitama: ['Un golpe. 👊', '¿Por qué no siento nada?', 'Está bien. 😐'],
-                    light: ['¡Soy KIRA! ✍️', 'Este mundo necesita ser purificado.', 'Según lo planeado. 😏'],
-                    tanjiro: ['¡Respiración del agua! 💧', '¡Protegeré a todos!', '¡Nezuko! 🌸'],
-                    zenitsu: ['¡Tengo miedo! ⚡', '¡Nezuko-chaaan! 🌸⚡', '¡Por favor sálvenme! 😭'],
-                    eren: ['¡Los destruiré a todos! ⚔️', '¡Tatakae! ¡Tatakae! 🔥', 'La libertad está más allá de las murallas.'],
-                    deku: ['¡Smash! 💥', '¡Tengo que esforzarme aún más!', '¡Seré el héroe número uno! 💚'],
-                    bakugo: ['¡SHINEEE! 💥', '¡Muérete, nerd!', '¡Yo seré el número uno! 🧨']
-                };
+            // Test de Personalidad interactivo
+            if (global.personalidadTest && global.personalidadTest[m.sender]) {
+                const test = global.personalidadTest[m.sender];
+                const respuesta = (m.body || '').toLowerCase().trim();
 
-                const cleanPersonaje = (personaje || '').toLowerCase();
-                const respuestasList = respuestas[cleanPersonaje] || [`Soy ${personaje} y estoy aquí. ⚔️`];
-                const respuesta = respuestasList[Math.floor(Math.random() * respuestasList.length)];
+                if (['a', 'b', 'c'].includes(respuesta)) {
+                    const emojisReaccion = { a: '🔴', b: '🔵', c: '🟢' };
+                    try {
+                        await sock.sendMessage(m.chat, {
+                            react: { text: emojisReaccion[respuesta], key: m.key }
+                        });
+                    } catch (_) {}
+
+                    test.respuestas.push(respuesta);
+                    test.preguntaActual++;
+
+                    const preguntas = test.preguntas || [];
+
+                    if (test.preguntaActual < preguntas.length) {
+                        const sig = preguntas[test.preguntaActual];
+                        const num = test.preguntaActual + 1;
+                        const total = preguntas.length;
+
+                        await sock.sendMessage(m.chat, {
+                            text: `✅ *Respuesta registrada*\n\n` +
+                                  `━━━━━━━━━━━━━━━\n` +
+                                  `🔹 *[ Pregunta ${num} de ${total} ]*\n\n` +
+                                  `${sig.texto}\n\n` +
+                                  `${sig.a}\n` +
+                                  `${sig.b}\n` +
+                                  `${sig.c}\n\n` +
+                                  `━━━━━━━━━━━━━━━\n` +
+                                  `_Responde con A, B o C (o .personalidad stop para cancelar)_\n\n` +
+                                  `_Unknown Codexツ</>_`
+                        }, { quoted: m });
+                        return;
+                    }
+
+                    // Calcular resultado final con diagnóstico detallado
+                    delete global.personalidadTest[m.sender];
+                    const perfil = personalidadEngine.calcularPerfil(test.respuestas);
+
+                    await sock.sendMessage(m.chat, {
+                        text: `╔══════════════════╗\n` +
+                              `║  🎭 *RESULTADO FINAL*  ║\n` +
+                              `╚══════════════════╝\n\n` +
+                              `${perfil.emoji} *${perfil.titulo}*\n` +
+                              `🏷️ *Arquetipo:* ${perfil.tipo}\n` +
+                              `🔮 *Elemento afín:* ${perfil.elemento}\n` +
+                              `📺 *Aura de personaje:* ${perfil.anime}\n\n` +
+                              `━━━━━━━━━━━━━━━\n` +
+                              `📖 *Diagnóstico Psicológico:*\n_${perfil.descripcion}_\n\n` +
+                              `✅ *Fortalezas Clave:*\n${perfil.fortalezas}\n\n` +
+                              `⚠️ *Punto Ciego / Debilidad:*\n${perfil.debilidades}\n\n` +
+                              `💡 *Consejo de Vida:*\n_${perfil.consejo}_\n\n` +
+                              `━━━━━━━━━━━━━━━\n` +
+                              `📊 *Desglose de Decisiones:*\n` +
+                              `🔴 A (Acción/Liderazgo): ${perfil.porcentajes.a}%\n` +
+                              `🔵 B (Ingenio/Estrategia): ${perfil.porcentajes.b}%\n` +
+                              `🟢 C (Empatía/Sabiduría): ${perfil.porcentajes.c}%\n\n` +
+                              `_Unknown Codexツ</>_`
+                    }, { quoted: m });
+                    return;
+                }
+            }
+
+            // Debate interactivo con el bot (IA + Heurística avanzada con puntuación)
+            if (global.debates && global.debates[m.sender]) {
+                const debate = global.debates[m.sender];
+                const argumentoUsuario = (m.body || '').trim();
+                debate.rondas++;
+
+                let respuesta = null;
+                let reaccion = '🤔';
+                let uScore = 65;
+                let bScore = 80;
+
+                const respIA = await debateEngine.generarContraargumentoIA(
+                    debate.tema,
+                    debate.posicion,
+                    debate.rondas,
+                    argumentoUsuario,
+                    debate.historial || []
+                );
+
+                if (respIA) {
+                    respuesta = respIA;
+                    uScore = Math.floor(Math.random() * 20) + 75;
+                    bScore = Math.floor(Math.random() * 15) + 82;
+                    reaccion = argumentoUsuario.length > 80 ? '💪' : '🔥';
+                } else {
+                    const evalHeur = debateEngine.evaluarYContraargumentarHeuristico(
+                        debate.tema,
+                        debate.posicion,
+                        debate.rondas,
+                        argumentoUsuario
+                    );
+                    respuesta = evalHeur.texto;
+                    uScore = evalHeur.scoreUsuario;
+                    bScore = evalHeur.scoreBot;
+                    reaccion = evalHeur.reaccion;
+                }
+
+                debate.userScore = (debate.userScore || 0) + uScore;
+                debate.botScore = (debate.botScore || 0) + bScore;
+
+                if (!debate.historial) debate.historial = [];
+                debate.historial.push({ role: 'user', content: argumentoUsuario });
+                debate.historial.push({ role: 'assistant', content: respuesta });
+
+                try {
+                    await sock.sendMessage(m.chat, {
+                        react: { text: reaccion, key: m.key }
+                    });
+                } catch (_) {}
+
+                if (debate.rondas >= 5) {
+                    const finalUser = debate.userScore;
+                    const finalBot = debate.botScore;
+                    delete global.debates[m.sender];
+
+                    let ganador = '';
+                    let veredicto = '';
+
+                    if (finalUser > finalBot) {
+                        ganador = '¡Tú! 🏆';
+                        veredicto = '¡Victoria del usuario! Tus argumentos y persistencia superaron los puntos del bot.';
+                    } else if (finalUser === finalBot) {
+                        ganador = '¡Empate Técnico! ⚖️';
+                        veredicto = 'Ambos debatientes mantuvieron un nivel dialéctico supremo. Un choque de intelectos memorable.';
+                    } else {
+                        ganador = 'El Bot (Unsk1ngMD) 🤖';
+                        veredicto = 'La defensa lógica y estructurada del bot logró inclinar la balanza final de los jueces.';
+                    }
+
+                    await sock.sendMessage(m.chat, {
+                        text: `🗣️ *[Ronda Final 5/5]*\n\n` +
+                              `${respuesta}\n\n` +
+                              `╔══════════════════╗\n` +
+                              `║  🏆 *VEREDICTO FINAL*  ║\n` +
+                              `╚══════════════════╝\n\n` +
+                              `📌 *Tema debatido:* ${debate.tema}\n` +
+                              `👑 *Ganador Oficial:* ${ganador}\n\n` +
+                              `━━━━━━━━━━━━━━━\n` +
+                              `📊 *MARCADOR FINAL:*\n` +
+                              `👤 Tú: *${finalUser} pts*\n` +
+                              `🤖 Bot: *${finalBot} pts*\n\n` +
+                              `⚖️ *Evaluación del Jurado:*\n_${veredicto}_\n\n` +
+                              `_Unknown Codexツ</>_`
+                    }, { quoted: m });
+                    return;
+                }
 
                 await sock.sendMessage(m.chat, {
-                    text: `*[${personaje}]:* ${respuesta}`
+                    text: `🗣️ *[Ronda ${debate.rondas}/5]*\n\n` +
+                          `${respuesta}\n\n` +
+                          `━━━━━━━━━━━━━━━\n` +
+                          `📊 *Puntos de ronda:* Tú: +${uScore} pts | Bot: +${bScore} pts\n` +
+                          `_Escribe tu siguiente argumento o escribe .debatir stop para terminar_`
+                }, { quoted: m });
+                return;
+            }
+
+            // 0. Modo Roleplay activo para el usuario (Público y enriquecido)
+            const rpKey = (global.roleplayMode && (
+                global.roleplayMode[m.sender] ||
+                global.roleplayMode[(m.sender || '').replace(/:\d+@/, '@')] ||
+                (m.fromMe ? (global.roleplayMode[sock.user?.id] || global.roleplayMode[(sock.user?.id || '').replace(/:\d+@/, '@')]) : null)
+            )) || null;
+
+            if (rpKey) {
+                const isMedia = Boolean(m.message?.imageMessage || m.message?.videoMessage || m.message?.stickerMessage || m.message?.audioMessage);
+                const resp = await roleplayEngine.responderMensaje(rpKey, m.body, isMedia);
+
+                try {
+                    await sock.sendMessage(m.chat, {
+                        react: { text: resp.emoji || '🎭', key: m.key }
+                    });
+                } catch (_) {}
+
+                await sock.sendMessage(m.chat, {
+                    text: `${resp.emoji} *[${resp.nombre}]:*\n\n${resp.texto}\n\n_Unknown Codexツ</>_`
                 }, { quoted: m });
                 return;
             }

@@ -3,11 +3,11 @@
 const bannedManager = require('../../lib/banned');
 
 module.exports = {
-    name: 'desbanear',
-    alias: ['unban'],
+    name: 'unban',
+    alias: ['desbanear'],
     category: 'sistema',
     desc: 'Remueve a un usuario de la lista negra del bot (solo owner)',
-    usage: '.desbanear @usuario | .desbanear [número]',
+    usage: '.unban @usuario | .unban [número]',
     ownerOnly: true,
 
     execute: async ({ sock, m, args, isOwner }) => {
@@ -25,8 +25,8 @@ module.exports = {
         if (!target || target === 'undefined@s.whatsapp.net') {
             return await sock.sendMessage(jid, {
                 text: '❌ Uso correcto:\n' +
-                      '*.desbanear @usuario*\n' +
-                      '*.desbanear 18091234567*'
+                      '*.unban @usuario*\n' +
+                      '*.unban 18091234567*'
             }, { quoted: m });
         }
 

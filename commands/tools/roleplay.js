@@ -1,110 +1,26 @@
 'use strict';
 
-const premium = require('../../lib/premium');
+const roleplayEngine = require('../../lib/roleplayEngine');
 
 if (!global.roleplayMode) {
     global.roleplayMode = {};
 }
 
-const personajesData = {
-    naruto: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/2/284121.jpg',
-        descripcion: 'Ninja de Konoha, futuro Hokage. Nunca se rinde. 🍥',
-        frase: '¡Dattebayo! ¡Seré el mejor Hokage!'
-    },
-    goku: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/2/310574.jpg',
-        descripcion: 'Guerrero Saiyan, el más fuerte del universo. 💪',
-        frase: '¡Kamehameha! ¡Vamos a pelear!'
-    },
-    vegeta: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/3/52297.jpg',
-        descripcion: 'Príncipe de los Saiyajins, orgulloso y poderoso. 👑',
-        frase: '¡Soy el Príncipe de todos los Saiyajins!'
-    },
-    sasuke: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/9/131317.jpg',
-        descripcion: 'Ninja del clan Uchiha, busca la venganza. ⚡',
-        frase: 'Solo vivo para la venganza...'
-    },
-    luffy: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/9/310307.jpg',
-        descripcion: 'Capitán pirata de sombrero de paja. ⚓',
-        frase: '¡Seré el Rey de los Piratas!'
-    },
-    zoro: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/3/100534.jpg',
-        descripcion: 'Espadachín del estilo tres espadas (Santoryu). ⚔️',
-        frase: 'Seré el mejor espadachín del mundo.'
-    },
-    gojo: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/8/470133.jpg',
-        descripcion: 'El hechicero más fuerte. Infinity lo protege todo. ∞',
-        frase: 'Lamentablemente eres muy débil para mí.'
-    },
-    levi: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/2/241413.jpg',
-        descripcion: 'El soldado más fuerte de la humanidad. ⚔️',
-        frase: 'Tch. Eres un idiota de primera clase.'
-    },
-    saitama: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/5/295603.jpg',
-        descripcion: 'Héroe que derrota todo de un solo golpe. 👊',
-        frase: 'Un golpe. Siempre uno solo.'
-    },
-    light: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/8/260547.jpg',
-        descripcion: 'El dios del nuevo mundo. KIRA. ✍️',
-        frase: '¡Soy KIRA y purificaré este mundo!'
-    },
-    tanjiro: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/4/365763.jpg',
-        descripcion: 'Cazador de demonios, protector de su hermana. 🌸',
-        frase: '¡Respiración del agua, primera forma!'
-    },
-    zenitsu: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/9/384353.jpg',
-        descripcion: 'Cazador de demonios de la respiración del rayo. ⚡',
-        frase: '¡Respiración del rayo, primera postura!'
-    },
-    eren: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/10/216895.jpg',
-        descripcion: 'Poseedor del Titán de Ataque y Fundador. ⚔️',
-        frase: '¡Si no peleas, no puedes ganar!'
-    },
-    deku: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/7/299404.jpg',
-        descripcion: 'Sucesor del One For All, estudiante de la U.A. 💚',
-        frase: '¡Voy a salvar a todos con una sonrisa!'
-    },
-    bakugo: {
-        imagen: 'https://cdn.myanimelist.net/images/characters/12/299406.jpg',
-        descripcion: 'Héroe explosivo con un orgullo implacable. 💥',
-        frase: '¡SHINEEE! ¡Yo seré el número uno!'
-    }
-};
-
 module.exports = {
     name: 'roleplay',
     alias: ['animepersonaje', 'personaje', 'rp'],
-    category: 'herramientas',
-    desc: 'Activa el modo roleplay de un personaje de anime (Premium)',
-    usage: '.roleplay [personaje] | .roleplay stop',
+    category: 'juegos',
+    desc: 'Activa el modo roleplay de tu personaje de anime favorito para conversar',
+    usage: '.roleplay [personaje] | .roleplay stop | .roleplay list',
 
-    execute: async ({ sock, m, args, isOwner }) => {
+    execute: async ({ sock, m, args }) => {
         const jid = m.chat || m.key.remoteJid;
         const sender = m.sender;
-
-        if (!isOwner && !premium.isPremium(sender)) {
-            return await sock.sendMessage(jid, {
-                text: '⭐ Este comando es *Premium*.\n_Unknown Codexツ</>_'
-            }, { quoted: m });
-        }
 
         const subCmd = (args[0] || '').toLowerCase().trim();
 
         // 1. Detener roleplay
-        if (subCmd === 'stop' || subCmd === 'off' || subCmd === 'salir') {
+        if (subCmd === 'stop' || subCmd === 'off' || subCmd === 'salir' || subCmd === 'cancelar') {
             if (!global.roleplayMode[sender]) {
                 return await sock.sendMessage(jid, {
                     text: '⚠️ No tienes ningún roleplay activo.\n\n_Unknown Codexツ</>_'
@@ -112,55 +28,75 @@ module.exports = {
             }
             delete global.roleplayMode[sender];
             return await sock.sendMessage(jid, {
-                text: '✅ *Modo roleplay desactivado.*\n_Unknown Codexツ</>_'
+                text: '✅ *Modo roleplay desactivado.* ¡Hasta la próxima!\n\n_Unknown Codexツ</>_'
             }, { quoted: m });
         }
 
-        const personaje = args.join(' ').trim();
-        if (!personaje) {
+        // 2. Listar personajes disponibles
+        if (subCmd === 'list' || subCmd === 'lista' || subCmd === 'personajes') {
+            const listaP = Object.entries(roleplayEngine.personajes).map(([k, p]) =>
+                `${p.emoji} *${p.nombre}* (${p.anime})`
+            ).join('\n');
+
             return await sock.sendMessage(jid, {
-                text: '❌ Uso: *.roleplay [personaje]*\n\n' +
-                      '📋 *Personajes disponibles:*\n' +
-                      'Naruto, Goku, Vegeta, Sasuke, Luffy,\n' +
-                      'Zoro, Gojo, Levi, Saitama, Light,\n' +
-                      'Tanjiro, Zenitsu, Eren, Deku, Bakugo\n\n' +
-                      '*.roleplay stop* — Salir del roleplay\n\n' +
-                      '_Unknown Codexツ</>_'
+                text: `╔══════════════════╗\n` +
+                      `║ 🎭 *PERSONAJES ROLEPLAY* ║\n` +
+                      `╚══════════════════╝\n\n` +
+                      `${listaP}\n\n` +
+                      `━━━━━━━━━━━━━━━\n` +
+                      `💡 Usa: *.roleplay [nombre]* para hablar con uno.\n` +
+                      `Ejemplo: *.roleplay gojo* o *.roleplay goku*\n\n` +
+                      `_Unknown Codexツ</>_`
             }, { quoted: m });
         }
 
-        const cleanKey = personaje.toLowerCase().replace(/\s+/g, '');
-        const data = personajesData[cleanKey] ||
-                     personajesData[cleanKey.split('yagami')[0]] ||
-                     Object.entries(personajesData).find(([k]) => cleanKey.includes(k))?.[1];
+        const query = args.join(' ').trim();
+        if (!query) {
+            const nombres = Object.values(roleplayEngine.personajes).map(p => `${p.emoji} ${p.nombre.split(' ')[0]}`).join(', ');
+            return await sock.sendMessage(jid, {
+                text: `🎭 *MODO ROLEPLAY ANIME*\n\n` +
+                      `Habla en privado o en grupo y el personaje te responderá de forma personalizada y divertida.\n\n` +
+                      `📋 *Personajes disponibles:*\n${nombres}\n\n` +
+                      `💡 *Uso:* *.roleplay [personaje]*\n` +
+                      `Ejemplo: *.roleplay goku*\n\n` +
+                      `🛑 Usa *.roleplay stop* para salir del roleplay cuando quieras.\n\n` +
+                      `_Unknown Codexツ</>_`
+            }, { quoted: m });
+        }
 
-        // Guardar estado de roleplay
-        global.roleplayMode[sender] = personaje;
+        const match = roleplayEngine.getPersonaje(query);
+        if (!match) {
+            return await sock.sendMessage(jid, {
+                text: `❌ No se encontró el personaje *${query}*.\n` +
+                      `Usa *.roleplay list* para ver todos los personajes disponibles.`
+            }, { quoted: m });
+        }
 
-        if (data && data.imagen) {
+        const { key, data } = match;
+
+        // Guardar modo activo para el usuario
+        global.roleplayMode[sender] = key;
+
+        const caption = `🎭 *MODO ROLEPLAY ACTIVADO*\n\n` +
+                        `${data.emoji} *Personaje:* ${data.nombre}\n` +
+                        `📺 *Anime:* ${data.anime}\n` +
+                        `📖 *Perfil:* ${data.descripcion}\n\n` +
+                        `━━━━━━━━━━━━━━━\n` +
+                        `💬 *${data.nombre}:*\n"${data.frase}"\n` +
+                        `━━━━━━━━━━━━━━━\n\n` +
+                        `✨ ¡A partir de ahora cualquier mensaje que envíes será respondido como *${data.nombre}*!\n` +
+                        `🛑 Para salir escribe: *.roleplay stop*\n\n` +
+                        `_Unknown Codexツ</>_`;
+
+        if (data.imagen) {
             try {
-                await sock.sendMessage(jid, {
+                return await sock.sendMessage(jid, {
                     image: { url: data.imagen },
-                    caption: `🎭 *Modo Roleplay activado*\n\n` +
-                             `⚔️ *Personaje:* ${personaje}\n` +
-                             `📖 *Info:* ${data.descripcion}\n\n` +
-                             `💬 *${personaje}:* "${data.frase}"\n\n` +
-                             `━━━━━━━━━━━━━━━\n` +
-                             `Ahora responderé como *${personaje}*.\n` +
-                             `Usa *.roleplay stop* para salir.\n\n` +
-                             `_Unknown Codexツ</>_`
+                    caption
                 }, { quoted: m });
-                return;
             } catch (_) {}
         }
 
-        await sock.sendMessage(jid, {
-            text: `🎭 *Modo Roleplay activado*\n\n` +
-                  `⚔️ *Personaje:* ${personaje}\n\n` +
-                  `Ahora responderé como *${personaje}*.\n` +
-                  `Usa *.roleplay stop* para salir.\n\n` +
-                  `_Unknown Codexツ</>_`
-        }, { quoted: m });
+        await sock.sendMessage(jid, { text: caption }, { quoted: m });
     }
 };
-
