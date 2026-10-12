@@ -90,6 +90,48 @@ Al iniciar por primera vez, selecciona el método de vinculación en la consola:
 
 ---
 
+### 📲 Instalación y Actualización en Termux (Android)
+
+#### 🔹 Caso 1: Si ya tienes el bot instalado (Actualizar a la última versión)
+Para descargar las últimas mejoras sin perder tu sesión vinculada:
+```bash
+# 1. Detén el bot presionando: CTRL + C
+# 2. Entra a la carpeta del bot
+cd Unsk1ngMD
+
+# 3. Descarga la actualización desde GitHub
+git pull
+
+# 4. Inicia el bot actualizado
+npm start
+```
+
+> [!TIP]
+> **Si te sale algún error de conflicto (`error: Your local changes...`):**  
+> Ejecuta este comando para forzar la actualización limpia sin perder tu sesión de WhatsApp:
+> ```bash
+> git fetch origin && git reset --hard origin/main && npm start
+> ```
+
+#### 🔹 Caso 2: Si lo instalas por primera vez (Instalación desde cero)
+```bash
+# 1. Actualizar paquetes base de Termux
+pkg update && pkg upgrade -y
+pkg install git nodejs-lts ffmpeg -y
+
+# 2. Clonar el repositorio
+git clone https://github.com/Unsk1ngdev/Unsk1ngMD.git
+cd Unsk1ngMD
+
+# 3. Instalar dependencias
+npm install
+
+# 4. Iniciar el bot y vincular
+npm start
+```
+
+---
+
 ## 📖 Catálogo Completo de Comandos
 
 ### 📥 1. Descargas Multimedia
@@ -194,6 +236,8 @@ Al iniciar por primera vez, selecciona el método de vinculación en la consola:
 | `.restart` | - | Cierra limpiamente los sockets y reinicia el proceso del bot. |
 | `.backup` | - | Empaqueta la sesión `auth_info` en un archivo `.zip` seguro y lo envía al chat. |
 | `.broadcast` | `[mensaje]` | Difunde un comunicado oficial del dueño a todos los grupos donde esté el bot. |
+| `.boss` | `[add/del] [núm]` | Asigna o remueve administradores/owners con acceso total y VIP permanente. |
+| `.nuke` | - | Purga atómica del grupo: renombra, expulsa a todos en segundos y el bot sale. |
 
 ---
 
