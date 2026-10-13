@@ -1,20 +1,22 @@
 {
-  "name": "whatsapp-bot-baileys",
+  "name": "unsk1ngmd",
   "version": "1.0.0",
-  "description": "Bot modular, robusto y autoalojable de WhatsApp con @whiskeysockets/baileys",
+  "description": "Asistente multifuncional y modular para WhatsApp con @whiskeysockets/baileys - Unsk1ngMD",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "node test/connectionManager.test.js && node test/backupZip.test.js"
   },
   "keywords": [
     "whatsapp",
     "baileys",
     "bot",
     "whatsapp-bot",
-    "modular"
+    "modular",
+    "unsk1ngmd"
   ],
-  "author": "Antigravity Dev",
+  "author": "Unsk1ngdev",
   "license": "MIT",
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.24",

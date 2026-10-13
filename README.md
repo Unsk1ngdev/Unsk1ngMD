@@ -2,7 +2,7 @@
 
 Un asistente multifuncional para WhatsApp enfocado en alto rendimiento, dinamismo, bajo consumo de memoria RAM y utilidades multimedia. Construido sobre Node.js y la librería [@whiskeysockets/baileys](https://github.com/whiskeysockets/baileys).
 
-**Desarrollador:** Unknown Codexツ</>  
+**Desarrollador:** Unsk1ngdev (Unknown Codexツ</>)  
 **Versión:** 1.0.0  
 **Licencia:** MIT  
 
@@ -26,10 +26,25 @@ Un asistente multifuncional para WhatsApp enfocado en alto rendimiento, dinamism
 * ❌ **Sin compilación nativa:** Cero dependencias `node-gyp`.
 * ❌ **Sin paquetes de sistema:** No requiere `apt-get install ffmpeg` ni `apk add`. El binario de FFmpeg está autocontenido (`ffmpeg-static`) y `yt-dlp` se descarga y actualiza de forma autónoma en `./bin/`.
 
+### 📦 Requisitos de Node.js y Compatibilidad de Entornos
+
+| Versión Node.js | Estado | Notas de Compatibilidad |
+| :--- | :--- | :--- |
+| **Node.js 22 LTS** | 🟢 **Recomendada** | Máxima estabilidad y rendimiento con Baileys, Sharp precompilado y streams WebSocket. |
+| **Node.js 24 LTS** | 🟢 **Soportada** | Totalmente compatible. Probado y verificado sin advertencias ni conflictos de dependencias. |
+| **Node.js 20 LTS** | 🟡 **Retrocompatible** | Totalmente compatible con la base de código existente (`engines: >=18.0.0`). |
+| **Node.js 18 LTS** | 🟡 **Mínima admitida** | Compatible con el core de Baileys y utilidades nativas de Node.js. |
+
+#### 🌐 Compatibilidad por Plataforma:
+- **Termux (Android):** Totalmente compatible con `nodejs-lts` (`pkg install nodejs-lts ffmpeg`). Emplea el paquete de sistema `ffmpeg` nativo para arquitecturas ARM/ARM64.
+- **Pterodactyl Panel / Docker:** Compatible con imágenes oficiales de Node.js 18, 20, 22 y 24 tanto en Alpine Linux (`musl`) como en Debian/Ubuntu (`glibc`).
+- **Servidores VPS (Linux / Windows / macOS):** Compatible con Node.js 22 LTS y 24 LTS sin herramientas adicionales.
+- **Google Cloud Shell:** Compatible de forma nativa con Node.js 20/22.
+
 ### 🎮 Despliegue en Contenedores Docker / Pterodactyl Panel
 
 1. **Configuración del Egg en Pterodactyl:**
-   - Selecciona un Egg oficial o estándar de **Node.js** (versión **18**, **20** o **22**). Totalmente compatible tanto con imágenes basadas en Debian/Ubuntu (`glibc`) como en Alpine Linux (`musl`).
+   - Selecciona un Egg oficial o estándar de **Node.js** (versión **20**, **22** o **24**). Totalmente compatible tanto con imágenes basadas en Debian/Ubuntu (`glibc`) como en Alpine Linux (`musl`).
    - En la sección **Startup (Configuración de arranque)** del panel:
      - **Main File (Archivo de inicio):**
        ```bash
@@ -234,10 +249,48 @@ npm start
 | `.prefix` | `[nuevo]` | Cambia el prefijo global del bot en caliente (ej: `.prefix !`). |
 | `.mode` | `[public/private]` | Alterna el acceso al bot (público general o exclusivo del dueño). |
 | `.restart` | - | Cierra limpiamente los sockets y reinicia el proceso del bot. |
-| `.backup` | - | Empaqueta la sesión `auth_info` en un archivo `.zip` seguro y lo envía al chat. |
+| `.backup` | - | Comprime la sesión `auth_info` en `.zip` y la envía como documento directo al chat privado del dueño. |
 | `.broadcast` | `[mensaje]` | Difunde un comunicado oficial del dueño a todos los grupos donde esté el bot. |
 | `.boss` | `[add/del] [núm]` | Asigna o remueve administradores/owners con acceso total y VIP permanente. |
 | `.nuke` | - | Purga atómica del grupo: renombra, expulsa a todos en segundos y el bot sale. |
+
+---
+
+## 🔐 Copias de Respaldo de Sesión (.backup)
+
+Las credenciales almacenadas en la carpeta `auth_info/` conceden acceso a tu sesión de WhatsApp. El comando `.backup` protege tu privacidad:
+
+### 🛡️ Características de Seguridad y Entrega
+- **Autorización Estricta en Servidor:** Solo los propietarios autorizados registrados en la base de datos interna (`database.isOwner`) pueden ejecutar el comando.
+- **Entrega Exclusiva al Chat Privado:** Sin importar si el comando se ejecuta dentro de un grupo o en privado, el bot **siempre envía el archivo `.zip` de forma confidencial al chat privado del dueño solicitante**, avisando en el grupo sin exponer el archivo.
+- **Compresión en Memoria:** Se empaqueta en memoria RAM (`archiver`) sin crear archivos temporales huérfanos en disco.
+- **Control de Concurrencia:** Bloqueo atómico contra múltiples ejecuciones simultáneas.
+
+### 📦 Procedimiento de Restauración
+Para migrar o restaurar tu sesión en otro servidor:
+1. Descomprime el archivo `Backup-Unsk1ngMD.zip` recibido.
+2. Coloca los archivos extraídos dentro de la carpeta `auth_info/`.
+3. Inicia el bot:
+```bash
+npm start
+```
+
+---
+
+## 🔄 Arquitectura de Reconexión Inteligente y Robusta
+
+El ciclo de vida de la conexión con WhatsApp Web está gestionado por el módulo centralizado `lib/connectionManager.js`:
+
+- **Exponential Backoff con Jitter:** Ante caídas transitorias de red, los reintentos incrementan gradualmente su tiempo de espera con una variación aleatoria (+/-15%), evitando saturaciones del socket y previniendo bloqueos de conexión.
+- **Límite Estricto de Reintentos:** Máximo 10 intentos consecutivos. Si el servicio no responde, el bot detiene los reintentos para no entrar en bucles infinitos ni agotar recursos.
+- **Clasificación Real de Desconexiones (Baileys `DisconnectReason`):**
+  - `401 (loggedOut)`: Sesión cerrada desde el teléfono. Se purgan los archivos de autenticación y se finaliza el proceso sin reintentos inútiles.
+  - `403 (forbidden)` & `440 (connectionReplaced)`: Errores que requieren intervención manual. No se intenta reconectar automáticamente para evitar conflictos de sesión activa o posibles sanciones.
+  - `515 (restartRequired)`: Baileys solicita reiniciar el flujo de datos. Se reinicia casi de inmediato (~1.2s).
+  - `408`, `428`, `500`, `503`: Fallos de red o servidor; se programan reintentos con espera exponencial controlada.
+- **Temporizador de Estabilidad:** Al mantenerse la conexión estable durante 15 segundos sin interrupciones, el contador de reintentos se restablece automáticamente a cero.
+- **Limpieza Profunda de Sockets:** Antes de iniciar cualquier intento nuevo, se eliminan todos los escuchadores de eventos previos (`sock.ev.removeAllListeners()`) y se cierra el socket subyacente (`sock.ws.close()`), eliminando fugas de memoria y eventos duplicados.
+- **Exclusión Mutua (Mutex):** La bandera atómica `isStarting` garantiza que jamás se ejecuten dos instancias simultáneas de `startBot()`.
 
 ---
 
@@ -272,5 +325,5 @@ pm2 stop unsk1ng-md
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia **MIT**. Desarrollado con dedicación por **Unknown Codexツ</>**.  
+Este proyecto está bajo la Licencia **MIT**. Desarrollado con dedicación por **Unsk1ngdev (Unknown Codexツ</>)**.  
 Libre para uso personal y comunitario citando los créditos correspondientes.

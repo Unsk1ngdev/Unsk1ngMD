@@ -94,11 +94,19 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
             } else if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+                const isForbidden = statusCode === DisconnectReason.forbidden;
+                const isConflict = statusCode === DisconnectReason.connectionReplaced;
 
                 logger.warn(`[SUB-BOT +${cleanNumber}] Conexión cerrada. Código de estado: ${statusCode || 'desconocido'}`);
 
-                if (isLoggedOut) {
-                    logger.error(`[SUB-BOT +${cleanNumber}] Sesión cerrada desde el dispositivo. Eliminando datos...`);
+                // Limpiar listeners del sub-bot para evitar fugas de memoria
+                try {
+                    subSock.ev.removeAllListeners();
+                    if (subSock.ws && typeof subSock.ws.close === 'function') subSock.ws.close();
+                } catch (_) {}
+
+                if (isLoggedOut || isForbidden) {
+                    logger.error(`[SUB-BOT +${cleanNumber}] Sesión invalidada o cerrada desde el dispositivo. Eliminando datos...`);
                     global.subBots.delete(cleanNumber);
                     try {
                         fs.removeSync(sessionDir);
@@ -111,12 +119,14 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
                     if (sock && chatJid) {
                         try {
                             await sock.sendMessage(chatJid, {
-                                text: `⚠️ *[SUB-BOT DESCONECTADO]*\nLa sesión de +${cleanNumber} fue cerrada en WhatsApp.`
+                                text: `⚠️ *[SUB-BOT DESCONECTADO]*\nLa sesión de +${cleanNumber} fue cerrada o invalidada en WhatsApp.`
                             });
                         } catch (_) {}
                     }
+                } else if (isConflict) {
+                    logger.warn(`[SUB-BOT +${cleanNumber}] Conexión reemplazada por otra instancia activa. Deteniendo reconexión.`);
                 } else {
-                    // Reconexión automática ante desconexión temporal de red
+                    // Reconexión automática controlada ante desconexión temporal de red
                     logger.info(`[SUB-BOT +${cleanNumber}] Reconectando automáticamente en 5 segundos...`);
                     setTimeout(() => {
                         createSubBotSocket({ cleanNumber, sock, chatJid, isReconnect: true });

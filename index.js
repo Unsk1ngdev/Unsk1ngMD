@@ -5,7 +5,8 @@ const {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
+    makeCacheableSignalKeyStore,
+    Browsers
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const qrcodeTerminal = require('qrcode-terminal');
@@ -24,6 +25,7 @@ const { handleMessage } = require('./handlers/messageHandler');
 const { handleGroupUpdate } = require('./handlers/groupHandler');
 const antispamMiddleware = require('./middlewares/antispam');
 const { ensureYtdlp } = require('./lib/ytdlp');
+const connectionManager = require('./lib/connectionManager');
 
 /**
  * Renderiza el banner cyberpunk con cfonts y la caja de información neón
@@ -66,9 +68,9 @@ const renderBanner = (socketStatus = 'Iniciando conexión...') => {
     };
 
     console.log(border('┌', '┐'));
-    console.log(infoLine('Creador', 'Unknown Codexツ</>', chalk.hex('#00ff66').bold));
+    console.log(infoLine('Creador', 'Unsk1ngdev (Unknown Codexツ</>)', chalk.hex('#00ff66').bold));
     console.log(infoLine('Contacto', '+584160666286', chalk.hex('#38bdf8').bold));
-    console.log(infoLine('Versión', 'Dev', chalk.hex('#facc15').bold));
+    console.log(infoLine('Versión', '1.0.0', chalk.hex('#facc15').bold));
     console.log(infoLine('Estado del socket', socketStatus, chalk.hex('#e879f9').bold));
     console.log(border('└', '┘') + '\n');
 };
@@ -91,14 +93,26 @@ const askQuestion = (query) => {
  * Función principal de arranque del socket de WhatsApp
  */
 const startBot = async () => {
-    // 0. Crear directorios base esenciales si no existen
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    const binDir = path.join(process.cwd(), 'bin');
-    fs.ensureDirSync(tmpDir);
-    fs.ensureDirSync(binDir);
-    fs.ensureDirSync(config.sessionDir);
+    // Control de concurrencia: evitar que dos instancias de startBot() se ejecuten simultáneamente
+    if (connectionManager.isStarting) {
+        logger.warn('[SISTEMA] Intento de inicio concurrente de startBot() bloqueado.');
+        return;
+    }
+    connectionManager.isStarting = true;
 
-    renderBanner('Iniciando conexión...');
+    // Limpiar socket anterior y sus listeners para evitar duplicaciones
+    connectionManager.cleanupSocket();
+
+    let sock = null;
+    try {
+        // 0. Crear directorios base esenciales si no existen
+        const tmpDir = path.join(process.cwd(), 'tmp');
+        const binDir = path.join(process.cwd(), 'bin');
+        fs.ensureDirSync(tmpDir);
+        fs.ensureDirSync(binDir);
+        fs.ensureDirSync(config.sessionDir);
+
+        renderBanner('Iniciando conexión...');
 
     // 1. Cargar catálogo modular de comandos
     loadCommands();
@@ -134,11 +148,16 @@ const startBot = async () => {
 
     // 3. Preparar estado de autenticación multi-archivo
     fs.ensureDirSync(config.sessionDir);
+    const { state, saveCreds } = await useMultiFileAuthState(config.sessionDir);
     const credsFile = path.join(config.sessionDir, 'creds.json');
-    const isSessionActive = fs.existsSync(credsFile);
+    const isSessionActive = Boolean(
+        state?.creds?.registered ||
+        state?.creds?.me ||
+        (fs.existsSync(credsFile) && fs.statSync(credsFile).size > 100)
+    );
 
-    let authMethod = '1'; // 1 = QR, 2 = Pairing Code
-    let pairingNumber = '';
+    let authMethod = global.authMethod || '1'; // 1 = QR, 2 = Pairing Code
+    let pairingNumber = global.pairingNumber || '';
 
     // Autenticación dual interactiva si no hay credenciales existentes
     if (!isSessionActive) {
@@ -148,24 +167,38 @@ const startBot = async () => {
         console.log(chalk.white(' [2] Código de emparejamiento de 8 dígitos (Pairing Code)\n'));
 
         authMethod = await askQuestion(chalk.green.bold('Elige una opción (1 o 2): '));
+        global.authMethod = authMethod;
 
         if (authMethod === '2') {
             pairingNumber = await askQuestion(chalk.green.bold('Ingresa tu número de teléfono con código de país (ej: 18494509905): '));
             pairingNumber = pairingNumber.replace(/[^0-9]/g, '');
+            global.pairingNumber = pairingNumber;
 
             if (!pairingNumber || pairingNumber.length < 8) {
                 logger.error('Número de teléfono inválido. Reinicia el bot e intenta de nuevo.');
                 process.exit(1);
             }
         }
+    } else {
+        logger.info('Sesión enlazada o en proceso de vinculación detectada. Conectando...');
     }
 
-    const { state, saveCreds } = await useMultiFileAuthState(config.sessionDir);
-    const { version, isLatest } = await fetchLatestBaileysVersion();
-    logger.info(`Usando versión de WhatsApp Web v${version.join('.')} (Última: ${isLatest})`);
+    let version = [2, 3000, 1043857760];
+    try {
+        const vResult = await Promise.race([
+            fetchLatestBaileysVersion(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
+        if (vResult?.version) {
+            version = vResult.version;
+            logger.info(`Usando versión de WhatsApp Web v${version.join('.')} (Última: ${vResult.isLatest})`);
+        }
+    } catch (_) {
+        logger.info(`Usando versión estable de WhatsApp Web v${version.join('.')}`);
+    }
 
     // 4. Inicialización optimizada de Baileys Socket (< 250MB RAM)
-    const sock = makeWASocket({
+    sock = makeWASocket({
         version,
         logger: pino({ level: 'silent' }), // Silenciar logs internos de Baileys para no llenar RAM
         printQRInTerminal: false,
@@ -173,12 +206,13 @@ const startBot = async () => {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
         },
-        browser: authMethod === '2' ? ['Ubuntu', 'Chrome', '20.0.04'] : [config.botName, 'Chrome', '1.0.0'],
+        browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false, // Fundamental: evita cargar historiales antiguos a la RAM
         generateHighQualityLinkPreview: false,
         markOnlineOnConnect: true,
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 25000,
+        defaultQueryTimeoutMs: 60000,
         getMessage: async () => ({ conversation: '' })
     });
 
@@ -204,7 +238,7 @@ const startBot = async () => {
         }, 3000);
     }
 
-    // 6. Eventos de Conexión y Reconexión Automática
+    // 6. Eventos de Conexión y Reconexión Automática Controlada
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
@@ -215,25 +249,40 @@ const startBot = async () => {
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            const evalResult = connectionManager.evaluateDisconnection(statusCode);
 
-            renderBanner(shouldReconnect ? 'Desconectado - Reconectando...' : 'Sesión cerrada');
-            logger.warn(`Conexión cerrada. Razón: ${statusCode || 'Desconocida'}. Reconectando: ${shouldReconnect}`);
+            // Marcar socket para limpieza en el arranque siguiente
+            connectionManager.activeSock = sock;
 
-            if (statusCode === DisconnectReason.loggedOut) {
-                logger.error('Sesión cerrada desde el teléfono. Eliminando credenciales...');
+            if (evalResult.action === 'LOGGED_OUT') {
+                renderBanner('Sesión cerrada');
+                logger.error('Sesión cerrada desde WhatsApp (401). Eliminando credenciales para nueva vinculación...');
                 try {
                     await fs.remove(config.sessionDir);
-                } catch (e) {}
+                } catch (_) {}
                 logger.info('Credenciales eliminadas. Inicia el bot para volver a vincular.');
                 process.exit(1);
-            } else {
-                // Reconexión automática con breve espera de red
-                setTimeout(() => {
-                    startBot();
-                }, 4000);
             }
+
+            if (!evalResult.canReconnect) {
+                renderBanner('Conexión detenida');
+                logger.error(`[CONEXIÓN DETENIDA] ${evalResult.reasonText}`);
+                logger.warn('Intervención manual requerida. El bot no reintentará automáticamente para evitar bucles.');
+                return;
+            }
+
+            // Calcular retroceso exponencial con jitter
+            const delayMs = connectionManager.calculateBackoffDelay(evalResult.isFastRestart);
+            const retryStr = `Intento ${connectionManager.retryCount}/${connectionManager.maxRetries}`;
+
+            renderBanner(`Reconectando (${retryStr})...`);
+            logger.warn(`[RECONEXIÓN] ${evalResult.reasonText} Reintentando en ${(delayMs / 1000).toFixed(1)}s [${retryStr}]`);
+
+            connectionManager.scheduleReconnect(delayMs, () => {
+                startBot();
+            });
         } else if (connection === 'open') {
+            connectionManager.onConnectionOpen(sock);
             renderBanner('Conectado y Operativo ⚡');
             logger.success(`¡Bot conectado exitosamente como ${sock.user.name || sock.user.id}!`);
             logger.info(`Listo para recibir comandos. Prefijo actual: "${config.defaultPrefix}"`);
@@ -305,6 +354,24 @@ const startBot = async () => {
             }
         } catch (_) {}
     });
+
+        connectionManager.isStarting = false;
+        connectionManager.activeSock = sock;
+    } catch (err) {
+        connectionManager.isStarting = false;
+        connectionManager.cleanupSocket();
+        logger.error('Error durante la inicialización de startBot():', err?.message || err);
+
+        const delayMs = connectionManager.calculateBackoffDelay(false);
+        if (connectionManager.retryCount <= connectionManager.maxRetries) {
+            logger.warn(`[RECONEXIÓN] Reintentando tras fallo de inicialización en ${(delayMs / 1000).toFixed(1)}s (Intento ${connectionManager.retryCount}/${connectionManager.maxRetries})...`);
+            connectionManager.scheduleReconnect(delayMs, () => {
+                startBot();
+            });
+        } else {
+            logger.error('[SISTEMA] Límite de reintentos alcanzado tras fallos de inicialización. Deteniendo.');
+        }
+    }
 
     return sock;
 };
