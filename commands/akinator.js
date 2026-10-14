@@ -27,10 +27,10 @@ const SESSION_TIMEOUT_MS = 90000; // Temporizador realista de inactividad (90 se
 
 const CANDIDATE_MODELS = [
     process.env.GROQ_MODEL?.trim(),
-    config.groqModel,
-    'openai/gpt-oss-120b',
     'openai/gpt-oss-20b',
     'qwen/qwen3.8-27b',
+    'openai/gpt-oss-120b',
+    config.groqModel,
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant'
 ].filter(Boolean);
@@ -92,24 +92,36 @@ const queryAkinatorAI = async (messages) => {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json'
                     },
-                    timeout: 18000 // 18 segundos por intento
+                    timeout: 15000 // 15 segundos por intento
                 }
             );
 
             let content = res.data?.choices?.[0]?.message?.content?.trim();
             if (content) {
-                // Eliminar posibles bloques de markdown ```json ... ```
-                content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-                return JSON.parse(content);
+                // Extraer el bloque JSON si viene envuelto en texto o markdown
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    content = jsonMatch[0];
+                }
+                const parsed = JSON.parse(content);
+                const normalized = {
+                    tipo: parsed.tipo || (parsed.nombre || parsed.name ? 'adivinanza' : 'pregunta'),
+                    pregunta: parsed.pregunta || parsed.question || parsed.pregunta_actual || parsed.texto,
+                    progreso: typeof parsed.progreso === 'number' ? parsed.progreso : (parsed.progress || 10),
+                    nombre: parsed.nombre || parsed.name || parsed.personaje,
+                    descripcion: parsed.descripcion || parsed.description || parsed.detalles
+                };
+
+                if (normalized.pregunta || normalized.nombre) {
+                    return normalized;
+                }
             }
         } catch (err) {
             lastError = err;
             const status = err.response?.status;
-            if (status === 401) break; // Token inválido
-            if (status === 429 || status === 404 || status === 500 || status === 503) {
-                continue; // Probar modelo alternativo
-            }
-            break;
+            if (status === 401) break; // Clave de API inválida
+            // Para timeout, error 400 (modelo no accesible), 404, 429 o 500, probar el siguiente modelo
+            continue;
         }
     }
 
@@ -192,7 +204,7 @@ const startGame = async (sock, m) => {
 
     const initialMessages = [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: 'Inicia el juego. Formula la pregunta número 1.' }
+        { role: 'user', content: 'Inicia el juego. Formula la pregunta número 1 en formato json.' }
     ];
 
     try {
@@ -327,7 +339,7 @@ const checkAnswer = async (sock, m) => {
 
     const userMessageEntry = {
         role: 'user',
-        content: `El usuario respondió: ${answerText}. Formula la siguiente pregunta o tu adivinanza final.`
+        content: `El usuario respondió: ${answerText}. Formula la siguiente pregunta o tu adivinanza final en formato json.`
     };
     session.aki.messages.push(userMessageEntry);
 

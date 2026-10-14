@@ -47,7 +47,7 @@ module.exports = {
 
     // APIs
     groqApiKey: process.env.GROQ_API_KEY || '',
-    groqModel: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
+    groqModel: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
     aiApiUrl: process.env.AI_API_URL || '',
     aiApiKey: process.env.AI_API_KEY || '',
     aiModel: process.env.AI_MODEL || 'deepseek',

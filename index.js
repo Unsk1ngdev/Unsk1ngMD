@@ -68,7 +68,7 @@ const renderBanner = (socketStatus = 'Iniciando conexión...') => {
     };
 
     console.log(border('┌', '┐'));
-    console.log(infoLine('Creador', 'Unsk1ngdev (Unknown Codexツ</>)', chalk.hex('#00ff66').bold));
+    console.log(infoLine('Creador', 'Unknown Codex', chalk.hex('#00ff66').bold));
     console.log(infoLine('Contacto', '+584160666286', chalk.hex('#38bdf8').bold));
     console.log(infoLine('Versión', '1.0.0', chalk.hex('#facc15').bold));
     console.log(infoLine('Estado del socket', socketStatus, chalk.hex('#e879f9').bold));
@@ -178,23 +178,25 @@ const startBot = async () => {
                 logger.error('Número de teléfono inválido. Reinicia el bot e intenta de nuevo.');
                 process.exit(1);
             }
+        } else {
+            console.log(chalk.cyan('\n⏳ Conectando con los servidores de WhatsApp para generar código QR...'));
         }
     } else {
         logger.info('Sesión enlazada o en proceso de vinculación detectada. Conectando...');
     }
 
-    let version = [2, 3000, 1043857760];
-    try {
-        const vResult = await Promise.race([
-            fetchLatestBaileysVersion(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-        ]);
-        if (vResult?.version) {
-            version = vResult.version;
-            logger.info(`Usando versión de WhatsApp Web v${version.join('.')} (Última: ${vResult.isLatest})`);
-        }
-    } catch (_) {
-        logger.info(`Usando versión estable de WhatsApp Web v${version.join('.')}`);
+    let version = global.cachedBaileysVersion || [2, 3000, 1043857760];
+    if (!global.cachedBaileysVersion) {
+        try {
+            const vResult = await Promise.race([
+                fetchLatestBaileysVersion(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+            ]);
+            if (vResult?.version) {
+                version = vResult.version;
+                global.cachedBaileysVersion = version;
+            }
+        } catch (_) {}
     }
 
     // 4. Inicialización optimizada de Baileys Socket (< 250MB RAM)
