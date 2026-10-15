@@ -5,12 +5,14 @@ const path = require('path');
 const fs = require('fs-extra');
 const nsfwManager = require('../../lib/nsfw');
 const ffmpeg = require('../../lib/ffmpeg');
+const config = require('../../config');
+const { videoToSticker } = require('../../lib/media');
 
 module.exports = {
     name: 'gifnsfw',
-    alias: ['nsfwgif', 'hentaigif', 'gifporn'],
+    alias: ['nsfwgif', 'hentaigif', 'gifhentai', 'anigensfw'],
     category: 'multimedia',
-    desc: 'Envía un GIF animado explícito +18 optimizado para WhatsApp en grupos con NSFW activo',
+    desc: 'Envía un GIF animado explícito de anime y hentai +18 en grupos con NSFW activo',
     usage: '.gifnsfw',
 
     execute: async ({ sock, m }) => {
@@ -25,80 +27,150 @@ module.exports = {
         }
 
         await sock.sendMessage(jid, {
-            text: '🎬 Buscando GIF +18...'
+            text: '🎬 Buscando GIF anime +18...'
         }, { quoted: m });
 
-        const availableEndpoints = [
-            'blowjob', 'anal', 'cum', 'fuck', 'yaoi',
+        // Endpoints dedicados exclusivamente a GIFs de Anime / Hentai +18
+        const animeEndpoints = [
+            'blowjob', 'anal', 'cum', 'fuck',
             'pussylick', 'solo', 'threesome_fff', 'threesome_ffm'
         ].sort(() => Math.random() - 0.5);
 
+        const gifProviders = [
+            // Intento 1: Categoría anime hentai aleatoria de Purrbot
+            async () => {
+                const ep = animeEndpoints[0];
+                const res = await axios.get(`https://purrbot.site/api/img/nsfw/${ep}/gif`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                    timeout: 4500
+                });
+                const url = res.data?.link;
+                if (!url) throw new Error('Sin URL en purrbot 1');
+                return url;
+            },
+            // Intento 2: Segunda categoría anime hentai alternativa
+            async () => {
+                const ep = animeEndpoints[1] || animeEndpoints[0];
+                const res = await axios.get(`https://purrbot.site/api/img/nsfw/${ep}/gif`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                    timeout: 4500
+                });
+                const url = res.data?.link;
+                if (!url) throw new Error('Sin URL en purrbot 2');
+                return url;
+            },
+            // Intento 3: Tercera categoría anime hentai alternativa
+            async () => {
+                const ep = animeEndpoints[2] || 'fuck';
+                const res = await axios.get(`https://purrbot.site/api/img/nsfw/${ep}/gif`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                    timeout: 4500
+                });
+                const url = res.data?.link;
+                if (!url) throw new Error('Sin URL en purrbot 3');
+                return url;
+            }
+        ];
+
         let enviado = false;
 
-        // Intentar hasta con 3 endpoints distintos si alguno presenta lentitud
-        for (let i = 0; i < Math.min(3, availableEndpoints.length); i++) {
+        for (const getUrl of gifProviders) {
             if (enviado) break;
-            const ep = availableEndpoints[i];
 
             try {
-                // 1. Obtener URL del GIF
-                const resMeta = await axios.get(`https://purrbot.site/api/img/nsfw/${ep}/gif`, {
-                    headers: { 'User-Agent': 'Mozilla/5.0' },
-                    timeout: 5000
-                });
-                const url = resMeta.data?.link;
+                const url = await getUrl();
                 if (!url) continue;
 
-                // 2. Descargar el archivo binario
+                // Descargar el GIF anime con timeout de 8s
                 const resMedia = await axios.get(url, {
                     responseType: 'arraybuffer',
-                    timeout: 15000,
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                    timeout: 8000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
                 });
+
                 const rawBuffer = Buffer.from(resMedia.data);
-                const isMp4 = url.toLowerCase().endsWith('.mp4');
+                if (!rawBuffer || rawBuffer.length < 500) continue;
 
-                let finalVideoBuffer = rawBuffer;
+                // Si es excesivamente pesado (> 15MB), omitir
+                if (rawBuffer.length > 15 * 1024 * 1024) continue;
 
-                // 3. Conversión ultrarrápida a MP4 compatible con WhatsApp (H.264, yuv420p)
-                if (!isMp4 && ffmpeg.isFfmpegAvailable()) {
+                let finalVideoBuffer = null;
+                const isAlreadyMp4 = rawBuffer.length > 8 && rawBuffer.slice(4, 8).toString() === 'ftyp';
+
+                if (isAlreadyMp4) {
+                    finalVideoBuffer = rawBuffer;
+                } else if (ffmpeg.isFfmpegAvailable()) {
+                    const tempDir = config.tempDir && fs.existsSync(config.tempDir) ? config.tempDir : process.cwd();
                     const tmpId = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-                    const tmpIn = path.join(process.cwd(), `tmp_gif_in_${tmpId}.gif`);
-                    const tmpOut = path.join(process.cwd(), `tmp_gif_out_${tmpId}.mp4`);
+                    const tmpIn = path.join(tempDir, `tmp_gif_in_${tmpId}.gif`);
+                    const tmpOut = path.join(tempDir, `tmp_gif_out_${tmpId}.mp4`);
 
                     try {
                         fs.writeFileSync(tmpIn, rawBuffer);
                         await ffmpeg.convertGifToMp4(tmpIn, tmpOut);
-                        if (fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0) {
-                            finalVideoBuffer = fs.readFileSync(tmpOut);
+                        if (fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 100) {
+                            const converted = fs.readFileSync(tmpOut);
+                            if (converted.length > 8 && converted.slice(4, 8).toString() === 'ftyp') {
+                                finalVideoBuffer = converted;
+                            }
                         }
                     } catch (convErr) {
-                        console.error('[GIFNSFW] Conversión falló, usando original:', convErr.message);
+                        console.error('[GIFNSFW] Conversión a MP4 falló:', convErr.message);
                     } finally {
                         try { if (fs.existsSync(tmpIn)) fs.unlinkSync(tmpIn); } catch (_) {}
                         try { if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut); } catch (_) {}
                     }
                 }
 
-                // 4. Enviar a WhatsApp como GIF animado nativo
-                await sock.sendMessage(jid, {
-                    video: finalVideoBuffer,
-                    caption: '🎬 _Unknown Codexツ</> +18 GIF_',
-                    gifPlayback: true,
-                    mimetype: 'video/mp4'
-                }, { quoted: m });
+                // Enviar como MP4 nativo con reproducción continua (GIF WhatsApp)
+                if (finalVideoBuffer) {
+                    await sock.sendMessage(jid, {
+                        video: finalVideoBuffer,
+                        caption: '🎬 _Unknown Codexツ</> +18 Anime GIF_',
+                        gifPlayback: true,
+                        mimetype: 'video/mp4'
+                    }, { quoted: m });
+                    enviado = true;
+                    break;
+                }
 
+                // Fallback a sticker animado
+                try {
+                    const stickerBuffer = await videoToSticker(rawBuffer, {
+                        packname: config.packName || 'Unsk1ngMD',
+                        author: 'Unknown Codexツ</>'
+                    });
+                    if (stickerBuffer && stickerBuffer.length > 0) {
+                        await sock.sendMessage(jid, {
+                            sticker: stickerBuffer
+                        }, { quoted: m });
+                        enviado = true;
+                        break;
+                    }
+                } catch (stkErr) {
+                    console.error('[GIFNSFW] Fallback a sticker falló:', stkErr.message);
+                }
+
+                // Fallback a imagen GIF
+                await sock.sendMessage(jid, {
+                    image: rawBuffer,
+                    caption: '🎬 _Unknown Codexツ</> +18 Anime GIF_',
+                    mimetype: 'image/gif'
+                }, { quoted: m });
                 enviado = true;
                 break;
+
             } catch (e) {
-                console.error(`[GIFNSFW] Intento con ${ep} falló:`, e.message);
+                console.error('[GIFNSFW] Intento falló:', e.message);
                 continue;
             }
         }
 
         if (!enviado) {
             await sock.sendMessage(jid, {
-                text: '❌ Error al obtener GIF.\nIntenta de nuevo en unos segundos.\n\n_Unknown Codexツ</>_'
+                text: '❌ Error al obtener GIF anime +18.\nIntenta de nuevo en unos segundos.\n\n_Unknown Codexツ</>_'
             }, { quoted: m });
         }
     }

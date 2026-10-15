@@ -1,3 +1,5 @@
+'use strict';
+
 const axios = require('axios');
 
 module.exports = {
@@ -20,10 +22,10 @@ module.exports = {
         try {
             let memeData = null;
 
-            // 1. Intentar con meme-api.com
+            // 1. Intentar con meme-api.com con sub específico
             try {
                 const apiUrl = `https://meme-api.com/gimme/${selectedSub}`;
-                const response = await axios.get(apiUrl, { timeout: 12000 });
+                const response = await axios.get(apiUrl, { timeout: 6000 });
                 if (response.data && response.data.url && !response.data.nsfw) {
                     memeData = {
                         title: response.data.title,
@@ -33,14 +35,14 @@ module.exports = {
                     };
                 }
             } catch (err) {
-                // Probar fallback
+                // Fallback
             }
 
-            // 2. Fallback general sin subreddit específico en meme-api
+            // 2. Fallback general en meme-api
             if (!memeData) {
                 try {
                     const fallbackApi = 'https://meme-api.com/gimme';
-                    const res = await axios.get(fallbackApi, { timeout: 10000 });
+                    const res = await axios.get(fallbackApi, { timeout: 6000 });
                     if (res.data?.url && !res.data.nsfw) {
                         memeData = {
                             title: res.data.title,
@@ -58,7 +60,7 @@ module.exports = {
                     const redditUrl = `https://www.reddit.com/r/${selectedSub}/hot.json?limit=30`;
                     const res = await axios.get(redditUrl, {
                         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                        timeout: 12000
+                        timeout: 6000
                     });
                     const posts = res.data?.data?.children || [];
                     const imagePosts = posts.filter(p => {
@@ -79,13 +81,16 @@ module.exports = {
             }
 
             if (!memeData || !memeData.url) {
-                throw new Error('No se pudo obtener un meme en este momento. Intenta de nuevo.');
+                throw new Error('No se pudo obtener un meme en este momento.');
             }
 
-            // Descargar el buffer de imagen para enviarlo sin depender de previsualizaciones
+            // Descargar el buffer de imagen para enviarlo de forma fiable
             const imgRes = await axios.get(memeData.url, {
                 responseType: 'arraybuffer',
-                timeout: 20000
+                timeout: 10000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0'
+                }
             });
 
             const caption = `😂 *${memeData.title}*\n` +
@@ -99,7 +104,7 @@ module.exports = {
             await m.react('✅');
         } catch (err) {
             await m.react('❌');
-            throw new Error(`Error al obtener meme: ${err.message}`);
+            await m.reply('❌ No se pudo obtener un meme en este momento. Intenta de nuevo más tarde.');
         }
     }
 };

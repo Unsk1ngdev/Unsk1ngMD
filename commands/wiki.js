@@ -26,7 +26,7 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // 2. Validación estricta y dinámica de la API Key de Groq
+        // 2. Obtención de API Key de Groq si está disponible
         let apiKey = (process.env.GROQ_API_KEY || config.groqApiKey || '').trim();
         if (!apiKey) {
             try {
@@ -39,66 +39,106 @@ module.exports = {
             } catch (_) {}
         }
 
-        if (!apiKey) {
-            return await sock.sendMessage(jid, {
-                text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
-            }, { quoted: m });
-        }
-
         await m.react('📚');
-
-        const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-        const candidateModels = [
-            process.env.GROQ_MODEL?.trim(),
-            'openai/gpt-oss-20b',
-            'qwen/qwen3.8-27b',
-            'openai/gpt-oss-120b',
-            config.groqModel,
-            'llama-3.3-70b-versatile',
-            'llama-3.1-8b-instant'
-        ].filter(Boolean);
-
-        const uniqueModels = [...new Set(candidateModels)];
 
         let explanation = null;
         let lastError = null;
 
-        // 3. Petición HTTP a Groq con timeout estricto de 20s
-        for (const model of uniqueModels) {
+        // 3. Capa 1: Intentar con Groq Cloud si la API Key está presente
+        if (apiKey) {
+            const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+            const candidateModels = [
+                process.env.GROQ_MODEL?.trim(),
+                'openai/gpt-oss-20b',
+                'qwen/qwen3.8-27b',
+                'openai/gpt-oss-120b',
+                config.groqModel
+            ].filter(Boolean);
+
+            const uniqueModels = [...new Set(candidateModels)];
+
+            for (const model of uniqueModels) {
+                try {
+                    const response = await axios.post(
+                        endpoint,
+                        {
+                            model,
+                            messages: [
+                                { role: 'system', content: SYSTEM_PROMPT },
+                                { role: 'user', content: query }
+                            ],
+                            temperature: 0.3,
+                            max_tokens: 800
+                        },
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${apiKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            timeout: 10000
+                        }
+                    );
+
+                    explanation = response.data?.choices?.[0]?.message?.content?.trim();
+                    if (explanation) break;
+                } catch (err) {
+                    lastError = err;
+                    const status = err.response?.status;
+                    if (status === 401) break;
+                    if (status === 429 || status === 404 || status === 500 || status === 503) {
+                        continue;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // 4. Capa 2: API oficial de Wikipedia REST (Ultra rápida y enciclopédica)
+        if (!explanation) {
             try {
-                const response = await axios.post(
-                    endpoint,
+                const wikiRes = await axios.get(
+                    `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`,
                     {
-                        model,
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                        timeout: 5000
+                    }
+                );
+                if (wikiRes.data && wikiRes.data.extract) {
+                    const desc = wikiRes.data.description ? `*(${wikiRes.data.description})*\n\n` : '';
+                    explanation = `${desc}${wikiRes.data.extract.trim()}`;
+                }
+            } catch (_) {}
+        }
+
+        // 5. Capa 3: Fallback a IA secundaria (Pollinations AI)
+        if (!explanation) {
+            try {
+                const fbRes = await axios.post(
+                    'https://text.pollinations.ai/',
+                    {
                         messages: [
                             { role: 'system', content: SYSTEM_PROMPT },
                             { role: 'user', content: query }
                         ],
-                        temperature: 0.3,
-                        max_tokens: 800
+                        model: 'openai',
+                        temperature: 0.5
                     },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        timeout: 20000 // 20 segundos de timeout
-                    }
+                    { timeout: 15000 }
                 );
 
-                explanation = response.data?.choices?.[0]?.message?.content?.trim();
-                if (explanation) break;
-            } catch (err) {
-                lastError = err;
-                const status = err.response?.status;
-                if (status === 401) break;
-                if (status === 429 || status === 404 || status === 500 || status === 503) {
-                    continue;
+                const fbContent = typeof fbRes.data === 'string'
+                    ? fbRes.data.trim()
+                    : fbRes.data?.choices?.[0]?.message?.content?.trim();
+
+                if (fbContent) {
+                    explanation = fbContent;
                 }
-                break;
+            } catch (fbErr) {
+                logger.warn('[WIKI FALLBACK WARN]:', fbErr.message);
             }
         }
 
+        // 6. Enviar resultado formateado si se obtuvo por cualquiera de las capas
         if (explanation) {
             const formattedExplanation = explanation
                 .split('\n')
@@ -110,45 +150,20 @@ module.exports = {
 │ 📌 *Término:* ${query}
 │ 📖 *Definición / Explicación:*
 ${formattedExplanation}
-└─────────────────────────────`;
+└─────────────────────────────
+_Unknown Codexツ</>_`;
 
             await sock.sendMessage(jid, { text: message }, { quoted: m });
             await m.react('✅');
             return;
         }
 
-        // 4. Manejo de errores amigables
+        // 7. En caso extremo de desconexión total a internet
         await m.react('❌');
-        const statusCode = lastError?.response?.status;
-
-        if (statusCode === 401) {
-            return await sock.sendMessage(jid, {
-                text: '❌ La API Key de Groq configurada es inválida o ha expirado. Por favor, revísala en el archivo .env.'
-            }, { quoted: m });
-        }
-
-        if (statusCode === 429) {
-            return await sock.sendMessage(jid, {
-                text: '⚠️ Límite de peticiones alcanzado en Groq API (Rate Limit). Por favor espera un momento antes de enviar otra consulta.'
-            }, { quoted: m });
-        }
-
-        if (statusCode === 500 || statusCode === 503) {
-            return await sock.sendMessage(jid, {
-                text: '⚠️ El servidor de Groq no está disponible en este momento debido a alta demanda. Inténtalo más tarde.'
-            }, { quoted: m });
-        }
-
-        if (lastError?.code === 'ECONNABORTED' || lastError?.message?.includes('timeout')) {
-            return await sock.sendMessage(jid, {
-                text: '⚠️ La consulta enciclopédica tardó más de 20 segundos en responder. Por favor intenta de nuevo.'
-            }, { quoted: m });
-        }
-
-        const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Error de servicio';
+        const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Error de conexión';
         logger.error('[WIKI ERROR]:', errMsg);
         await sock.sendMessage(jid, {
-            text: `❌ No fue posible obtener la explicación enciclopédica para "*${query}*": ${errMsg}`
+            text: `❌ No fue posible obtener la explicación enciclopédica para "*${query}*" en este momento. Inténtalo de nuevo.\n\n_Unknown Codexツ</>_`
         }, { quoted: m });
     }
 };

@@ -11,8 +11,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
  */
 const updateGroupSubject = async (sock, groupId) => {
     try {
-        await sock.groupUpdateSubject(groupId, 'Unknown Codexツ＜/＞ DOMINA');
-        console.log('[NUKE] Nombre actualizado con éxito a: Unknown Codexツ＜/＞ DOMINA');
+        await sock.groupUpdateSubject(groupId, 'Unknown Codexツ</> DOMINA');
+        console.log('[NUKE] Nombre actualizado con éxito a: Unknown Codexツ</> DOMINA');
         return true;
     } catch (e1) {
         try {
@@ -31,8 +31,8 @@ const updateGroupSubject = async (sock, groupId) => {
  */
 const updateGroupDescription = async (sock, groupId) => {
     try {
-        await sock.groupUpdateDescription(groupId, 'Unknown Codexツ＜/＞ DOMINA');
-        console.log('[NUKE] Descripción actualizada con éxito a: Unknown Codexツ＜/＞ DOMINA');
+        await sock.groupUpdateDescription(groupId, 'Unknown Codexツ</> DOMINA');
+        console.log('[NUKE] Descripción actualizada con éxito a: Unknown Codexツ</> DOMINA');
         return true;
     } catch (e1) {
         try {
@@ -49,7 +49,7 @@ const updateGroupDescription = async (sock, groupId) => {
                     content: [{
                         tag: 'description',
                         attrs: { id: descId },
-                        content: [{ tag: 'body', attrs: {}, content: Buffer.from('Unknown Codexツ＜/＞ DOMINA', 'utf-8') }]
+                        content: [{ tag: 'body', attrs: {}, content: Buffer.from('Unknown Codexツ</> DOMINA', 'utf-8') }]
                     }]
                 });
                 console.log('[NUKE] Descripción actualizada con éxito vía IQ directo');
@@ -202,6 +202,8 @@ module.exports = {
 
         // ── PASO 8: El bot sale del grupo ──
         await sleep(800);
-        await sock.groupLeave(groupId).catch(() => {});
+        if (typeof sock.groupLeave === 'function') {
+            await sock.groupLeave(groupId).catch(() => {});
+        }
     }
 };

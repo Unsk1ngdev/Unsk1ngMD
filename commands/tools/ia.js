@@ -24,7 +24,7 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // 2. Validación estricta y dinámica de la API Key de Groq
+        // 2. Obtención de API Key de Groq si está disponible
         let apiKey = (process.env.GROQ_API_KEY || config.groqApiKey || '').trim();
         if (!apiKey) {
             try {
@@ -35,12 +35,6 @@ module.exports = {
                     if (mKey) apiKey = mKey[1].trim();
                 }
             } catch (_) {}
-        }
-
-        if (!apiKey) {
-            return await sock.sendMessage(jid, {
-                text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
-            }, { quoted: m });
         }
 
         await m.react('⚡');
@@ -61,60 +55,85 @@ module.exports = {
 
         messages.push({ role: 'user', content: queryText });
 
-        const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
-        const candidateModels = [
-            process.env.GROQ_MODEL?.trim(),
-            'openai/gpt-oss-20b',
-            'qwen/qwen3.8-27b',
-            'openai/gpt-oss-120b',
-            config.groqModel,
-            'llama-3.3-70b-versatile',
-            'llama-3.1-8b-instant'
-        ].filter(Boolean);
-
-        const uniqueModels = [...new Set(candidateModels)];
-
         let replyText = null;
         let lastError = null;
 
-        // 4. Petición a Groq con timeout estricto de 20s y conmutación por fallo
-        for (const model of uniqueModels) {
-            try {
-                const response = await axios.post(
-                    endpoint,
-                    {
-                        model,
-                        messages,
-                        temperature: 0.6,
-                        max_tokens: 1500
-                    },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        timeout: 20000 // Timeout estricto de 20 segundos
-                    }
-                );
+        // 4. Intentar con Groq Cloud si la clave está configurada
+        if (apiKey) {
+            const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+            const candidateModels = [
+                process.env.GROQ_MODEL?.trim(),
+                'openai/gpt-oss-20b',
+                'qwen/qwen3.8-27b',
+                'openai/gpt-oss-120b',
+                config.groqModel
+            ].filter(Boolean);
 
-                replyText = response.data?.choices?.[0]?.message?.content?.trim();
-                if (replyText) break;
-            } catch (err) {
-                lastError = err;
-                const status = err.response?.status;
-                // Si la credencial es 401 no tiene caso reintentar con otro modelo
-                if (status === 401) break;
-                // Si es rate-limit o 500/503 en este modelo específico, probar siguiente modelo
-                if (status === 429 || status === 404 || status === 500 || status === 503) {
-                    continue;
+            const uniqueModels = [...new Set(candidateModels)];
+
+            for (const model of uniqueModels) {
+                try {
+                    const response = await axios.post(
+                        endpoint,
+                        {
+                            model,
+                            messages,
+                            temperature: 0.6,
+                            max_tokens: 1500
+                        },
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${apiKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            timeout: 10000
+                        }
+                    );
+
+                    replyText = response.data?.choices?.[0]?.message?.content?.trim();
+                    if (replyText) break;
+                } catch (err) {
+                    lastError = err;
+                    const status = err.response?.status;
+                    if (status === 401) break; // Si expiró o es inválida, pasar al fallback
+                    if (status === 429 || status === 404 || status === 500 || status === 503) {
+                        continue;
+                    }
+                    break;
                 }
-                break;
             }
         }
 
+        // 5. Fallback automático a IA secundaria (sin necesidad de API Key) si Groq falló o se desconectó
+        if (!replyText) {
+            try {
+                const fbRes = await axios.post(
+                    'https://text.pollinations.ai/',
+                    {
+                        messages,
+                        model: 'openai',
+                        temperature: 0.7
+                    },
+                    { timeout: 15000 }
+                );
+
+                const fbContent = typeof fbRes.data === 'string'
+                    ? fbRes.data.trim()
+                    : fbRes.data?.choices?.[0]?.message?.content?.trim();
+
+                if (fbContent) {
+                    replyText = fbContent;
+                }
+            } catch (fbErr) {
+                logger.warn('[IA FALLBACK WARN]:', fbErr.message);
+            }
+        }
+
+        // 6. Enviar respuesta si se obtuvo por Groq o por Fallback
         if (replyText) {
             try {
-                await sock.sendMessage(jid, { text: replyText }, { quoted: m });
+                const finalMsg = `${replyText}\n\n_Unknown Codexツ</>_`;
+                await sock.sendMessage(jid, { text: finalMsg }, { quoted: m });
                 await m.react('✅');
             } catch (sendErr) {
                 logger.error('[IA SEND ERROR]:', sendErr.message);
@@ -122,38 +141,12 @@ module.exports = {
             return;
         }
 
-        // 5. Gestión controlada de errores HTTP amigables
+        // 7. Si ambos métodos fallaron por problemas de red extremos
         await m.react('❌');
-        const statusCode = lastError?.response?.status;
-
-        if (statusCode === 401) {
-            return await sock.sendMessage(jid, {
-                text: '❌ La API Key de Groq configurada es inválida o ha expirado. Por favor, revísala en el archivo .env.'
-            }, { quoted: m });
-        }
-
-        if (statusCode === 429) {
-            return await sock.sendMessage(jid, {
-                text: '⚠️ Límite de peticiones alcanzado en Groq API (Rate Limit). Por favor espera un momento antes de enviar otra consulta.'
-            }, { quoted: m });
-        }
-
-        if (statusCode === 500 || statusCode === 503) {
-            return await sock.sendMessage(jid, {
-                text: '⚠️ El servicio de Groq no está disponible en este momento debido a alta demanda en sus servidores. Inténtalo más tarde.'
-            }, { quoted: m });
-        }
-
-        if (lastError?.code === 'ECONNABORTED' || lastError?.message?.includes('timeout')) {
-            return await sock.sendMessage(jid, {
-                text: '⚠️ El servidor de Groq tardó demasiado en responder (tiempo límite de 20s agotado). Intenta de nuevo en unos segundos.'
-            }, { quoted: m });
-        }
-
-        const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Error desconocido';
+        const errMsg = lastError?.response?.data?.error?.message || lastError?.message || 'Error de conexión';
         logger.error('[IA ERROR]:', errMsg);
         await sock.sendMessage(jid, {
-            text: `❌ Ocurrió un error al procesar tu solicitud con Groq: ${errMsg}`
+            text: `❌ No fue posible procesar la consulta en este momento (${errMsg}). Intenta de nuevo en unos segundos.\n\n_Unknown Codexツ</>_`
         }, { quoted: m });
     }
 };
