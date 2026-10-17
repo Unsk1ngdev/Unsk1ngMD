@@ -133,9 +133,9 @@ const startBot = async () => {
     }
 
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
-        console.warn('⚠️ [AVISO]: GROQ_API_KEY no detectada en .env. Comandos de IA deshabilitados.');
+        console.warn(chalk.yellow('⚠️ [AVISO]: GROQ_API_KEY no detectada en .env. Activando fallback gratuito (Pollinations AI) para funciones de IA.'));
     } else {
-        console.log('✅ [GROQ]: API Key detectada correctamente.');
+        console.log(chalk.green('✅ [GROQ]: API Key detectada correctamente.'));
     }
 
     // 4. Iniciar verificación y preparación de yt-dlp en segundo plano (sin retrasar el arranque)

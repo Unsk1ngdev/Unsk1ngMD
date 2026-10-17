@@ -66,63 +66,131 @@ Si estás listo para adivinar:
 }`;
 
 /**
- * Consulta la IA de Groq probando modelos con formato JSON garantizado
+ * Parsea y normaliza de forma ultra robusta la respuesta JSON de Akinator (Groq o Pollinations)
+ */
+const parseAndNormalizeAkinator = (raw) => {
+    if (!raw) return null;
+    let parsed = null;
+    if (typeof raw === 'object') {
+        parsed = raw;
+    } else {
+        const str = String(raw).trim();
+        try {
+            parsed = JSON.parse(str);
+        } catch (_) {}
+
+        if (!parsed) {
+            const first = str.indexOf('{');
+            const last = str.lastIndexOf('}');
+            if (first !== -1 && last !== -1 && last > first) {
+                try {
+                    parsed = JSON.parse(str.slice(first, last + 1));
+                } catch (_) {}
+            }
+        }
+
+        if (!parsed) {
+            try {
+                const cleaned = str.replace(/^\{+/, '{').replace(/\}+$/, '}');
+                parsed = JSON.parse(cleaned);
+            } catch (_) {}
+        }
+
+        if (!parsed) {
+            try {
+                const matches = str.match(/\{[^{}]*"(?:tipo|pregunta|nombre)"[^{}]*\}/g);
+                if (matches) {
+                    for (const m of matches) {
+                        try {
+                            parsed = JSON.parse(m);
+                            if (parsed) break;
+                        } catch (_) {}
+                    }
+                }
+            } catch (_) {}
+        }
+    }
+
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    const normalized = {
+        tipo: parsed.tipo || (parsed.nombre || parsed.name ? 'adivinanza' : 'pregunta'),
+        pregunta: parsed.pregunta || parsed.question || parsed.pregunta_actual || parsed.texto,
+        progreso: typeof parsed.progreso === 'number' ? parsed.progreso : (parsed.progress || 10),
+        nombre: parsed.nombre || parsed.name || parsed.personaje,
+        descripcion: parsed.descripcion || parsed.description || parsed.detalles
+    };
+
+    if (normalized.pregunta || normalized.nombre) {
+        return normalized;
+    }
+    return null;
+};
+
+/**
+ * Consulta la IA de Groq o fallback a Pollinations AI garantizando formato JSON
  */
 const queryAkinatorAI = async (messages) => {
     const apiKey = getGroqApiKey();
-    if (!apiKey) {
-        throw new Error('GROQ_API_KEY no configurada');
-    }
-
-    const uniqueModels = [...new Set(CANDIDATE_MODELS)];
     let lastError = null;
 
-    for (const model of uniqueModels) {
-        try {
-            const res = await axios.post(
-                'https://api.groq.com/openai/v1/chat/completions',
-                {
-                    model,
-                    messages,
-                    response_format: { type: 'json_object' },
-                    temperature: 0.6
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
+    // 1. Intentar con Groq Cloud si la API Key está configurada
+    if (apiKey) {
+        const uniqueModels = [...new Set(CANDIDATE_MODELS)];
+        for (const model of uniqueModels) {
+            try {
+                const res = await axios.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    {
+                        model,
+                        messages,
+                        response_format: { type: 'json_object' },
+                        temperature: 0.6
                     },
-                    timeout: 15000 // 15 segundos por intento
-                }
-            );
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: 15000
+                    }
+                );
 
-            let content = res.data?.choices?.[0]?.message?.content?.trim();
-            if (content) {
-                // Extraer el bloque JSON si viene envuelto en texto o markdown
-                const jsonMatch = content.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    content = jsonMatch[0];
-                }
-                const parsed = JSON.parse(content);
-                const normalized = {
-                    tipo: parsed.tipo || (parsed.nombre || parsed.name ? 'adivinanza' : 'pregunta'),
-                    pregunta: parsed.pregunta || parsed.question || parsed.pregunta_actual || parsed.texto,
-                    progreso: typeof parsed.progreso === 'number' ? parsed.progreso : (parsed.progress || 10),
-                    nombre: parsed.nombre || parsed.name || parsed.personaje,
-                    descripcion: parsed.descripcion || parsed.description || parsed.detalles
-                };
-
-                if (normalized.pregunta || normalized.nombre) {
+                const content = res.data?.choices?.[0]?.message?.content?.trim();
+                const normalized = parseAndNormalizeAkinator(content);
+                if (normalized) {
                     return normalized;
                 }
+            } catch (err) {
+                lastError = err;
+                const status = err.response?.status;
+                if (status === 401) break; // Clave inválida, pasar a fallback
+                continue;
             }
-        } catch (err) {
-            lastError = err;
-            const status = err.response?.status;
-            if (status === 401) break; // Clave de API inválida
-            // Para timeout, error 400 (modelo no accesible), 404, 429 o 500, probar el siguiente modelo
-            continue;
         }
+    }
+
+    // 2. Fallback automático a Pollinations AI (sin necesidad de API Key)
+    try {
+        const fbRes = await axios.post(
+            'https://text.pollinations.ai/',
+            {
+                messages,
+                model: 'openai',
+                jsonMode: true,
+                temperature: 0.6
+            },
+            { timeout: 15000 }
+        );
+
+        const content = fbRes.data?.choices?.[0]?.message?.content || fbRes.data;
+        const normalized = parseAndNormalizeAkinator(content);
+        if (normalized) {
+            return normalized;
+        }
+    } catch (fbErr) {
+        logger.warn('[AKINATOR FALLBACK WARN]:', fbErr.message);
+        if (!lastError) lastError = fbErr;
     }
 
     throw lastError || new Error('No se pudo contactar el servidor de Akinator AI');
@@ -184,13 +252,6 @@ const setSessionTimeout = (sock, chatId) => {
  */
 const startGame = async (sock, m) => {
     const chatId = m.chat;
-
-    // Validación de clave de API antes de iniciar
-    if (!getGroqApiKey()) {
-        return await sock.sendMessage(chatId, {
-            text: '❌ La API Key de Groq no está configurada en el archivo .env. Añade GROQ_API_KEY para habilitar esta función.'
-        }, { quoted: m });
-    }
 
     if (global.akinatorSessions && global.akinatorSessions.has(chatId)) {
         return await sock.sendMessage(chatId, {
