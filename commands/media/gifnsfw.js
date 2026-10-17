@@ -136,21 +136,23 @@ module.exports = {
                     break;
                 }
 
-                // Fallback a sticker animado
-                try {
-                    const stickerBuffer = await videoToSticker(rawBuffer, {
-                        packname: config.packName || 'Unsk1ngMD',
-                        author: 'Unknown Codexツ</>'
-                    });
-                    if (stickerBuffer && stickerBuffer.length > 0) {
-                        await sock.sendMessage(jid, {
-                            sticker: stickerBuffer
-                        }, { quoted: m });
-                        enviado = true;
-                        break;
+                // Fallback a sticker animado solo si FFmpeg está disponible
+                if (ffmpeg.isFfmpegAvailable()) {
+                    try {
+                        const stickerBuffer = await videoToSticker(rawBuffer, {
+                            packname: config.packName || 'Unsk1ngMD',
+                            author: 'Unknown Codexツ</>'
+                        });
+                        if (stickerBuffer && stickerBuffer.length > 0) {
+                            await sock.sendMessage(jid, {
+                                sticker: stickerBuffer
+                            }, { quoted: m });
+                            enviado = true;
+                            break;
+                        }
+                    } catch (stkErr) {
+                        console.error('[GIFNSFW] Fallback a sticker falló:', stkErr.message);
                     }
-                } catch (stkErr) {
-                    console.error('[GIFNSFW] Fallback a sticker falló:', stkErr.message);
                 }
 
                 // Fallback a imagen GIF
