@@ -28,6 +28,8 @@ baileys_store*.json
 *.bak
 
 # 3. Datos locales en caliente y registros de grupos privados
+logs.json
+rank.json
 database/groups.json
 database/settings.json
 database/recentMessages.json
