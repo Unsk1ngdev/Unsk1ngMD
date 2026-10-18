@@ -240,22 +240,13 @@ const categoriaInfo = {
 
 module.exports = {
     name: 'carta',
-    alias: ['letter', 'escribircarta', 'cartas'],
-    category: 'premium',
-    desc: 'Genera cartas personalizadas y poéticas de alta calidad con IA o selección artística (Premium)',
+    alias: ['carte', 'letter', 'escribircarta', 'cartas'],
+    category: 'herramientas',
+    desc: 'Genera cartas personalizadas y poéticas de alta calidad con IA o selección artística',
     usage: '.carta [tipo] [para] [de] | [detalle opcional]',
-    premiumOnly: true,
 
-    execute: async ({ sock, m, args, text, isOwner }) => {
+    execute: async ({ sock, m, args, text }) => {
         const jid = m.chat || m.key.remoteJid;
-        const sender = m.sender;
-
-        const isPrem = isOwner || database.isOwner(sender) || premiumManager.isPremium(sender);
-        if (!isPrem) {
-            return await sock.sendMessage(jid, {
-                text: '⭐ Este comando es *Premium*.\n_Unknown Codexツ</>_'
-            }, { quoted: m });
-        }
 
         let tipo = '';
         let para = '';

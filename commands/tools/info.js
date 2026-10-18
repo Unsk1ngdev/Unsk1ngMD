@@ -3,7 +3,7 @@ const config = require('../../config');
 
 module.exports = {
     name: 'info',
-    alias: ['profile', 'perfil', 'whois', 'userinfo'],
+    alias: ['profile', 'whois', 'userinfo'],
     category: 'herramientas',
     desc: 'Consulta geográfica profunda, operador, bio con fecha, cuenta business y foto de perfil en WhatsApp',
     usage: '.info [@mención, número o respondiendo a un mensaje]',

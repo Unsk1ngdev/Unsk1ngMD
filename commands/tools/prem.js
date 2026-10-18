@@ -114,14 +114,17 @@ module.exports = {
                     '⭐ *¡Felicitaciones! Tienes acceso Premium.*',
                     '',
                     '🔓 Ahora puedes usar:',
+                    '👁️ `.vv` — Ver fotos/videos una vez',
+                    '🎙️ `.escuchar` — Escuchar audios una vez',
                     '🕵️ `.spy` — Ver grupos de un número',
+                    '⚔️ `.debatir` — Debate interactivo',
                     '👻 `.ghost` — Modo invisible',
                     '🪞 `.clonar` — Copiar perfil',
                     '👁️ `.stalkear` — Monitorear conexión',
                     '💬 `.sms` — Mensaje anónimo',
-                    '📸 `.perfil` — Foto de perfil HD',
                     '🎭 `.fake` — Perfil falso',
                     '📱 `.dispositivo` — Ver dispositivo',
+                    '📍 `.ubicacion` — Pin de cualquier ciudad',
                     '',
                     '_Unknown Codexツ</>_'
                 ].join('\n')

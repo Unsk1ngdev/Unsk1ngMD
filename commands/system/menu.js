@@ -5,11 +5,27 @@ const path = require('path');
 const database = require('../../lib/database');
 const config = require('../../config');
 
+/**
+ * Formatea el tiempo activo de forma compacta y legible
+ */
+const formatUptime = (seconds) => {
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const parts = [];
+    if (d > 0) parts.push(`${d}d`);
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    parts.push(`${s}s`);
+    return parts.join(' ');
+};
+
 module.exports = {
     name: 'menu',
     alias: ['help', 'ayuda', 'allmenu', 'menulist'],
     category: 'sistema',
-    desc: 'Muestra el menú principal con todos los comandos organizados por sección',
+    desc: 'Muestra el menú principal con todos los comandos organizados en tarjetas cyberpunk',
     usage: '.menu [categoría opcional]',
 
     execute: async ({ sock, m, args }) => {
@@ -17,16 +33,25 @@ module.exports = {
         const mode = database.getMode();
         const filter = (args && args[0] ? args[0].toLowerCase().trim() : '');
 
-        // Secciones ordenadas:
-        // 1. Grupo
-        // 2. Juegos
-        // 3. Descargas
-        // 4. Multimedia & Stickers
-        // 5. Público & Herramientas
-        // 6. Sub-Bots
-        // 7. Owner Only (antepenúltimo)
-        // 8. Premium (penúltimo)
-        // 9. NSFW (último)
+        // 1. Datos dinámicos en vivo para la cabecera
+        const uptimeStr = formatUptime(process.uptime());
+        const rawName = (m.pushName || '').replace(/[\r\n]+/g, ' ').trim();
+        const cleanSender = (m.sender || '').replace(/:\d+@/, '@').split('@')[0];
+        const userName = rawName || (cleanSender ? `+${cleanSender}` : 'Usuario');
+        const memUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
+
+        // Latencia estimada
+        let speedMs = 35;
+        if (m.messageTimestamp) {
+            const diff = Math.abs(Date.now() - (Number(m.messageTimestamp) * 1000));
+            if (diff > 0 && diff < 5000) speedMs = diff;
+        }
+
+        const now = new Date();
+        const fecha = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const hora = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        // 2. Secciones completas de comandos
         const secciones = [
             {
                 key: 'admin',
@@ -109,6 +134,8 @@ module.exports = {
                 key: 'publico',
                 title: '🌐 PÚBLICO & HERRAMIENTAS',
                 cmds: [
+                    ['📸', 'perfil', 'Foto de perfil HD'],
+                    ['💌', 'carta', 'Carta emotiva personalizada'],
                     ['🔍', 'info', 'Info de número'],
                     ['🌐', 'ip', 'Info de IP o dominio'],
                     ['🌍', 'pais', 'Info y bandera de país'],
@@ -174,14 +201,14 @@ module.exports = {
                 key: 'premium',
                 title: '⭐ PREMIUM',
                 cmds: [
+                    ['👁️', 'vv', 'Ver fotos/videos una vez'],
+                    ['🎙️', 'escuchar', 'Escuchar audios una vez'],
                     ['🕵️', 'spy', 'Grupos de un número'],
                     ['⚔️', 'debatir', 'Debate interactivo de 5 rondas'],
-                    ['💌', 'carta', 'Carta emotiva personalizada'],
                     ['👻', 'ghost', 'Modo invisible'],
                     ['🪞', 'clonar', 'Copiar perfil'],
                     ['👁️', 'stalkear', 'Monitorear conexión'],
                     ['💬', 'sms', 'Mensaje anónimo'],
-                    ['📸', 'perfil', 'Foto de perfil HD'],
                     ['🎭', 'fake', 'Perfil falso'],
                     ['📱', 'dispositivo', 'Ver dispositivo'],
                     ['📍', 'ubicacion', 'Pin de cualquier ciudad']
@@ -200,20 +227,25 @@ module.exports = {
             }
         ];
 
-        // Función formateadora de una sección con el estilo solicitado
+        // 3. Formateador de tarjeta Cyberpunk por sección
         const formatSection = (sec) => {
             const lines = sec.cmds.map(([ico, cmd, desc]) => {
                 const fullCmd = `${prefix}${cmd}`;
-                const pad = ' '.repeat(Math.max(1, 18 - fullCmd.length));
-                return `${ico} *${fullCmd}*${pad}— ${desc}`;
+                return `│ ${ico} *${fullCmd}* › _${desc}_`;
             }).join('\n');
 
-            return `━━━━━━━━━━━━━━━━━━━\n      ${sec.title}\n━━━━━━━━━━━━━━━━━━━\n${lines}`;
+            return `╭───〔 ${sec.title} 〕───⬣\n${lines}\n╰──────────────────────────⬣`;
         };
 
-        const footer = `\n━━━━━━━━━━━━━━━━━━━\n   _Unknown Codexツ</>_`;
+        const footer =
+            `╭───〔 💡 ATAJOS RÁPIDOS 〕───⬣\n` +
+            `│ ✦ Usa *.menu [categoría]* para ver solo una sección.\n` +
+            `│ ✦ Ejemplo: *.menu juegos* o *.menu descargas*\n` +
+            `│ ✦ Escribe *.comandos* para la guía de uso.\n` +
+            `╰──────────────────────────⬣\n\n` +
+            `     _Unknown Codexツ</>_`;
 
-        // Si se especificó una categoría para filtrar (ej: .menu juegos, .menu owner, etc.)
+        // 4. Si se especificó una categoría para filtrar (ej: .menu juegos, .menu owner, etc.)
         if (filter) {
             const matched = secciones.find(s =>
                 s.key.includes(filter) ||
@@ -222,32 +254,40 @@ module.exports = {
             );
 
             if (matched) {
-                const filteredText =
+                const filteredHeader =
                     `╭━━━〔 *${config.botName.toUpperCase()}* 〕━━━⬣\n` +
                     `┃ 📁 *Categoría:* ${matched.title}\n` +
+                    `┃ 👤 *Usuario:* ${userName}\n` +
                     `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
-                    `╰━━━━━━━━━━━━━━━━━━⬣\n\n` +
-                    formatSection(matched) +
-                    footer;
+                    `┃ 📦 *Comandos en sección:* ${matched.cmds.length}\n` +
+                    `╰━━━━━━━━━━━━━━━━━━━━━━⬣\n\n`;
 
-                return await sock.sendMessage(m.chat, { text: filteredText }, { quoted: m });
+                const filteredText = `${filteredHeader}${formatSection(matched)}\n\n${footer}`;
+                return await sock.sendMessage(m.chat, {
+                    text: filteredText
+                }, { quoted: m });
             }
         }
 
-        // Conteo total de comandos disponibles
+        // 5. Menú completo con todas las secciones
         let totalCmds = 0;
         secciones.forEach(s => totalCmds += s.cmds.length);
 
         const header =
             `╭━━━〔 *${config.botName.toUpperCase()}* 〕━━━⬣\n` +
+            `┃ 👤 *Usuario:* ${userName}\n` +
             `┃ 👑 *Creador:* ${config.ownerName}\n` +
             `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
             `┃ 🔒 *Modo:* ${mode.toUpperCase()}\n` +
-            `┃ 📦 *Total Comandos:* ${totalCmds}\n` +
-            `╰━━━━━━━━━━━━━━━━━━⬣\n\n`;
+            `┃ ⏱️ *Activo:* ${uptimeStr}\n` +
+            `┃ ⚡ *Latencia:* ${speedMs}ms\n` +
+            `┃ 📊 *RAM:* ${memUsage} MB\n` +
+            `┃ 📅 *Fecha:* ${fecha} | ${hora}\n` +
+            `┃ 📦 *Comandos:* ${totalCmds} Disponibles\n` +
+            `╰━━━━━━━━━━━━━━━━━━━━━━⬣\n\n`;
 
-        const body = secciones.map(formatSection).join('\n');
-        const menuCompleto = `${header}${body}${footer}`;
+        const body = secciones.map(formatSection).join('\n\n');
+        const menuCompleto = `${header}${body}\n\n${footer}`;
 
         const chatId = m.chat || m.key?.remoteJid;
 
@@ -256,29 +296,37 @@ module.exports = {
         const mp4Path = path.join(config.assetsDir, 'menu.mp4');
         const imgPath = path.join(config.assetsDir, 'menu.jpg');
 
+        const sendOptions = {
+            caption: menuCompleto
+        };
+
         try {
             if (fs.existsSync(mp4Path)) {
                 await sock.sendMessage(chatId, {
                     video: fs.readFileSync(mp4Path),
                     gifPlayback: true,
-                    caption: menuCompleto
+                    ...sendOptions
                 }, { quoted: m });
             } else if (fs.existsSync(gifPath)) {
                 await sock.sendMessage(chatId, {
                     video: fs.readFileSync(gifPath),
                     gifPlayback: true,
-                    caption: menuCompleto
+                    ...sendOptions
                 }, { quoted: m });
             } else if (fs.existsSync(imgPath)) {
                 await sock.sendMessage(chatId, {
                     image: fs.readFileSync(imgPath),
-                    caption: menuCompleto
+                    ...sendOptions
                 }, { quoted: m });
             } else {
-                await sock.sendMessage(chatId, { text: menuCompleto }, { quoted: m });
+                await sock.sendMessage(chatId, {
+                    text: menuCompleto
+                }, { quoted: m });
             }
         } catch (_) {
-            await sock.sendMessage(chatId, { text: menuCompleto }, { quoted: m });
+            await sock.sendMessage(chatId, {
+                text: menuCompleto
+            }, { quoted: m });
         }
     }
 };

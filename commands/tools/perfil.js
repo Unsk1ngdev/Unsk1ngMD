@@ -1,23 +1,15 @@
 'use strict';
 
-const premium = require('../../lib/premium');
-
 module.exports = {
     name: 'perfil',
     alias: ['pfp', 'fotoperfil', 'avatar'],
     category: 'herramientas',
-    desc: 'Obtiene la foto de perfil en alta resolución de un usuario (solo premium)',
+    desc: 'Obtiene la foto de perfil en alta resolución de un usuario',
     usage: '.perfil [@usuario | número]',
 
-    execute: async ({ sock, m, args, isOwner }) => {
+    execute: async ({ sock, m, args }) => {
         const sender = m.sender;
         const jid = m.chat || m.key.remoteJid;
-
-        if (!isOwner && !premium.isPremium(sender)) {
-            return await sock.sendMessage(jid, {
-                text: '⭐ Este comando es *Premium*.\n_Unknown Codexツ</>_'
-            }, { quoted: m });
-        }
 
         const mentioned = m.mentionedJid || m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
         let target = mentioned[0];
