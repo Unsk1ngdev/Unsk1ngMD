@@ -30,6 +30,7 @@ baileys_store*.json
 # 3. Datos locales en caliente y registros de grupos privados
 database/groups.json
 database/settings.json
+database/recentMessages.json
 database/backups/
 data/settings.json
 data/antilink.json

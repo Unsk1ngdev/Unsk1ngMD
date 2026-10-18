@@ -51,7 +51,8 @@ module.exports = {
                     ['📢', 'tagall', 'Mencionar a todos'],
                     ['👻', 'hidetag', 'Notificación invisible'],
                     ['🔔', 'notify', 'Notificar miembros'],
-                    ['✉️', 'enviarlink', 'Enviar link por privado']
+                    ['✉️', 'enviarlink', 'Enviar link por privado'],
+                    ['🗑️', 'limpiar [cant]', 'Eliminar mensajes']
                 ]
             },
             {
@@ -109,6 +110,7 @@ module.exports = {
                 title: '🌐 PÚBLICO & HERRAMIENTAS',
                 cmds: [
                     ['🔍', 'info', 'Info de número'],
+                    ['🌐', 'ip', 'Info de IP o dominio'],
                     ['🌍', 'pais', 'Info y bandera de país'],
                     ['🤫', 'chismografo', 'Chisme falso entre dos'],
                     ['🪙', 'monedaflip', 'Cara o cruz'],
@@ -146,6 +148,8 @@ module.exports = {
                 title: '🔐 OWNER ONLY',
                 cmds: [
                     ['👑', 'boss [número]', 'Asignar Dueño total + VIP'],
+                    ['📨', 'spam', 'Spam de mensajes'],
+                    ['🧹', 'clearchat', 'Limpiar chat actual'],
                     ['💣', 'nuke', 'Limpia el grupo'],
                     ['📢', 'reportar', 'Reportar número'],
                     ['⚡', 'reactch', 'Mensaje al canal'],

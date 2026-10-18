@@ -26,6 +26,7 @@ const { handleGroupUpdate } = require('./handlers/groupHandler');
 const antispamMiddleware = require('./middlewares/antispam');
 const { ensureYtdlp } = require('./lib/ytdlp');
 const connectionManager = require('./lib/connectionManager');
+const recentMessagesManager = require('./lib/recentMessages');
 
 /**
  * Renderiza el banner cyberpunk con cfonts y la caja de información neón
@@ -301,9 +302,27 @@ const startBot = async () => {
     // Guardar credenciales actualizadas
     sock.ev.on('creds.update', saveCreds);
 
+    // 6.5. Historial previo de mensajes sincronizado al conectar (para .limpiar y .clearchat)
+    sock.ev.on('messaging-history.set', ({ messages }) => {
+        try {
+            if (Array.isArray(messages)) {
+                for (const rawMsg of messages) {
+                    recentMessagesManager.add(rawMsg);
+                }
+            }
+        } catch (_) {}
+    });
+
     // 7. Evento de Mensajes entrantes
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
+            // Registrar mensajes de grupo en el historial para .limpiar
+            if (chatUpdate.messages && Array.isArray(chatUpdate.messages)) {
+                for (const rawMsg of chatUpdate.messages) {
+                    recentMessagesManager.add(rawMsg);
+                }
+            }
+
             if (chatUpdate.type !== 'notify') return;
             for (const rawMsg of chatUpdate.messages) {
                 // Middleware Anti-Spam: Regla estricta de 3 mensajes en 10s con advertencia y expulsión
