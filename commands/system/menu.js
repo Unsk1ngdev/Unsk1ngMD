@@ -35,9 +35,10 @@ module.exports = {
 
         // 1. Datos dinámicos en vivo para la cabecera
         const uptimeStr = formatUptime(process.uptime());
-        const rawName = (m.pushName || '').replace(/[\r\n]+/g, ' ').trim();
-        const cleanSender = (m.sender || '').replace(/:\d+@/, '@').split('@')[0];
-        const userName = rawName || (cleanSender ? `+${cleanSender}` : 'Usuario');
+        // Nombre de la cuenta donde está vinculado / montado el bot
+        const botAccountName = (sock?.user?.name || '').replace(/[\r\n]+/g, ' ').trim();
+        const botNumber = (sock?.user?.id || sock?.user?.jid || '').split(':')[0].split('@')[0].replace(/[^0-9]/g, '');
+        const userName = botAccountName || (botNumber ? `+${botNumber}` : config.ownerName);
         const memUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
 
         // Latencia estimada
