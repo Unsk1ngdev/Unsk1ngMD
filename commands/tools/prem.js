@@ -116,6 +116,7 @@ module.exports = {
                     '🔓 Ahora puedes usar:',
                     '👁️ `.vv` — Ver fotos/videos una vez',
                     '🎙️ `.escuchar` — Escuchar audios una vez',
+                    '🪪 `.cedula` — Consulta Cédula/DNI',
                     '🕵️ `.spy` — Ver grupos de un número',
                     '⚔️ `.debatir` — Debate interactivo',
                     '👻 `.ghost` — Modo invisible',

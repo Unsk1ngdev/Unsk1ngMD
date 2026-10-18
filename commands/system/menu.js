@@ -202,6 +202,7 @@ module.exports = {
                 key: 'premium',
                 title: '⭐ PREMIUM',
                 cmds: [
+                    ['🪪', 'cedula', 'Consulta Cédula/DNI'],
                     ['👁️', 'vv', 'Ver fotos/videos una vez'],
                     ['🎙️', 'escuchar', 'Escuchar audios una vez'],
                     ['🕵️', 'spy', 'Grupos de un número'],

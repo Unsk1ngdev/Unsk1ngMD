@@ -51,6 +51,7 @@ module.exports = {
     aiApiUrl: process.env.AI_API_URL || '',
     aiApiKey: process.env.AI_API_KEY || '',
     aiModel: process.env.AI_MODEL || 'deepseek',
+    peruToken: process.env.PERU_TOKEN || '',
 
     // Configuración de límites y memoria
     maxMediaSizeMB: 50,
