@@ -103,6 +103,12 @@ Al iniciar por primera vez, selecciona el método de vinculación en la consola:
 - **`[1]` Código QR:** Escanéalo directamente desde WhatsApp (*Dispositivos vinculados > Vincular un dispositivo*).
 - **`[2]` Pairing Code (Recomendado):** Ingresa tu número de teléfono con código de país para recibir el código de emparejamiento de 8 dígitos en la terminal.
 
+4. **Actualizar el bot a la última versión:**
+   ```bash
+   git pull origin main
+   npm start
+   ```
+
 ---
 
 ### 📲 Instalación y Actualización en Termux (Android)
@@ -115,7 +121,7 @@ Para descargar las últimas mejoras sin perder tu sesión vinculada:
 cd Unsk1ngMD
 
 # 3. Descarga la actualización desde GitHub
-git pull
+git pull origin main
 
 # 4. Inicia el bot actualizado
 npm start
