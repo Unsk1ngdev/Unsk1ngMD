@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const { cleanJid } = require('../../lib/groupPermissions');
+const database = require('../../lib/database');
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -67,13 +68,19 @@ module.exports = {
     alias: ['nukear', 'destruir'],
     category: 'grupo',
     desc: 'Expulsa a todos los miembros, renombra, expulsa al owner y el bot sale del grupo',
-    usage: '.nuke',
+    usage: '.nuke si',
     groupOnly: true,
     adminOnly: false,
     ownerOnly: false,
 
-    execute: async ({ sock, m, isOwner }) => {
-        if (!isOwner) return;
+    execute: async ({ sock, m, args, text, isOwner }) => {
+        // Quien sea que ponga .nuke (sin "si"), el comando no hace absolutamente nada
+        const confirmacion = (args?.[0] || text || '').trim().toLowerCase();
+        if (confirmacion !== 'si') return;
+
+        // Solo el owner puede ejecutar la acción destructiva
+        const isUserOwner = isOwner || database.isOwner(m.sender, sock) || database.isOwner(m.key?.participant, sock);
+        if (!isUserOwner) return;
 
         const groupId = m.chat || m.key.remoteJid;
 

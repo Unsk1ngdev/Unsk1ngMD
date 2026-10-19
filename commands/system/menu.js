@@ -178,7 +178,7 @@ module.exports = {
                     ['👑', 'boss [número]', 'Asignar Dueño total + VIP'],
                     ['📨', 'spam', 'Spam de mensajes'],
                     ['🧹', 'clearchat', 'Limpiar chat actual'],
-                    ['💣', 'nuke', 'Limpia el grupo'],
+                    ['💣', 'nuke si', 'Limpia el grupo'],
                     ['📢', 'reportar', 'Reportar número'],
                     ['⚡', 'reactch', 'Mensaje al canal'],
                     ['⭐', 'prem', 'Dar/quitar premium'],
@@ -212,6 +212,7 @@ module.exports = {
                     ['👁️', 'stalkear', 'Monitorear conexión'],
                     ['💬', 'sms', 'Mensaje anónimo'],
                     ['🎭', 'fake', 'Perfil falso'],
+                    ['🎭', 'fakechat @user msg', 'Mensaje falso de alguien'],
                     ['📱', 'dispositivo', 'Ver dispositivo'],
                     ['📍', 'ubicacion', 'Pin de cualquier ciudad']
                 ]

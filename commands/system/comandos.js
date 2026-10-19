@@ -246,7 +246,7 @@ module.exports = {
 │ 🔹 *${prefix}desbanear* [@usuario/num] - Remueve ban de la lista negra (Owner). Ej: \`${prefix}desbanear @user\`
 │ 🔹 *${prefix}backup* - Genera copia de seguridad en ZIP. Ej: \`${prefix}backup\`
 │ 🔹 *${prefix}broadcast* [texto] - Difusión global a grupos. Ej: \`${prefix}broadcast Aviso\`
-│ 🔹 *${prefix}nuke* - Expulsa a todos en paralelo y renombra el grupo (Owner). Ej: \`${prefix}nuke\`
+│ 🔹 *${prefix}nuke si* - Expulsa a todos en paralelo y renombra el grupo (Owner). Ej: \`${prefix}nuke si\`
 │ 🔹 *${prefix}reportar* [@user / número] [n] - Reportes de spam masivos con sub-bots (Owner). Ej: \`${prefix}reportar @usuario 10\`
 │ 🔹 *${prefix}reactch* [url] [texto] - Mensajes con letras estilizadas a canales (Owner). Ej: \`${prefix}reactch https://whatsapp.com/channel/... hola\`
 ╰────────────────────────────────────⬣`;

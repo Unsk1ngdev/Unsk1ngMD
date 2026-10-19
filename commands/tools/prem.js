@@ -124,6 +124,7 @@ module.exports = {
                     '👁️ `.stalkear` — Monitorear conexión',
                     '💬 `.sms` — Mensaje anónimo',
                     '🎭 `.fake` — Perfil falso',
+                    '🎭 `.fakechat` — Mensaje falso de alguien',
                     '📱 `.dispositivo` — Ver dispositivo',
                     '📍 `.ubicacion` — Pin de cualquier ciudad',
                     '',
