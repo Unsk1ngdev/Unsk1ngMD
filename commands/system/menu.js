@@ -213,6 +213,7 @@ module.exports = {
                     ['💬', 'sms', 'Mensaje anónimo'],
                     ['🎭', 'fake', 'Perfil falso'],
                     ['🎭', 'fakechat @user msg', 'Mensaje falso de alguien'],
+                    ['🎮', 'discord [ID]', 'Inteligencia Discord (Snowflake)'],
                     ['📱', 'dispositivo', 'Ver dispositivo'],
                     ['📍', 'ubicacion', 'Pin de cualquier ciudad']
                 ]

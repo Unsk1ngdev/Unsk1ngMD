@@ -127,6 +127,10 @@ module.exports = {
 │ 🔹 *${prefix}crypto* [moneda]
 │    _Cotización y precio en tiempo real de criptomonedas._
 │    *Ej:* \`${prefix}crypto btc\`
+│
+│ 🔹 *${prefix}discord* [ID] (Premium)
+│    _Inteligencia profunda y perfil de Discord vía Snowflake (Premium)._
+│    *Ej:* \`${prefix}discord 155149108183695360\`
 ╰────────────────────────────────────⬣
 
 🤖 *3. CATEGORÍA: INTELIGENCIA ARTIFICIAL (IA)*

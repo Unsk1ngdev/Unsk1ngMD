@@ -125,6 +125,7 @@ module.exports = {
                     '💬 `.sms` — Mensaje anónimo',
                     '🎭 `.fake` — Perfil falso',
                     '🎭 `.fakechat` — Mensaje falso de alguien',
+                    '🎮 `.discord` — Inteligencia y perfil de Discord',
                     '📱 `.dispositivo` — Ver dispositivo',
                     '📍 `.ubicacion` — Pin de cualquier ciudad',
                     '',
