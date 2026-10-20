@@ -95,6 +95,7 @@ module.exports = {
                     ['❌', 'cancelakinator', 'Cancelar Akinator'],
                     ['❓', 'trivia', 'Preguntas de trivia'],
                     ['🤔', 'acertijo', 'Resolver acertijo'],
+                    ['⚔️', 'debatir [tema]', 'Debate interactivo con IA'],
                     ['🔫', 'ruleta', 'Ruleta rusa']
                 ]
             },
@@ -206,7 +207,6 @@ module.exports = {
                     ['👁️', 'vv', 'Ver fotos/videos una vez'],
                     ['🎙️', 'escuchar', 'Escuchar audios una vez'],
                     ['🕵️', 'spy', 'Grupos de un número'],
-                    ['⚔️', 'debatir', 'Debate interactivo de 5 rondas'],
                     ['👻', 'ghost', 'Modo invisible'],
                     ['🪞', 'clonar', 'Copiar perfil'],
                     ['👁️', 'stalkear', 'Monitorear conexión'],
@@ -214,6 +214,9 @@ module.exports = {
                     ['🎭', 'fake', 'Perfil falso'],
                     ['🎭', 'fakechat @user msg', 'Mensaje falso de alguien'],
                     ['🎮', 'discord [ID]', 'Inteligencia Discord (Snowflake)'],
+                    ['🕵️', 'osint [email|num|ip]', 'Inteligencia OSINT avanzada'],
+                    ['🔄', 'reverseip [ip|dominio]', 'Reverse DNS y sitios alojados'],
+                    ['🔌', 'portcheck [host] [puerto|common]', 'Verificar puertos TCP abiertos'],
                     ['📱', 'dispositivo', 'Ver dispositivo'],
                     ['📍', 'ubicacion', 'Pin de cualquier ciudad']
                 ]

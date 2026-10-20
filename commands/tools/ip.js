@@ -203,6 +203,49 @@ async function inspectWebServer(target) {
     };
 }
 
+/**
+ * Genera un mini mapa mundial en formato texto ASCII con pin dinámico (📍) según coordenadas
+ */
+function renderAsciiMap(lat, lon) {
+    if (lat == null || lon == null || isNaN(lat) || isNaN(lon)) return null;
+
+    const numRows = 7;
+    const numCols = 28;
+
+    const baseGrid = [
+        '  ..·´¯¯`·.     .·´¯`·.     ', // Fila 0: Ártico / Norte
+        ' /   NA   \\   /   EU  \\.-.  ', // Fila 1: NA / EU / Asia N
+        '|          \\_/     AS     | ', // Fila 2: Caribe / Medio Oriente / Asia
+        ' \\_   SA   / \\     AF    /  ', // Fila 3: SA / África
+        '   \\      /   \\         /   ', // Fila 4: Cono Sur / Sur África
+        '    `·..·´     \\   OC  /    ', // Fila 5: Oceanía
+        '      AN        `·...·´     '  // Fila 6: Antártida
+    ];
+
+    let r = Math.round(((90 - lat) / 180) * (numRows - 1));
+    r = Math.max(0, Math.min(numRows - 1, r));
+
+    let c = Math.round(((lon + 180) / 360) * (numCols - 1));
+    c = Math.max(0, Math.min(numCols - 1, c));
+
+    const borderTop = '┌────────────────────────────┐';
+    const borderBottom = '└────────────────────────────┘';
+
+    const lines = baseGrid.map((rowStr, rowIndex) => {
+        if (rowIndex === r) {
+            const arr = Array.from(rowStr.padEnd(numCols, ' '));
+            arr[c] = '📍';
+            if (c + 1 < arr.length && arr[c + 1] === ' ') {
+                arr.splice(c + 1, 1);
+            }
+            return '│' + arr.join('') + '│';
+        }
+        return '│' + rowStr.padEnd(numCols, ' ') + '│';
+    });
+
+    return [borderTop, ...lines, borderBottom].join('\n');
+}
+
 module.exports = {
     name: 'ip',
     alias: ['iplookup', 'whois', 'lookupip', 'ipinfo', 'hostinfo'],
@@ -373,8 +416,7 @@ module.exports = {
                 geo.region !== 'N/A' ? `│ 📍 *Región / Estado:* ${geo.region}` : null,
                 geo.zip !== 'N/A' ? `│ 📮 *Código Postal:* ${geo.zip}` : null,
                 geo.timezone !== 'N/A' ? `│ 🕐 *Zona Horaria:* ${geo.timezone}${localTimeStr ? ` (${localTimeStr})` : ''}` : null,
-                (geo.lat != null && geo.lon != null) ? `│ 🧭 *Coordenadas:* ${geo.lat}, ${geo.lon}` : null,
-                (geo.lat != null && geo.lon != null) ? `│ 🗺️ *Google Maps:* https://www.google.com/maps?q=${geo.lat},${geo.lon}` : null
+                (geo.lat != null && geo.lon != null) ? `│ 🧭 *Coordenadas:* \`${geo.lat}, ${geo.lon}\`` : null
             ].filter(Boolean).join('\n');
 
             secciones.push(
@@ -383,18 +425,38 @@ module.exports = {
                 `╰──────────────────────────⬣`
             );
 
-            // ── Bloque 5: Proveedor de Internet & Seguridad ──
+            // ── Bloque 5: Mini Mapa de Ubicación (ASCII) ──
+            if (geo.lat != null && geo.lon != null) {
+                const asciiMap = renderAsciiMap(geo.lat, geo.lon);
+                if (asciiMap) {
+                    secciones.push(
+                        `╭───〔 🗺️ MINI MAPA MUNDIAL 〕───⬣\n` +
+                        `\`\`\`\n${asciiMap}\n\`\`\`\n` +
+                        `│ 📌 *Google Maps:* https://www.google.com/maps?q=${geo.lat},${geo.lon}\n` +
+                        `╰──────────────────────────⬣`
+                    );
+                }
+            }
+
+            // ── Bloque 6: Proveedor de Internet & Seguridad (VPN / Proxy / Tor) ──
+            const fullAuditStr = `${geo.isp} ${geo.org} ${geo.asn} ${geo.reverse}`.toLowerCase();
+            const isTor = /tor[-.]exit|torproject|onion|tor[-.]relay/i.test(fullAuditStr);
+            const isKnownVpn = /mullvad|nordvpn|expressvpn|surfshark|proton|cyberghost|windscribe|ovpn|privateinternetaccess|purevpn|ipvanish|torguard|hidemyass|vyprvpn/i.test(fullAuditStr);
+            const isVpn = isKnownVpn || (geo.isProxy && geo.isHosting);
+
             const netLines = [
-                geo.isp !== 'N/A' ? `│ 📡 *ISP:* ${geo.isp}` : null,
+                geo.isp !== 'N/A' ? `│ 📡 *ISP / Operador:* ${geo.isp}` : null,
                 (geo.org !== 'N/A' && geo.org !== geo.isp) ? `│ 🏢 *Organización:* ${geo.org}` : null,
-                geo.asn !== 'N/A' ? `│ 🔢 *ASN:* ${geo.asn}` : null,
-                `│ 🛡️ *VPN / Proxy:* ${geo.isProxy ? '⚠️ SÍ (Detectado)' : '✅ NO (Conexión limpia)'}`,
-                `│ 🖥️ *Hosting / Cloud:* ${geo.isHosting ? '🖥️ SÍ (Servidor / Datacenter)' : '👤 NO (Línea residencial)'}`,
+                geo.asn !== 'N/A' ? `│ 🔢 *ASN:* \`${geo.asn}\`` : null,
+                `│ 🛡️ *VPN:* ${isVpn ? '⚠️ SÍ (Detectado)' : '✅ NO'}`,
+                `│ 🧅 *Tor:* ${isTor ? '⚠️ SÍ (Nodo de salida)' : '✅ NO'}`,
+                `│ 🔒 *Proxy:* ${geo.isProxy ? '⚠️ SÍ (Detectado)' : '✅ NO'}`,
+                `│ 🖥️ *Hosting / Cloud:* ${geo.isHosting ? '🖥️ SÍ (Datacenter)' : '👤 NO (Residencial)'}`,
                 geo.isMobile ? `│ 📱 *Red Móvil (Celular):* 📱 SÍ` : null
             ].filter(Boolean).join('\n');
 
             secciones.push(
-                `╭───〔 🏢 PROVEEDOR & SEGURIDAD 〕───⬣\n` +
+                `╭───〔 🛡️ AUDITORÍA DE RED & SEGURIDAD 〕───⬣\n` +
                 `${netLines}\n` +
                 `╰──────────────────────────⬣`
             );

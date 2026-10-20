@@ -1,26 +1,15 @@
 'use strict';
 
-const premiumManager = require('../../lib/premium');
-const database = require('../../lib/database');
-
 module.exports = {
     name: 'debatir',
     alias: ['debate', 'discutir', 'polemica'],
-    category: 'premium',
-    desc: 'Inicia un debate interactivo de 5 rondas con análisis de argumentos y puntuación (Premium)',
+    category: 'juegos',
+    desc: 'Inicia un debate interactivo de 5 rondas con análisis de argumentos y puntuación',
     usage: '.debatir [tema] | .debatir stop',
-    premiumOnly: true,
 
     execute: async ({ sock, m, args, text, isOwner }) => {
         const jid = m.chat || m.key.remoteJid;
         const sender = m.sender;
-
-        const isPrem = isOwner || database.isOwner(sender) || premiumManager.isPremium(sender);
-        if (!isPrem) {
-            return await sock.sendMessage(jid, {
-                text: '⭐ Este comando es *Premium*.\n_Unknown Codexツ</>_'
-            }, { quoted: m });
-        }
 
         if (!global.debates) global.debates = {};
 

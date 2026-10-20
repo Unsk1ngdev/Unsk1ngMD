@@ -131,6 +131,18 @@ module.exports = {
 │ 🔹 *${prefix}discord* [ID] (Premium)
 │    _Inteligencia profunda y perfil de Discord vía Snowflake (Premium)._
 │    *Ej:* \`${prefix}discord 155149108183695360\`
+│
+│ 🔹 *${prefix}osint* [email|num|ip] <valor> (Premium)
+│    _Inteligencia OSINT: filtraciones HIBP, datos de número e IP (Premium)._
+│    *Ej:* \`${prefix}osint email prueba@gmail.com\` | \`${prefix}osint ip 8.8.8.8\`
+│
+│ 🔹 *${prefix}reverseip* [ip|dominio] (Premium)
+│    _Reverse DNS (PTR) y dominios alojados en la misma IP (Premium)._
+│    *Ej:* \`${prefix}reverseip 1.1.1.1\` | \`${prefix}reverseip google.com\`
+│
+│ 🔹 *${prefix}portcheck* [host] [puerto|common] (Premium)
+│    _Escáner y verificación de estado de puertos TCP en red (Premium)._
+│    *Ej:* \`${prefix}portcheck google.com 443\` | \`${prefix}portcheck 1.1.1.1 common\`
 ╰────────────────────────────────────⬣
 
 🤖 *3. CATEGORÍA: INTELIGENCIA ARTIFICIAL (IA)*
@@ -220,6 +232,10 @@ module.exports = {
 │ 🔹 *${prefix}acertijo*
 │    _Adivinanzas con respuestas abiertas y 60 segundos de límite._
 │    *Ej:* \`${prefix}acertijo\`
+│
+│ 🔹 *${prefix}debatir* [tema] | *${prefix}debatir stop*
+│    _Inicia un debate interactivo de 5 rondas contra la IA con análisis y puntuación._
+│    *Ej:* \`${prefix}debatir la inteligencia artificial\`
 ╰────────────────────────────────────⬣
 
 ⚡ *6. CATEGORÍA: SUB-BOTS (MULTI-SESIÓN)*
