@@ -80,6 +80,10 @@ module.exports = {
 │    _Sube imagen o video citado a la nube y genera enlace directo (máx. 15 MB)._
 │    *Ej:* Responder a foto o video con \`${prefix}tourl\`
 │
+│ 🔹 *${prefix}imglink*
+│    _Sube imagen citada a ImgBB generando enlace directo, web y de borrado._
+│    *Ej:* Responder a foto con \`${prefix}imglink\`
+│
 │ 🔹 *${prefix}gif*
 │    _Convierte video corto o sticker en bucle a GIF interactivo._
 │    *Ej:* Responder a sticker con \`${prefix}gif\`

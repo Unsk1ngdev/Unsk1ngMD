@@ -124,6 +124,7 @@ module.exports = {
                     ['🎵', 'tomp3', 'Extraer audio a MP3'],
                     ['🎙️', 'tovn', 'Convertir a nota de voz'],
                     ['☁️', 'tourl', 'Subir archivo a la nube'],
+                    ['🖼️', 'imglink', 'Subir imagen a ImgBB con link'],
                     ['🔲', 'qr', 'Generar código QR'],
                     ['📷', 'readqr', 'Leer código QR'],
                     ['🖥️', 'screenshot', 'Captura de web'],
