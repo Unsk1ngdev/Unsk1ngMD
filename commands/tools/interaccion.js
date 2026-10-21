@@ -5,6 +5,7 @@ const fs = require('fs-extra');
 const axios = require('axios');
 const ffmpeg = require('../../lib/ffmpeg');
 const logger = require('../../lib/logger');
+const userNames = require('../../lib/userNames');
 
 /**
  * Normaliza y obtiene el JID limpio
@@ -85,12 +86,14 @@ module.exports = [
 
             let caption = '';
             const mentions = [sender];
+            const senderName = m.pushName || userNames.get(sender);
 
             if (target && target !== sender) {
                 mentions.push(target);
-                caption = `👊💥 *@${sender.split('@')[0]}* le acomodó un tremendo puñetazo a *@${target.split('@')[0]}* 💢\n\n_Unknown Codexツ</>_`;
+                const targetName = userNames.get(target);
+                caption = `👊💥 *${senderName}* le acomodó un tremendo puñetazo a *${targetName}* 💢\n\n_Unknown Codexツ</>_`;
             } else {
-                caption = `👊 *@${sender.split('@')[0]}* se dio un puñetazo a sí mismo por accidente... ¡Auch! 🤕\n\n_Unknown Codexツ</>_`;
+                caption = `👊 *${senderName}* se dio un puñetazo a sí mismo por accidente... ¡Auch! 🤕\n\n_Unknown Codexツ</>_`;
             }
 
             const media = await fetchReactionVideo('punch');
@@ -123,12 +126,14 @@ module.exports = [
 
             let caption = '';
             const mentions = [sender];
+            const senderName = m.pushName || userNames.get(sender);
 
             if (target && target !== sender) {
                 mentions.push(target);
-                caption = `✨🥰 *@${sender.split('@')[0]}* le está acariciando la cabecita con mucho cariño a *@${target.split('@')[0]}* 💕\n\n_Unknown Codexツ</>_`;
+                const targetName = userNames.get(target);
+                caption = `✨🥰 *${senderName}* le está acariciando la cabecita con mucho cariño a *${targetName}* 💕\n\n_Unknown Codexツ</>_`;
             } else {
-                caption = `🥺 *@${sender.split('@')[0]}* se hace mimos a sí mismo buscando un poco de afecto... ✨\n\n_Unknown Codexツ</>_`;
+                caption = `🥺 *${senderName}* se hace mimos a sí mismo buscando un poco de afecto... ✨\n\n_Unknown Codexツ</>_`;
             }
 
             const media = await fetchReactionVideo('pat');
@@ -161,12 +166,14 @@ module.exports = [
 
             let caption = '';
             const mentions = [sender];
+            const senderName = m.pushName || userNames.get(sender);
 
             if (target && target !== sender) {
                 mentions.push(target);
-                caption = `👻⚡ *¡BUUU!* *@${sender.split('@')[0]}* salió de la nada y le pegó un susto de muerte a *@${target.split('@')[0]}* 😱💥\n\n_Unknown Codexツ</>_`;
+                const targetName = userNames.get(target);
+                caption = `👻⚡ *¡BUUU!* *${senderName}* salió de la nada y le pegó un susto de muerte a *${targetName}* 😱💥\n\n_Unknown Codexツ</>_`;
             } else {
-                caption = `😱 *@${sender.split('@')[0]}* vio una sombra en su habitación y casi se muere del susto 🏃💨\n\n_Unknown Codexツ</>_`;
+                caption = `😱 *${senderName}* vio una sombra en su habitación y casi se muere del susto 🏃💨\n\n_Unknown Codexツ</>_`;
             }
 
             const media = await fetchReactionVideo('shocked');

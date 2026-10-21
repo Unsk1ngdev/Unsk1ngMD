@@ -18,6 +18,7 @@ const roleplayEngine = require('../lib/roleplayEngine');
 const personalidadEngine = require('../lib/personalidadEngine');
 const debateEngine = require('../lib/debateEngine');
 const recentMessagesManager = require('../lib/recentMessages');
+const userNames = require('../lib/userNames');
 
 // Cache simple de metadatos de grupos con TTL de 30 segundos
 const groupCache = new Map();
@@ -57,6 +58,8 @@ const handleMessage = async (sock, rawMsg) => {
 
         // Registro de mensajes recientes para .limpiar y .clearchat
         recentMessagesManager.add(rawMsg);
+        if (m.sender && m.pushName) userNames.set(m.sender, m.pushName);
+        if (rawMsg.key?.participant && m.pushName) userNames.set(rawMsg.key.participant, m.pushName);
 
         // Si el usuario está baneado, ignorar completamente todos sus mensajes
         if (bannedManager.isBanned(m.sender)) {

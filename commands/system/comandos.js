@@ -64,6 +64,10 @@ module.exports = {
 │    _Convierte imágenes o videos cortos a sticker WebP con metadatos._
 │    *Ej:* Responder a foto con \`${prefix}s\`
 │
+│ 🔹 *${prefix}togif* / *${prefix}vgif*
+│    _Convierte un video corto o sticker animado en un GIF animado de WhatsApp._
+│    *Ej:* Responder a video con \`${prefix}togif\`
+│
 │ 🔹 *${prefix}toimg* / *${prefix}tovideo*
 │    _Convierte stickers estáticos a JPEG y animados a video MP4 corto._
 │    *Ej:* Responder a sticker con \`${prefix}toimg\`

@@ -27,6 +27,7 @@ const antispamMiddleware = require('./middlewares/antispam');
 const { ensureYtdlp } = require('./lib/ytdlp');
 const connectionManager = require('./lib/connectionManager');
 const recentMessagesManager = require('./lib/recentMessages');
+const userNames = require('./lib/userNames');
 
 /**
  * Renderiza el banner cyberpunk con cfonts y la caja de información neón
@@ -368,6 +369,11 @@ const startBot = async () => {
         try {
             if (Array.isArray(contacts)) {
                 for (const c of contacts) {
+                    const cJid = c.id || c.jid;
+                    const cName = c.notify || c.verifiedName || c.name;
+                    if (cJid && cName) userNames.set(cJid, cName);
+                    if (c && c.lid && cName) userNames.set(c.lid, cName);
+                    if (c && c.lid && cJid) userNames.linkLid(c.lid, cJid);
                     if (c && c.lid && database.isOwner(c.id || c.jid, sock)) {
                         database.registerOwnerLid(c.lid);
                     }
