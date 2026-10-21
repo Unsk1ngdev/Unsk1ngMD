@@ -70,7 +70,7 @@ module.exports = {
     usage: '.verdadoreto [verdad / reto / picante / stop]',
     groupOnly: true,
 
-    execute: async ({ sock, m, args, groupMetadata, participants }) => {
+    execute: async ({ sock, m, args, command, groupMetadata, participants }) => {
         const jid = m.chat || m.key.remoteJid;
 
         if (!jid.endsWith('@g.us')) {
@@ -140,9 +140,9 @@ module.exports = {
         const esPicante = subCmd === 'picante' || subCmd === 'hot';
         let esVerdad = false;
 
-        if (subCmd === 'verdad') {
+        if (command === 'verdad' || subCmd === 'verdad') {
             esVerdad = true;
-        } else if (subCmd === 'reto') {
+        } else if (command === 'reto' || subCmd === 'reto') {
             esVerdad = false;
         } else {
             esVerdad = Math.random() < 0.5;

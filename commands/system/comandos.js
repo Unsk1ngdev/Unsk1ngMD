@@ -147,6 +147,30 @@ module.exports = {
 │ 🔹 *${prefix}portcheck* [host] [puerto|common] (Premium)
 │    _Escáner y verificación de estado de puertos TCP en red (Premium)._
 │    *Ej:* \`${prefix}portcheck google.com 443\` | \`${prefix}portcheck 1.1.1.1 common\`
+│
+│ 🔹 *${prefix}banco* [saldo | depositar <cant> | retirar <cant> | pedir <cant> | pagar <cant|todo> | deuda]
+│    _Sistema bancario completo: administra tus cuentas, solicita préstamos y paga deudas._
+│    *Ej:* \`${prefix}banco saldo\` | \`${prefix}banco depositar 5000\` | \`${prefix}banco pedir 50000\`
+│
+│ 🔹 *${prefix}diario*
+│    _Reclama tu bono económico y de experiencia cada 24 horas ($5,000 - $10,000)._
+│    *Ej:* \`${prefix}diario\`
+│
+│ 🔹 *${prefix}trabajar*
+│    _Trabaja en diversos oficios para ganar dinero y EXP cada 15 minutos._
+│    *Ej:* \`${prefix}trabajar\`
+│
+│ 🔹 *${prefix}transferir* [@usuario] [monto]
+│    _Transfiere monedas en mano a otro usuario del grupo de forma instantánea._
+│    *Ej:* \`${prefix}transferir @usuario 2000\`
+│
+│ 🔹 *${prefix}consejo*
+│    _Entrega un consejo reflexivo, práctico o de vida al azar._
+│    *Ej:* \`${prefix}consejo\`
+│
+│ 🔹 *${prefix}facto*
+│    _Dato curioso, científico o histórico fascinante._
+│    *Ej:* \`${prefix}facto\`
 ╰────────────────────────────────────⬣
 
 🤖 *3. CATEGORÍA: INTELIGENCIA ARTIFICIAL (IA)*
@@ -213,6 +237,14 @@ module.exports = {
 │ 🔹 *${prefix}revoke*
 │    _Restablece e invalida el enlace de invitación anterior del grupo._
 │    *Ej:* \`${prefix}revoke\`
+│
+│ 🔹 *${prefix}amigorandom* / *${prefix}amistad*
+│    _Elige a dos miembros aleatorios del grupo y los proclama amigos del día._
+│    *Ej:* \`${prefix}amigorandom\`
+│
+│ 🔹 *${prefix}formarpareja*
+│    _Forma 5 parejas aleatorias con porcentaje de compatibilidad (10+ miembros)._
+│    *Ej:* \`${prefix}formarpareja\`
 ╰────────────────────────────────────⬣
 
 🎮 *5. CATEGORÍA: JUEGOS Y ENTRETENIMIENTO*
@@ -240,6 +272,18 @@ module.exports = {
 │ 🔹 *${prefix}debatir* [tema] | *${prefix}debatir stop*
 │    _Inicia un debate interactivo de 5 rondas contra la IA con análisis y puntuación._
 │    *Ej:* \`${prefix}debatir la inteligencia artificial\`
+│
+│ 🔹 *${prefix}verdad* [picante]
+│    _Lanza una pregunta de verdad incómoda o picante al azar._
+│    *Ej:* \`${prefix}verdad\` | \`${prefix}verdad picante\`
+│
+│ 🔹 *${prefix}punch* [@usuario] / *${prefix}patt* [@usuario]
+│    _Reacciones interactivas animadas: puñetazo o caricias en la cabeza._
+│    *Ej:* \`${prefix}punch @usuario\` | \`${prefix}patt @usuario\`
+│
+│ 🔹 *${prefix}scared* [@usuario]
+│    _Reacción animada de pegarle un susto a alguien o asustarse._
+│    *Ej:* \`${prefix}scared @usuario\`
 ╰────────────────────────────────────⬣
 
 ⚡ *6. CATEGORÍA: SUB-BOTS (MULTI-SESIÓN)*
@@ -262,6 +306,7 @@ module.exports = {
 │ 🔹 *${prefix}ping* - Comprueba la latencia del bot. Ej: \`${prefix}ping\`
 │ 🔹 *${prefix}status* - Estadísticas, RAM y uptime. Ej: \`${prefix}status\`
 │ 🔹 *${prefix}stats* - Estadísticas completas en tiempo real (Owner). Ej: \`${prefix}stats\`
+│ 🔹 *${prefix}chetar* [@usuario] - Maxea monedas, nivel, exp y stats al infinito (Owner). Ej: \`${prefix}chetar\`
 │ 🔹 *${prefix}owner* - Contacto directo del creador. Ej: \`${prefix}owner\`
 │ 🔹 *${prefix}prefix* [nuevo] - Cambia el prefijo global. Ej: \`${prefix}prefix !\`
 │ 🔹 *${prefix}mode* [public/private] - Alterna acceso al bot. Ej: \`${prefix}mode public\`

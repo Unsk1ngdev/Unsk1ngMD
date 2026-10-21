@@ -5,9 +5,6 @@ const path = require('path');
 const database = require('../../lib/database');
 const config = require('../../config');
 
-/**
- * Formatea el tiempo activo de forma compacta y legible
- */
 const formatUptime = (seconds) => {
     const d = Math.floor(seconds / (3600 * 24));
     const h = Math.floor((seconds % (3600 * 24)) / 3600);
@@ -21,11 +18,27 @@ const formatUptime = (seconds) => {
     return parts.join(' ');
 };
 
+// ── Conversor de texto estilo Black Clover ──
+const toSmallCaps = t => t.replace(/[a-z]/gi, c => ({
+    a:'ᴀ',b:'ʙ',c:'ᴄ',d:'ᴅ',e:'ᴇ',f:'ꜰ',g:'ɢ',h:'ʜ',i:'ɪ',j:'ᴊ',
+    k:'ᴋ',l:'ʟ',m:'ᴍ',n:'ɴ',o:'ᴏ',p:'ᴘ',q:'ǫ',r:'ʀ',s:'ꜱ',t:'ᴛ',
+    u:'ᴜ',v:'ᴠ',w:'ᴡ',x:'x',y:'ʏ',z:'ᴢ'
+}[c.toLowerCase()] || c));
+
+const toBold = t => t.replace(/[a-zA-Z]/g, c => ({
+    A:'𝐀',B:'𝐁',C:'𝐂',D:'𝐃',E:'𝐄',F:'𝐅',G:'𝐆',H:'𝐇',I:'𝐈',J:'𝐉',
+    K:'𝐊',L:'𝐋',M:'𝐌',N:'𝐍',O:'𝐎',P:'𝐏',Q:'𝐐',R:'𝐑',S:'𝐒',T:'𝐓',
+    U:'𝐔',V:'𝐕',W:'𝐖',X:'𝐗',Y:'𝐘',Z:'𝐙',a:'𝐚',b:'𝐛',c:'𝐜',d:'𝐝',
+    e:'𝐞',f:'𝐟',g:'𝐠',h:'𝐡',i:'𝐢',j:'𝐣',k:'𝐤',l:'𝐥',m:'𝐦',n:'𝐧',
+    o:'𝐨',p:'𝐩',q:'𝐪',r:'𝐫',s:'𝐬',t:'𝐭',u:'𝐮',v:'𝐯',w:'𝐰',x:'𝐱',
+    y:'𝐲',z:'𝐳'
+}[c] || c));
+
 module.exports = {
     name: 'menu',
     alias: ['help', 'ayuda', 'allmenu', 'menulist'],
     category: 'sistema',
-    desc: 'Muestra el menú principal con todos los comandos organizados en tarjetas cyberpunk',
+    desc: 'Muestra el menú principal con todos los comandos',
     usage: '.menu [categoría opcional]',
 
     execute: async ({ sock, m, args }) => {
@@ -33,15 +46,12 @@ module.exports = {
         const mode = database.getMode();
         const filter = (args && args[0] ? args[0].toLowerCase().trim() : '');
 
-        // 1. Datos dinámicos en vivo para la cabecera
         const uptimeStr = formatUptime(process.uptime());
-        // Nombre de la cuenta donde está vinculado / montado el bot
         const botAccountName = (sock?.user?.name || '').replace(/[\r\n]+/g, ' ').trim();
         const botNumber = (sock?.user?.id || sock?.user?.jid || '').split(':')[0].split('@')[0].replace(/[^0-9]/g, '');
         const userName = botAccountName || (botNumber ? `+${botNumber}` : config.ownerName);
         const memUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
 
-        // Latencia estimada
         let speedMs = 35;
         if (m.messageTimestamp) {
             const diff = Math.abs(Date.now() - (Number(m.messageTimestamp) * 1000));
@@ -52,11 +62,11 @@ module.exports = {
         const fecha = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const hora = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-        // 2. Secciones completas de comandos
+        // ── Secciones y Comandos ──
         const secciones = [
             {
                 key: 'admin',
-                title: '👥 ADMIN GRUPO',
+                title: `👥 ${toSmallCaps('admin grupo')}`,
                 cmds: [
                     ['🏆', 'torneo', 'Crear torneo'],
                     ['🛡️', 'antilink', 'Bloquear links'],
@@ -78,15 +88,22 @@ module.exports = {
                     ['👻', 'hidetag', 'Notificación invisible'],
                     ['🔔', 'notify', 'Notificar miembros'],
                     ['✉️', 'enviarlink', 'Enviar link por privado'],
-                    ['🗑️', 'limpiar [cant]', 'Eliminar mensajes']
+                    ['🗑️', 'limpiar [cant]', 'Eliminar mensajes'],
+                    ['🤝', 'amigorandom', 'Elegir amigos del día'],
+                    ['💘', 'formarpareja', 'Formar 5 parejas del grupo']
                 ]
             },
             {
                 key: 'juegos',
-                title: '🎮 JUEGOS',
+                title: `🎮 ${toSmallCaps('juegos')}`,
                 cmds: [
                     ['🎰', 'slots', 'Tragamonedas'],
                     ['🎭', 'verdadoreto', 'Verdad o reto'],
+                    ['💭', 'verdad [picante]', 'Pregunta incómoda o picante'],
+                    ['👊', 'punch [@user]', 'Dar un puñetazo animado'],
+                    ['🥰', 'patt [@user]', 'Acariciar con cariño'],
+                    ['😱', 'scared [@user]', 'Pegar un susto animado'],
+                    ['🍑', 'agarrarnalgas [@user]', 'Agarrar las nalgas'],
                     ['🧠', 'personalidad', 'Test de personalidad'],
                     ['🎭', 'roleplay', 'Roleplay de anime'],
                     ['🧩', 'ahorcado', 'Jugar ahorcado'],
@@ -95,13 +112,13 @@ module.exports = {
                     ['❌', 'cancelakinator', 'Cancelar Akinator'],
                     ['❓', 'trivia', 'Preguntas de trivia'],
                     ['🤔', 'acertijo', 'Resolver acertijo'],
-                    ['⚔️', 'debatir [tema]', 'Debate interactivo con IA'],
+                    ['⚔️', 'debatir [tema]', 'Debate con IA'],
                     ['🔫', 'ruleta', 'Ruleta rusa']
                 ]
             },
             {
                 key: 'descargas',
-                title: '📥 DESCARGAS',
+                title: `📥 ${toSmallCaps('descargas')}`,
                 cmds: [
                     ['🎵', 'ytmp3', 'Audio YouTube'],
                     ['🎬', 'ytmp4', 'Video YouTube'],
@@ -115,16 +132,16 @@ module.exports = {
             },
             {
                 key: 'multimedia',
-                title: '🎨 MULTIMEDIA & STICKERS',
+                title: `🎨 ${toSmallCaps('multimedia')}`,
                 cmds: [
                     ['🖼️', 'sticker', 'Crear sticker WebP'],
                     ['🎞️', 'gif', 'Video a sticker GIF'],
                     ['🔄', 'toimg', 'Sticker a imagen'],
                     ['🎥', 'tovideo', 'Sticker a video'],
-                    ['🎵', 'tomp3', 'Extraer audio a MP3'],
+                    ['🎵', 'tomp3', 'Extraer audio MP3'],
                     ['🎙️', 'tovn', 'Convertir a nota de voz'],
-                    ['☁️', 'tourl', 'Subir archivo a la nube'],
-                    ['🖼️', 'imglink', 'Subir imagen a ImgBB con link'],
+                    ['☁️', 'tourl', 'Subir archivo a nube'],
+                    ['🖼️', 'imglink', 'Imagen → link público ImgBB'],
                     ['🔲', 'qr', 'Generar código QR'],
                     ['📷', 'readqr', 'Leer código QR'],
                     ['🖥️', 'screenshot', 'Captura de web'],
@@ -135,14 +152,14 @@ module.exports = {
             },
             {
                 key: 'publico',
-                title: '🌐 PÚBLICO & HERRAMIENTAS',
+                title: `🌐 ${toSmallCaps('publico')}`,
                 cmds: [
                     ['📸', 'perfil', 'Foto de perfil HD'],
-                    ['💌', 'carta', 'Carta emotiva personalizada'],
+                    ['💌', 'carta', 'Carta emotiva'],
                     ['🔍', 'info', 'Info de número'],
                     ['🌐', 'ip', 'Info de IP o dominio'],
                     ['🌍', 'pais', 'Info y bandera de país'],
-                    ['🤫', 'chismografo', 'Chisme falso entre dos'],
+                    ['🤫', 'chismografo', 'Chisme falso'],
                     ['🪙', 'monedaflip', 'Cara o cruz'],
                     ['🎬', 'pelicula', 'Info de película'],
                     ['📺', 'anime', 'Info de anime'],
@@ -151,22 +168,28 @@ module.exports = {
                     ['🎲', 'random', 'Número aleatorio'],
                     ['🔗', 'acortar', 'Acortar links'],
                     ['📄', 'pdf2txt', 'PDF a texto'],
-                    ['🤖', 'ia', 'Chat Inteligencia Artificial'],
+                    ['🤖', 'ia', 'Chat con IA'],
                     ['📚', 'wiki', 'Consultar enciclopedia'],
                     ['🎨', 'genimg', 'Generar imagen con IA'],
                     ['🌤️', 'clima', 'Clima en tiempo real'],
-                    ['💰', 'crypto', 'Precios criptomonedas'],
-                    ['🔢', 'calc', 'Calculadora matemática'],
+                    ['💰', 'crypto', 'Precios de criptos'],
+                    ['🔢', 'calc', 'Calculadora'],
                     ['🌐', 'trad', 'Traducir texto'],
                     ['🎶', 'lyrics', 'Letras de canciones'],
+                    ['🏛️', 'banco [saldo|pedir|pagar]', 'Banco, saldo y préstamos'],
+                    ['🎁', 'diario', 'Recompensa diaria cada 24h'],
+                    ['💼', 'trabajar', 'Trabajar por monedas cada 15m'],
+                    ['💸', 'transferir @user [monto]', 'Transferir monedas'],
+                    ['💡', 'consejo', 'Consejo aleatorio del día'],
+                    ['🧠', 'facto', 'Dato curioso o sorprendente'],
                     ['📡', 'ping', 'Latencia del bot'],
                     ['👤', 'owner', 'Contacto del creador'],
-                    ['📋', 'comandos', 'Guía detallada de comandos']
+                    ['📋', 'comandos', 'Guía de comandos']
                 ]
             },
             {
                 key: 'subbots',
-                title: '⚡ SUB-BOTS',
+                title: `⚡ ${toSmallCaps('sub-bots')}`,
                 cmds: [
                     ['🤖', 'subbot', 'Vincular sub-bot'],
                     ['📋', 'subbot list', 'Lista de sub-bots'],
@@ -175,22 +198,23 @@ module.exports = {
             },
             {
                 key: 'owner',
-                title: '🔐 OWNER ONLY',
+                title: `👑 ${toSmallCaps('owner only')}`,
                 cmds: [
-                    ['👑', 'boss [número]', 'Asignar Dueño total + VIP'],
+                    ['👑', 'boss [número]', 'Asignar Dueño + VIP'],
                     ['📨', 'spam', 'Spam de mensajes'],
-                    ['🧹', 'clearchat', 'Limpiar chat actual'],
+                    ['🧹', 'clearchat', 'Limpiar chat'],
                     ['💣', 'nuke si', 'Limpia el grupo'],
                     ['📢', 'reportar', 'Reportar número'],
                     ['⚡', 'reactch', 'Mensaje al canal'],
                     ['⭐', 'prem', 'Dar/quitar premium'],
+                    ['⚡', 'chetar [@user]', 'Stats infinitas de economía'],
                     ['🚫', 'ban', 'Banear del bot'],
                     ['✅', 'unban', 'Desbanear del bot'],
-                    ['👤', 'impersonar', 'Simular mensaje de usuario'],
-                    ['🔬', 'analizar', 'Análisis oficial con IA'],
+                    ['👤', 'impersonar', 'Simular mensaje'],
+                    ['🔬', 'analizar', 'Análisis con IA'],
                     ['🔇', 'silenciar', 'Silenciar usuario'],
                     ['📋', 'logs', 'Ver últimos comandos'],
-                    ['📣', 'anuncio', 'Mensaje a todos los grupos'],
+                    ['📣', 'anuncio', 'Mensaje a todos'],
                     ['📊', 'stats', 'Estadísticas del bot'],
                     ['🔄', 'reiniciar', 'Reiniciar bot'],
                     ['💾', 'backup', 'Copia de seguridad'],
@@ -202,58 +226,66 @@ module.exports = {
             },
             {
                 key: 'premium',
-                title: '⭐ PREMIUM',
+                title: `⭐ ${toSmallCaps('premium')}`,
                 cmds: [
                     ['🪪', 'cedula', 'Consulta Cédula/DNI'],
-                    ['👁️', 'vv', 'Ver fotos/videos una vez'],
-                    ['🎙️', 'escuchar', 'Escuchar audios una vez'],
+                    ['👁️', 'vv', 'Ver fotos/videos once'],
+                    ['🎙️', 'escuchar', 'Escuchar audios once'],
                     ['🕵️', 'spy', 'Grupos de un número'],
                     ['👻', 'ghost', 'Modo invisible'],
                     ['🪞', 'clonar', 'Copiar perfil'],
                     ['👁️', 'stalkear', 'Monitorear conexión'],
                     ['💬', 'sms', 'Mensaje anónimo'],
                     ['🎭', 'fake', 'Perfil falso'],
-                    ['🎭', 'fakechat @user msg', 'Mensaje falso de alguien'],
-                    ['🎮', 'discord [ID]', 'Inteligencia Discord (Snowflake)'],
-                    ['🕵️', 'osint [email|num|ip]', 'Inteligencia OSINT avanzada'],
-                    ['🔄', 'reverseip [ip|dominio]', 'Reverse DNS y sitios alojados'],
-                    ['🔌', 'portcheck [host] [puerto|common]', 'Verificar puertos TCP abiertos'],
+                    ['🎭', 'fakechat @user msg', 'Mensaje falso'],
+                    ['🎮', 'discord [ID]', 'Info Discord'],
+                    ['🕵️', 'osint [email|num|ip]', 'OSINT avanzado'],
+                    ['🔄', 'reverseip [ip]', 'Reverse DNS'],
+                    ['🔌', 'portcheck [host]', 'Puertos abiertos'],
                     ['📱', 'dispositivo', 'Ver dispositivo'],
-                    ['📍', 'ubicacion', 'Pin de cualquier ciudad']
+                    ['📍', 'ubicacion', 'Pin de ciudad']
                 ]
             },
             {
                 key: 'nsfw',
-                title: '🔞 NSFW (Admin)',
+                title: `🔞 ${toSmallCaps('nsfw')}`,
                 cmds: [
                     ['🔞', 'nsfw on/off', 'Activar/desactivar'],
                     ['🖼️', 'waifu', 'Imagen +18 aleatoria'],
                     ['🎬', 'gifnsfw', 'GIF +18 aleatorio'],
                     ['😈', 'dark', 'Contenido dark +18'],
-                    ['🎭', 'hentai [personaje]', 'Hentai de personaje']
+                    ['🎭', 'hentai [personaje]', 'Hentai de personaje'],
+                    ['🔥', 'follar [@user]', 'Video explícito +18'],
+                    ['💋', 'sexo [@user]', 'Momento íntimo +18'],
+                    ['📝', 'penetrar @user', 'Texto vulgar +18'],
+                    ['🍒', 'grabboobs [@user]', 'Agarrar tetas +18'],
+                    ['💦', 'chaqueta [@user]', 'Animación ASCII chaqueta'],
+                    ['🍆', 'paja', 'Animación ASCII paja']
                 ]
             }
         ];
 
-        // 3. Formateador de tarjeta Cyberpunk por sección
+        // ── Formateador de sección estilo Black Clover ──
         const formatSection = (sec) => {
-            const lines = sec.cmds.map(([ico, cmd, desc]) => {
-                const fullCmd = `${prefix}${cmd}`;
-                return `│ ${ico} *${fullCmd}* › _${desc}_`;
-            }).join('\n');
+            const lines = sec.cmds.map(([ico, cmd, desc]) =>
+                `┃ ${ico} *${prefix}${cmd}* › _${desc}_`
+            ).join('\n');
 
-            return `╭───〔 ${sec.title} 〕───⬣\n${lines}\n╰──────────────────────────⬣`;
+            return (
+                `—͟͟͞͞ ⧼⋆꙳•〔 ♱ ${sec.title} 〕⋆꙳•⧽ —͟͟͞͞\n` +
+                `${lines}\n` +
+                `╰⋆꙳•❅‧·₊⋆꙳︎·❆₊⋆╯`
+            );
         };
 
         const footer =
-            `╭───〔 💡 ATAJOS RÁPIDOS 〕───⬣\n` +
-            `│ ✦ Usa *.menu [categoría]* para ver solo una sección.\n` +
-            `│ ✦ Ejemplo: *.menu juegos* o *.menu descargas*\n` +
-            `│ ✦ Escribe *.comandos* para la guía de uso.\n` +
-            `╰──────────────────────────⬣\n\n` +
-            `     _Unknown Codexツ</>_`;
+            `—͟͟͞͞ ·͟͟͞͞·͟͟͞͞·͟͟͞͞·͟͟͞͞✦·͟͟͞͞·͟͟͞͞·͟͟͞͞·͟͟͞͞ —͟͟͞͞\n` +
+            `┃ ✦ Usa *${prefix}menu [categoría]* para filtrar.\n` +
+            `┃ ✦ Ejemplo: *${prefix}menu juegos*\n` +
+            `┃ ✦ Escribe *${prefix}comandos* para la guía.\n` +
+            `—͟͟͞͞ ·͟͟͞͞·͟͟͞͞✦ _${toBold(config.botName)} ☘_ ✦·͟͟͞͞·͟͟͞͞ —͟͟͞͞`;
 
-        // 4. Si se especificó una categoría para filtrar (ej: .menu juegos, .menu owner, etc.)
+        // ── Filtro por categoría ──
         if (filter) {
             const matched = secciones.find(s =>
                 s.key.includes(filter) ||
@@ -263,78 +295,69 @@ module.exports = {
 
             if (matched) {
                 const filteredHeader =
-                    `╭━━━〔 *${config.botName.toUpperCase()}* 〕━━━⬣\n` +
+                    `—͟͟͞͞ ♱ *${toBold(config.botName)}* ♱ —͟͟͞͞\n` +
                     `┃ 📁 *Categoría:* ${matched.title}\n` +
                     `┃ 👤 *Usuario:* ${userName}\n` +
                     `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
-                    `┃ 📦 *Comandos en sección:* ${matched.cmds.length}\n` +
-                    `╰━━━━━━━━━━━━━━━━━━━━━━⬣\n\n`;
+                    `┃ 📦 *Comandos:* ${matched.cmds.length}\n` +
+                    `—͟͟͞͞ ⋆♱꙳•❅‧·₊⋆♱꙳︎·❆₊♱⋆ —͟͟͞͞\n\n`;
 
-                const filteredText = `${filteredHeader}${formatSection(matched)}\n\n${footer}`;
                 return await sock.sendMessage(m.chat, {
-                    text: filteredText
+                    text: `${filteredHeader}${formatSection(matched)}\n\n${footer}`
                 }, { quoted: m });
             }
         }
 
-        // 5. Menú completo con todas las secciones
+        // ── Menú completo ──
         let totalCmds = 0;
         secciones.forEach(s => totalCmds += s.cmds.length);
 
         const header =
-            `╭━━━〔 *${config.botName.toUpperCase()}* 〕━━━⬣\n` +
-            `┃ 👤 *Usuario:* ${userName}\n` +
-            `┃ 👑 *Creador:* ${config.ownerName}\n` +
-            `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
-            `┃ 🔒 *Modo:* ${mode.toUpperCase()}\n` +
-            `┃ ⏱️ *Activo:* ${uptimeStr}\n` +
-            `┃ ⚡ *Latencia:* ${speedMs}ms\n` +
-            `┃ 📊 *RAM:* ${memUsage} MB\n` +
-            `┃ 📅 *Fecha:* ${fecha} | ${hora}\n` +
-            `┃ 📦 *Comandos:* ${totalCmds} Disponibles\n` +
-            `╰━━━━━━━━━━━━━━━━━━━━━━⬣\n\n`;
+            `—͟͟͞͞ ♱ *${toBold(config.botName)}* ♱ —͟͟͞͞\n` +
+            `┃\n` +
+            `┃ 👤 *${toBold('Usuario')}* › ${userName}\n` +
+            `┃ 👑 *${toBold('Creador')}* › ${config.ownerName}\n` +
+            `┃ 🔤 *${toBold('Prefijo')}* › [ *${prefix}* ]\n` +
+            `┃ 🔒 *${toBold('Modo')}* › ${toSmallCaps(mode)}\n` +
+            `┃ ⏱️ *${toBold('Activo')}* › ${uptimeStr}\n` +
+            `┃ ⚡ *${toBold('Latencia')}* › ${speedMs}ms\n` +
+            `┃ 📊 *${toBold('RAM')}* › ${memUsage} MB\n` +
+            `┃ 📅 *${toBold('Fecha')}* › ${fecha} | ${hora}\n` +
+            `┃ 📦 *${toBold('Comandos')}* › ${totalCmds} disponibles\n` +
+            `┃\n` +
+            `—͟͟͞͞ ⋆♱꙳•❅‧·₊⋆♱꙳︎·❆₊♱⋆ —͟͟͞͞\n\n`;
 
         const body = secciones.map(formatSection).join('\n\n');
         const menuCompleto = `${header}${body}\n\n${footer}`;
 
         const chatId = m.chat || m.key?.remoteJid;
-
-        // Rutas multimedia opcionales
         const gifPath = path.join(config.assetsDir, 'menu.gif');
         const mp4Path = path.join(config.assetsDir, 'menu.mp4');
         const imgPath = path.join(config.assetsDir, 'menu.jpg');
-
-        const sendOptions = {
-            caption: menuCompleto
-        };
 
         try {
             if (fs.existsSync(mp4Path)) {
                 await sock.sendMessage(chatId, {
                     video: fs.readFileSync(mp4Path),
                     gifPlayback: true,
-                    ...sendOptions
+                    caption: menuCompleto
                 }, { quoted: m });
             } else if (fs.existsSync(gifPath)) {
                 await sock.sendMessage(chatId, {
                     video: fs.readFileSync(gifPath),
                     gifPlayback: true,
-                    ...sendOptions
+                    caption: menuCompleto
                 }, { quoted: m });
             } else if (fs.existsSync(imgPath)) {
                 await sock.sendMessage(chatId, {
                     image: fs.readFileSync(imgPath),
-                    ...sendOptions
+                    caption: menuCompleto
                 }, { quoted: m });
             } else {
-                await sock.sendMessage(chatId, {
-                    text: menuCompleto
-                }, { quoted: m });
+                await sock.sendMessage(chatId, { text: menuCompleto }, { quoted: m });
             }
         } catch (_) {
-            await sock.sendMessage(chatId, {
-                text: menuCompleto
-            }, { quoted: m });
+            await sock.sendMessage(chatId, { text: menuCompleto }, { quoted: m });
         }
     }
 };
