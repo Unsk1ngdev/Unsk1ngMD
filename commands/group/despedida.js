@@ -99,9 +99,16 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // 3. Guardar — mensaje limpio sin mostrar variables ni instrucciones técnicas
-        const mensaje = args.join(' ').trim() ||
-            '👋 Hasta luego {usuario}!\nNos veremos pronto. 🚪';
+        // 3. Activar / Guardar mensaje de despedida
+        const isOnCmd = subCmd === 'on' || subCmd === 'activar' || subCmd === 'enable';
+        let mensaje = args.join(' ').trim();
+
+        if (isOnCmd) {
+            const rest = args.slice(1).join(' ').trim();
+            mensaje = rest || '👋 Hasta luego {usuario}!\nEsperamos verte pronto en {grupo}. 🚪';
+        } else if (!mensaje) {
+            mensaje = '👋 Hasta luego {usuario}!\nEsperamos verte pronto en {grupo}. 🚪';
+        }
 
         despedidaData[jid] = {
             mensaje,

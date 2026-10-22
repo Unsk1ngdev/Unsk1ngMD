@@ -189,24 +189,30 @@ module.exports = [
                 return await m.reply('❌ Este comando es exclusivo para administradores del grupo.');
             }
 
-            const option = (args[0] || '').toLowerCase().trim();
-            if (option !== 'on' && option !== 'off') {
+            const rawOpt = (args[0] || '').toLowerCase().trim();
+            const onValues = ['on', 'activar', 'enable', '1', 'si', 'sí', 'true', 'encender'];
+            const offValues = ['off', 'desactivar', 'disable', '0', 'no', 'false', 'apagar'];
+
+            let enable = null;
+            if (onValues.includes(rawOpt)) enable = true;
+            else if (offValues.includes(rawOpt)) enable = false;
+
+            if (enable === null) {
                 const isEnabled = groupSettings.isAntilinkEnabled(m.chat);
                 return await m.reply(
                     `🛡️ *ANTI-ENLACES AUTOMATIZADO*\n\n` +
                     `📌 *Estado actual:* ${isEnabled ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}\n\n` +
                     `💡 *Uso:*\n` +
-                    `• *.antilink on*  - Activa la eliminación de mensajes y expulsión inmediata de spammers\n` +
-                    `• *.antilink off* - Desactiva el filtro`
+                    `• *.antilink on*  - Borra automáticamente los mensajes con enlaces (sin expulsar a nadie)\n` +
+                    `• *.antilink off* - Desactiva la protección de enlaces`
                 );
             }
 
-            const enable = option === 'on';
             groupSettings.setSetting(m.chat, 'antilink', enable);
 
             await m.reply(
                 `🛡️ *ANTI-ENLACES:* Ha sido *${enable ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}* en este grupo.\n` +
-                `${enable ? '⚠️ Cualquier miembro no-admin que envíe enlaces será eliminado inmediatamente.' : 'ℹ️ El envío de enlaces vuelve a estar permitido.'}`
+                `${enable ? '⚠️ Cualquier mensaje que contenga enlaces será eliminado automáticamente (sin expulsar a nadie).' : 'ℹ️ El envío de enlaces vuelve a estar permitido.'}`
             );
         }
     },

@@ -227,22 +227,20 @@ const handleMessage = async (sock, rawMsg) => {
 
             isAdmin = perms.isSenderAdmin || isOwner;
 
-            // --- 1. FILTRO ANTIENLACES (ANTILINK CON EXPULSIÓN INMEDIATA) ---
+            // --- 1. FILTRO ANTIENLACES (SOLO BORRADO DE MENSAJES, SIN EXPULSIÓN) ---
             const isAntilinkActive = groupSettings.isAntilinkEnabled(m.chat) || antilinkManager.isEnabled(m.chat);
             if (isAntilinkActive && !isAdmin && !isOwner) {
                 const linkRegex = /(?:chat\.whatsapp\.com\/(?:invite\/)?[0-9A-Za-z]{20,24}|wa\.me\/[0-9]+|(?:https?:\/\/|www\.)[^\s]+)/i;
                 if (linkRegex.test(m.body)) {
-                    // Borrar mensaje inmediatamente
-                    await sock.sendMessage(m.chat, { delete: m.key });
-
-                    // Expulsar al participante sin excepciones
+                    // Borrar mensaje inmediatamente sin expulsar al usuario
                     try {
-                        await sock.groupParticipantsUpdate(m.chat, [m.sender], 'remove');
+                        await sock.sendMessage(m.chat, { delete: m.key });
                     } catch (_) {}
 
-                    // Notificación breve
+                    // Notificación breve advirtiendo al usuario
+                    const userNum = m.sender ? m.sender.replace(/:.*@/, '@').split('@')[0] : 'usuario';
                     await sock.sendMessage(m.chat, {
-                        text: `⚠️ @${m.sender.split('@')[0]} fue eliminado automáticamente por enviar enlaces no autorizados.`,
+                        text: `⚠️ @${userNum}, los enlaces no están permitidos en este grupo. Tu mensaje ha sido eliminado.`,
                         mentions: [m.sender]
                     });
                     return; // No procesar más el mensaje con enlace

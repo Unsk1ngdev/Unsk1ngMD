@@ -24,7 +24,11 @@ const handleGroupUpdate = async (sock, update) => {
 
                 for (const participante of participants) {
                     const numero = participante.replace(/:\d+@/, '@').split('@')[0];
-                    const mensaje = configDespedida.mensaje
+                    let rawMsg = (configDespedida.mensaje || '').trim();
+                    if (!rawMsg || rawMsg.toLowerCase() === 'on' || rawMsg.toLowerCase() === 'activar') {
+                        rawMsg = '👋 Hasta luego {usuario} de {grupo}!';
+                    }
+                    const mensaje = rawMsg
                         .replace(/{usuario}/g, `+${numero}`)
                         .replace(/{grupo}/g, nombreGrupo);
 
