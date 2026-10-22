@@ -1,11 +1,14 @@
+'use strict';
+
 require('dotenv').config();
 const database = require('../lib/database');
+const groupSettings = require('../lib/groupSettings');
 const logger = require('../lib/logger');
 
-// 1. Inicialización en memoria del tracker de spam global
+// Inicialización en memoria del tracker de spam global
 global.spamTracker = global.spamTracker || new Map();
 
-// Caché ligera de metadatos de grupo (30 segundos) para no saturar peticiones a WhatsApp
+// Caché ligera de metadatos de grupo (30 segundos) para no saturar peticiones
 const groupMetadataCache = new Map();
 
 const getCachedGroupMetadata = async (sock, jid) => {
@@ -23,56 +26,59 @@ const getCachedGroupMetadata = async (sock, jid) => {
     }
 };
 
-/**
- * Normaliza cualquier JID extrayendo únicamente los dígitos numéricos
- */
 const cleanDigits = (id) => (id ? String(id).replace(/:.*@/, '@').split('@')[0].replace(/[^0-9]/g, '') : '');
+const cleanJid = (id) => (id ? String(id).replace(/:.*@/, '@').trim().toLowerCase() : '');
 
 /**
  * Middleware de detección y mitigación de ráfagas de spam
- * Regla: Máximo 3 mensajes en 10 segundos
- * 
+ *
+ * Modo estándar (antispam): Borra mensajes y advierte con mención (NUNCA expulsa a nadie).
+ * Modo estricto (antispamkick): Solo expulsa si antispamkick está explícitamente activado.
+ *
  * @param {import('@whiskeysockets/baileys').WASocket} sock - Instancia activa del socket de Baileys
- * @param {object} rawMsg - Mensaje sin procesar recibido en messages.upsert
+ * @param {object} rawMsg - Mensaje recibido en messages.upsert
  * @returns {Promise<boolean>} true si el mensaje fue interceptado/bloqueado por spam; false si continúa normalmente
  */
 const antispamMiddleware = async (sock, rawMsg) => {
     try {
-        // Validar que sea un mensaje entrante real y no un evento de protocolo/reacción vacío
         if (!rawMsg || !rawMsg.message) return false;
 
-        const chatJid = rawMsg.chat || rawMsg.key?.remoteJid || '';
-        const senderJid = rawMsg.sender || rawMsg.key?.participant || rawMsg.participant || chatJid;
+        const chatJid = cleanJid(rawMsg.chat || rawMsg.key?.remoteJid || '');
 
-        // 3. EXCLUSIONES INMEDIATAS (BYPASS):
-
-        // a) Ignorar chats privados (solo opera en grupos)
+        // 1. EXCLUSIÓN: Solo opera en grupos
         if (!chatJid || !chatJid.endsWith('@g.us')) {
             return false;
         }
 
-        // b) Ignorar mensajes generados por el propio bot
+        // 2. VERIFICACIÓN CRÍTICA: ¿Está activado el antispam en este grupo?
+        // Si está en 'off' o desactivado, ignorar completamente
+        if (!groupSettings.isAntispamEnabled(chatJid)) {
+            return false;
+        }
+
+        // 3. EXCLUSIONES DE EMISOR (BYPASS):
+        // a) Mensajes del propio bot
         if (rawMsg.key?.fromMe) {
             return false;
         }
 
+        const senderJid = cleanJid(rawMsg.sender || rawMsg.key?.participant || rawMsg.participant || '');
         const numero = cleanDigits(senderJid);
         const ownerNumber = cleanDigits(process.env.OWNER_NUMBER || '');
 
-        // c) Ignorar al creador del bot
-        if ((ownerNumber && numero === ownerNumber) || database.isOwner(senderJid)) {
+        // b) Creador o Dueños del bot
+        if ((ownerNumber && numero === ownerNumber) || database.isOwner(senderJid, sock)) {
             return false;
         }
 
-        // Obtener metadatos del grupo para verificar roles
+        // c) Administradores del grupo
         const groupMetadata = await getCachedGroupMetadata(sock, chatJid);
         const participants = groupMetadata?.participants || [];
 
-        // d) Ignorar administradores del grupo
         const senderParticipant = participants.find(p => {
             const pId = cleanDigits(p.id);
             const pLid = cleanDigits(p.lid);
-            return pId === numero || pLid === numero;
+            return (pId && pId === numero) || (pLid && pLid === numero);
         });
 
         const isSenderAdmin = senderParticipant?.admin === 'admin' || senderParticipant?.admin === 'superadmin';
@@ -80,70 +86,78 @@ const antispamMiddleware = async (sock, rawMsg) => {
             return false;
         }
 
-        // 1 & 2. LÓGICA DE VENTANA DESLIZANTE (3 mensajes en 10 segundos)
-        const trackerKey = `${chatJid}_${senderJid}`;
+        // 4. LÓGICA DE VENTANA DE RÁFAGA (5 mensajes en 5 segundos)
+        const trackerKey = `${chatJid}_${numero || senderJid}`;
         const now = Date.now();
-        const windowMs = 10000; // 10 segundos
+        const windowMs = 5000; // 5 segundos
 
         let record = global.spamTracker.get(trackerKey);
 
-        if (!record || now - record.firstMessage > windowMs) {
-            // Reiniciar o iniciar nueva ventana de 10 segundos
+        if (!record || (now - record.firstMessage) > windowMs) {
             record = {
                 count: 1,
                 firstMessage: now,
+                lastWarnTime: 0,
                 warned: false,
                 locked: false
             };
             global.spamTracker.set(trackerKey, record);
-            return false; // Mensaje 1: Permitir flujo normal
+            return false; // Mensaje 1 dentro de ventana normal
         }
 
         // Incrementar conteo dentro de la ventana activa
         record.count += 1;
 
-        // Mensaje 2: Permitir flujo normal sin advertencia
-        if (record.count === 2) {
+        // Mensajes del 2 al 4: flujo normal
+        if (record.count < 5) {
             return false;
         }
 
+        // 5. UMBRAL ALCANZADO (Mensaje 5 o posterior): SPAM CONFIRMADO
         const targetMention = `${numero}@s.whatsapp.net`;
         const mentions = [senderJid, targetMention];
 
-        // Intentar eliminar el mensaje de spam para mantener limpio el grupo
+        // Siempre borrar el mensaje que sobrepasa el límite
         try {
             await sock.sendMessage(chatJid, { delete: rawMsg.key });
         } catch (_) {}
 
-        // Mutex para evitar envíos dobles por asincronía en ráfagas muy veloces
         if (record.locked) {
             return true;
         }
 
-        // MENSAJE 3: Advertencia en el chat
-        if (record.count === 3 && !record.warned) {
-            record.locked = true;
-            record.warned = true;
+        // Comprobar si este grupo tiene activado el modo expulsión (antispamkick)
+        const isKickActive = groupSettings.isAntispamKickEnabled(chatJid);
 
-            try {
-                await sock.sendMessage(chatJid, {
-                    text: `⚠️ @${numero}, relájate. Límite de mensajes alcanzado (3 en 10s). El próximo provocará tu expulsión.`,
-                    mentions
-                });
-            } catch (err) {
-                logger.error('[ANTISPAM] Error enviando advertencia:', err.message);
-            } finally {
-                record.locked = false;
+        // A) MODO ANTISPAM ESTÁNDAR (O PRIMERA ADVERTENCIA):
+        // Si antispamkick NO está activado, NUNCA expulsar a nadie. Solo avisar y borrar mensajes.
+        if (!isKickActive || record.count < 7) {
+            if (!record.warned || (now - record.lastWarnTime > 10000)) {
+                record.locked = true;
+                record.warned = true;
+                record.lastWarnTime = now;
+
+                try {
+                    const kickWarning = isKickActive
+                        ? ' Si continúas serás expulsado del grupo.'
+                        : '';
+                    await sock.sendMessage(chatJid, {
+                        text: `⚠️ @${numero}, deja el spam. Envía tus mensajes con calma. Los mensajes excesivos serán eliminados.${kickWarning}`,
+                        mentions
+                    });
+                } catch (err) {
+                    logger.error('[ANTISPAM] Error enviando advertencia:', err.message);
+                } finally {
+                    record.locked = false;
+                }
             }
-
-            return true; // Interceptar mensaje
+            return true; // Mensaje interceptado y borrado
         }
 
-        // MENSAJE 4 O POSTERIOR: Expulsión directa (antispamkick)
-        if (record.count >= 4) {
+        // B) MODO ANTISPAMKICK (Solo si antispamkick está ACTIVO y el usuario continuó tras ser advertido, count >= 7):
+        if (isKickActive && record.count >= 7) {
             record.locked = true;
 
-            // Determinar si el bot cuenta con permisos de administrador en el grupo
             const botNum = cleanDigits(sock.user?.id || sock.user?.jid);
             const botLid = cleanDigits(sock.user?.lid);
 
@@ -158,17 +172,13 @@ const antispamMiddleware = async (sock, rawMsg) => {
 
             if (isBotAdmin) {
                 try {
-                    // 1. Notificar en el chat la expulsión
                     await sock.sendMessage(chatJid, {
-                        text: `⛔ @${numero} ha sido expulsado por ignorar la advertencia de spam.`,
+                        text: `⛔ @${numero} ha sido expulsado del grupo por spam continuo tras ser advertido.`,
                         mentions
                     });
 
-                    // 2. Normalizar JID primario para groupParticipantsUpdate (sin sufijos :device)
                     const expelJid = senderJid.replace(/:.*@/, '@');
                     await sock.groupParticipantsUpdate(chatJid, [expelJid], 'remove');
-
-                    // 3. Limpiar registro del mapa de memoria
                     global.spamTracker.delete(trackerKey);
                 } catch (expelErr) {
                     logger.error('[ANTISPAM] Error expulsando infractor de spam:', expelErr.message);
@@ -176,10 +186,9 @@ const antispamMiddleware = async (sock, rawMsg) => {
                     record.locked = false;
                 }
             } else {
-                // Si el bot NO es admin
                 try {
                     await sock.sendMessage(chatJid, {
-                        text: `⚠️ @${numero} superó el límite de spam, pero no tengo permisos de administrador para expulsarlo.`,
+                        text: `⚠️ @${numero} continúa haciendo spam, pero no tengo permisos de administrador para expulsarlo.`,
                         mentions
                     });
                 } catch (warnErr) {
@@ -189,15 +198,27 @@ const antispamMiddleware = async (sock, rawMsg) => {
                 }
             }
 
-            return true; // Interceptar mensaje
+            return true;
         }
 
-        return false;
+        return true;
     } catch (globalErr) {
         logger.error('[ANTISPAM MIDDLEWARE ERROR]:', globalErr.message);
-        return false; // Ante cualquier error inesperado, no detener el bot
+        return false;
+    }
+};
+
+/**
+ * Limpia los registros de memoria de un grupo específico
+ */
+antispamMiddleware.resetChat = (chatJid) => {
+    if (!global.spamTracker) return;
+    const clean = cleanJid(chatJid);
+    for (const key of global.spamTracker.keys()) {
+        if (key.startsWith(clean)) {
+            global.spamTracker.delete(key);
+        }
     }
 };
 
 module.exports = antispamMiddleware;
-

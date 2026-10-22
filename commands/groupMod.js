@@ -216,7 +216,7 @@ module.exports = [
         name: 'antispam',
         alias: ['spamfilter'],
         category: 'grupo',
-        desc: 'Activa o desactiva el filtro de spam (Modo Advertencia: borra mensajes y avisa)',
+        desc: 'Activa o desactiva el filtro de spam (Modo Advertencia: borra mensajes y avisa sin expulsar)',
         usage: '.antispam [on / off]',
         groupOnly: true,
         execute: async ({ sock, m, args }) => {
@@ -225,22 +225,46 @@ module.exports = [
                 return await m.reply('❌ Este comando es exclusivo para administradores del grupo.');
             }
 
-            const option = (args[0] || '').toLowerCase().trim();
-            if (option !== 'on' && option !== 'off') {
+            const rawOpt = (args[0] || '').toLowerCase().trim();
+            const onValues = ['on', 'activar', 'enable', '1', 'si', 'sí', 'true', 'encender', 'prendido', 'prender'];
+            const offValues = ['off', 'desactivar', 'disable', '0', 'no', 'false', 'apagar', 'apagado'];
+
+            let enable = null;
+            if (onValues.includes(rawOpt)) enable = true;
+            else if (offValues.includes(rawOpt)) enable = false;
+
+            if (enable === null) {
                 const isEnabled = groupSettings.isAntispamEnabled(m.chat);
+                const isKick = groupSettings.isAntispamKickEnabled(m.chat);
                 return await m.reply(
                     `⏱️ *ANTI-SPAM (MODO ADVERTENCIA)*\n\n` +
-                    `📌 *Estado actual:* ${isEnabled ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}\n\n` +
+                    `📌 *Estado actual:* ${isEnabled ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}\n` +
+                    `⚡ *Modo Expulsión (Kick):* ${isKick ? 'ACTIVADO 🚨 (usa .antispamkick off para desactivar)' : 'DESACTIVADO (Solo borra y avisa) 🛡️'}\n\n` +
                     `💡 *Uso:*\n` +
-                    `• *.antispam on*  - Detecta ráfagas de más de 5 mensajes en 3 seg, los borra y advierte\n` +
-                    `• *.antispam off* - Desactiva la protección`
+                    `• *.antispam on*  - Borra ráfagas de spam y advierte (no expulsará a nadie)\n` +
+                    `• *.antispam off* - Desactiva la protección completamente\n` +
+                    `• *.antispamkick on* - Activa la expulsión automática si continúan haciendo spam`
                 );
             }
 
-            const enable = option === 'on';
             groupSettings.setSetting(m.chat, 'antispam', enable);
 
-            await m.reply(`⏱️ *ANTI-SPAM:* Modo Advertencia *${enable ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}*.`);
+            if (!enable) {
+                // Al apagar antispam, limpiar cualquier tracker en memoria y apagar también kick
+                groupSettings.setSetting(m.chat, 'antispamkick', false);
+                try {
+                    const antispamMiddleware = require('../middlewares/antispam');
+                    if (typeof antispamMiddleware.resetChat === 'function') {
+                        antispamMiddleware.resetChat(m.chat);
+                    }
+                } catch (_) {}
+            }
+
+            await m.reply(
+                enable
+                    ? `⏱️ *ANTI-SPAM ACTIVADO ✅*\n\n> 🛡️ *Modo:* Borrado de mensajes y advertencias (no expulsará a nadie).\n> 💡 _Si deseas que además expulse a quienes continúen haciendo spam, activa *.antispamkick on*_`
+                    : `⏱️ *ANTI-SPAM DESACTIVADO ❌*\n\n> El filtro de spam ha sido apagado completamente en este grupo.`
+            );
         }
     },
 
@@ -249,7 +273,7 @@ module.exports = [
         name: 'antispamkick',
         alias: ['spamkick'],
         category: 'grupo',
-        desc: 'Activa o desactiva el modo estricto de spam (borra mensajes y expulsa al infractor)',
+        desc: 'Activa o desactiva la expulsión automática por spam repetido',
         usage: '.antispamkick [on / off]',
         groupOnly: true,
         execute: async ({ sock, m, args }) => {
@@ -258,22 +282,39 @@ module.exports = [
                 return await m.reply('❌ Este comando es exclusivo para administradores del grupo.');
             }
 
-            const option = (args[0] || '').toLowerCase().trim();
-            if (option !== 'on' && option !== 'off') {
-                const isEnabled = groupSettings.isAntispamKickEnabled(m.chat);
+            const rawOpt = (args[0] || '').toLowerCase().trim();
+            const onValues = ['on', 'activar', 'enable', '1', 'si', 'sí', 'true', 'encender', 'prendido', 'prender'];
+            const offValues = ['off', 'desactivar', 'disable', '0', 'no', 'false', 'apagar', 'apagado'];
+
+            let enable = null;
+            if (onValues.includes(rawOpt)) enable = true;
+            else if (offValues.includes(rawOpt)) enable = false;
+
+            if (enable === null) {
+                const isKick = groupSettings.isAntispamKickEnabled(m.chat);
+                const isAntispam = groupSettings.isAntispamEnabled(m.chat);
                 return await m.reply(
                     `🚨 *ANTI-SPAM ESTRICTO (KICK)*\n\n` +
-                    `📌 *Estado actual:* ${isEnabled ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}\n\n` +
+                    `📌 *Estado actual:* ${isKick ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}\n` +
+                    `🛡️ *Anti-Spam Base:* ${isAntispam ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}\n\n` +
                     `💡 *Uso:*\n` +
-                    `• *.antispamkick on*  - Borra mensajes repetidos y expulsa automáticamente al usuario\n` +
-                    `• *.antispamkick off* - Desactiva el modo estricto`
+                    `• *.antispamkick on*  - Borra ráfagas de spam y expulsa al infractor si continúa\n` +
+                    `• *.antispamkick off* - Desactiva la expulsión (solo borrará y advertirá)\n\n` +
+                    `_Nota: Para expulsar infractores, el bot debe tener rango de administrador._`
                 );
             }
 
-            const enable = option === 'on';
+            if (enable) {
+                // Si activan kick, asegurarse de que antispam base también esté activado
+                groupSettings.setSetting(m.chat, 'antispam', true);
+            }
             groupSettings.setSetting(m.chat, 'antispamkick', enable);
 
-            await m.reply(`🚨 *ANTI-SPAM KICK:* Modo Estricto *${enable ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}* en este grupo.`);
+            await m.reply(
+                enable
+                    ? `🚨 *ANTI-SPAM KICK ACTIVADO ✅*\n\n> ⚡ *Modo Estricto:* Se expulsará automáticamente a los miembros que ignoren las advertencias de spam.\n> ⚠️ _Asegúrate de que el bot sea Administrador del grupo para poder expulsar._`
+                    : `🚨 *ANTI-SPAM KICK DESACTIVADO ❌*\n\n> 🛡️ El bot ya *NO* expulsará a nadie por spam. Solo borrará los mensajes repetidos y advertirá.`
+            );
         }
     },
 

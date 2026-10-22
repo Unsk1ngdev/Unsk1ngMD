@@ -326,7 +326,7 @@ const startBot = async () => {
 
             if (chatUpdate.type !== 'notify') return;
             for (const rawMsg of chatUpdate.messages) {
-                // Middleware Anti-Spam: Regla estricta de 3 mensajes en 10s con advertencia y expulsión
+                // Middleware Anti-Spam: Filtro de ráfagas con advertencia, borrado y modo expulsión opcional (.antispam / .antispamkick)
                 const isSpam = await antispamMiddleware(sock, rawMsg);
                 if (isSpam) continue;
 
