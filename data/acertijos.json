@@ -642,5 +642,762 @@
       "un piano"
     ],
     "displayRespuesta": "El piano 🎹"
+  },
+  {
+    "pregunta": "Vuela sin alas, silba sin boca, azota sin manos y nunca se toca. ¿Qué es?",
+    "respuestas": [
+      "viento",
+      "el viento"
+    ],
+    "displayRespuesta": "El viento 💨"
+  },
+  {
+    "pregunta": "Doy calor sin quemar de lejos, brillo en el cielo y visto de oro el día entero. ¿Qué soy?",
+    "respuestas": [
+      "sol",
+      "el sol"
+    ],
+    "displayRespuesta": "El sol ☀️"
+  },
+  {
+    "pregunta": "De noche salgo y de día me escondo; unas veces redonda y otras como una cuna en el fondo. ¿Qué soy?",
+    "respuestas": [
+      "luna",
+      "la luna"
+    ],
+    "displayRespuesta": "La luna 🌙"
+  },
+  {
+    "pregunta": "Negro como el carbón, caliente como el tizón, dulce con azúcar y te quita el sueño en un rincón. ¿Qué es?",
+    "respuestas": [
+      "cafe",
+      "el cafe",
+      "café",
+      "el café"
+    ],
+    "displayRespuesta": "El café ☕"
+  },
+  {
+    "pregunta": "Cho-co entre dos paredes late, quien no lo adivine es un disparate. ¿Qué es?",
+    "respuestas": [
+      "chocolate",
+      "el chocolate"
+    ],
+    "displayRespuesta": "El chocolate 🍫"
+  },
+  {
+    "pregunta": "Tengo escamas pero no soy pez de tierra, respiro en el agua y nado en la corriente. ¿Quién soy?",
+    "respuestas": [
+      "pez",
+      "el pez",
+      "pescado",
+      "el pescado"
+    ],
+    "displayRespuesta": "El pez 🐟"
+  },
+  {
+    "pregunta": "Llevo mi casa a cuestas, camino muy despacito, y si me asusto adentro me meto todito. ¿Quién soy?",
+    "respuestas": [
+      "tortuga",
+      "la tortuga"
+    ],
+    "displayRespuesta": "La tortuga 🐢"
+  },
+  {
+    "pregunta": "Tengo tronco pero no soy elefante, tengo copa pero no de beber, y en otoño mis hojas ves caer. ¿Qué soy?",
+    "respuestas": [
+      "arbol",
+      "el arbol",
+      "árbol",
+      "el árbol"
+    ],
+    "displayRespuesta": "El árbol 🌳"
+  },
+  {
+    "pregunta": "Siempre corre y nunca anda, tiene lecho pero nunca duerme, y desemboca en el mar que lo envuelve. ¿Qué es?",
+    "respuestas": [
+      "rio",
+      "el rio",
+      "río",
+      "el río"
+    ],
+    "displayRespuesta": "El río 🌊"
+  },
+  {
+    "pregunta": "Tengo falda y no soy mujer, tengo cumbre y llego más alto que el cielo al amanecer. ¿Qué soy?",
+    "respuestas": [
+      "montana",
+      "la montana",
+      "montaña",
+      "la montaña"
+    ],
+    "displayRespuesta": "La montaña 🏔️"
+  },
+  {
+    "pregunta": "Tengo boca y no hablo, tengo badajo y no como, y cuando me mueven a todo el pueblo llamo. ¿Qué soy?",
+    "respuestas": [
+      "campana",
+      "la campana"
+    ],
+    "displayRespuesta": "La campana 🔔"
+  },
+  {
+    "pregunta": "Tengo cara pero no tengo cuerpo, tengo corona pero no soy rey. ¿Qué soy?",
+    "respuestas": [
+      "moneda",
+      "la moneda"
+    ],
+    "displayRespuesta": "La moneda 🪙"
+  },
+  {
+    "pregunta": "Salgo después de la lluvia con siete vestidos de colores, alegro el cielo y gusto a chicos y mayores. ¿Qué soy?",
+    "respuestas": [
+      "arcoiris",
+      "el arcoiris",
+      "arco iris",
+      "el arco iris"
+    ],
+    "displayRespuesta": "El arcoíris 🌈"
+  },
+  {
+    "pregunta": "En la playa me encuentras por millones, si me meto en tu zapato te molesto a montones. ¿Qué soy?",
+    "respuestas": [
+      "arena",
+      "la arena"
+    ],
+    "displayRespuesta": "La arena 🏖️"
+  },
+  {
+    "pregunta": "Tengo una caldera en mi corazón, cuando me enfado escupo fuego, humo y tizón. ¿Qué soy?",
+    "respuestas": [
+      "volcan",
+      "el volcan",
+      "volcán",
+      "el volcán"
+    ],
+    "displayRespuesta": "El volcán 🌋"
+  },
+  {
+    "pregunta": "Caigo del cielo blanca y fría, en tus manos me deshago con premura y alegría. ¿Qué soy?",
+    "respuestas": [
+      "nieve",
+      "la nieve"
+    ],
+    "displayRespuesta": "La nieve ❄️"
+  },
+  {
+    "pregunta": "Tengo cabeza roja y cuerpo de madera, al rasparme ardo y doy luz a cualquiera. ¿Qué soy?",
+    "respuestas": [
+      "fosforo",
+      "el fosforo",
+      "fósforo",
+      "el fósforo",
+      "cerillo",
+      "el cerillo",
+      "cerilla",
+      "la cerilla"
+    ],
+    "displayRespuesta": "El fósforo / cerillo 🧨"
+  },
+  {
+    "pregunta": "Duro como la roca, brillante bajo la luz, la piedra preciosa más cotizada que conoces tú. ¿Qué es?",
+    "respuestas": [
+      "diamante",
+      "el diamante"
+    ],
+    "displayRespuesta": "El diamante 💎"
+  },
+  {
+    "pregunta": "No tengo brazos pero atraigo el metal, si te me acercas de hierro me pego sin igual. ¿Qué soy?",
+    "respuestas": [
+      "iman",
+      "el iman",
+      "imán",
+      "el imán"
+    ],
+    "displayRespuesta": "El imán 🧲"
+  },
+  {
+    "pregunta": "Bailo por toda la casa barriendo el suelo, y cuando termino me paro en un rincón sin recelo. ¿Qué soy?",
+    "respuestas": [
+      "escoba",
+      "la escoba"
+    ],
+    "displayRespuesta": "La escoba 🧹"
+  },
+  {
+    "pregunta": "Rojo por fuera, jugoso por dentro, en ensaladas y pizzas siempre me encuentro. ¿Qué fruta u hortaliza soy?",
+    "respuestas": [
+      "tomate",
+      "el tomate"
+    ],
+    "displayRespuesta": "El tomate 🍅"
+  },
+  {
+    "pregunta": "Enterrada en la tierra crezco naranja y alargada, a los conejos encanto y en la cocina soy amada. ¿Qué soy?",
+    "respuestas": [
+      "zanahoria",
+      "la zanahoria"
+    ],
+    "displayRespuesta": "La zanahoria 🥕"
+  },
+  {
+    "pregunta": "Verde por fuera, roja por dentro, con pepitas negras en su centro dulce y fresco. ¿Qué fruta es?",
+    "respuestas": [
+      "sandia",
+      "la sandia",
+      "sandía",
+      "la sandía",
+      "patilla",
+      "la patilla"
+    ],
+    "displayRespuesta": "La sandía 🍉"
+  },
+  {
+    "pregunta": "Fui la tentación en el cuento de Blancanieves, dulce o ácida, roja o verde siempre que la pruebes. ¿Qué fruta soy?",
+    "respuestas": [
+      "manzana",
+      "la manzana"
+    ],
+    "displayRespuesta": "La manzana 🍎"
+  },
+  {
+    "pregunta": "Blanca como la cal, me da la vaca y me bebes al desayunar. ¿Qué es?",
+    "respuestas": [
+      "leche",
+      "la leche"
+    ],
+    "displayRespuesta": "La leche 🥛"
+  },
+  {
+    "pregunta": "Blanca como la nieve, fina o gruesa en la cocina, doy sabor al caldo y si me falta la comida se arruina. ¿Qué soy?",
+    "respuestas": [
+      "sal",
+      "la sal"
+    ],
+    "displayRespuesta": "La sal 🧂"
+  },
+  {
+    "pregunta": "Con leche me preparan, los ratones me persiguen y en la pizza me derrito con primor. ¿Qué alimento soy?",
+    "respuestas": [
+      "queso",
+      "el queso"
+    ],
+    "displayRespuesta": "El queso 🧀"
+  },
+  {
+    "pregunta": "Tengo corona y no soy rey, tengo mil ojos y no puedo ver, piel con escamas y dulce al comer. ¿Qué fruta tropical soy?",
+    "respuestas": [
+      "pina",
+      "la pina",
+      "piña",
+      "la piña",
+      "ananas",
+      "el ananas"
+    ],
+    "displayRespuesta": "La piña 🍍"
+  },
+  {
+    "pregunta": "Crecemos en racimos moradas o verdes, de nosotras nace el vino más célebre. ¿Qué fruta somos?",
+    "respuestas": [
+      "uva",
+      "la uva",
+      "uvas",
+      "las uvas"
+    ],
+    "displayRespuesta": "La uva 🍇"
+  },
+  {
+    "pregunta": "Tengo el mismo nombre que mi propio color, jugo refrescante y rica vitamina C con sabor. ¿Qué fruta soy?",
+    "respuestas": [
+      "naranja",
+      "la naranja"
+    ],
+    "displayRespuesta": "La naranja 🍊"
+  },
+  {
+    "pregunta": "Tengo cuatro agujeros y no puedo coser, paso por el ojal para la camisa sostener. ¿Qué soy?",
+    "respuestas": [
+      "boton",
+      "el boton",
+      "botón",
+      "el botón"
+    ],
+    "displayRespuesta": "El botón 🔘"
+  },
+  {
+    "pregunta": "Sueno sin cuerdas, hablo sin boca, transmito mensajes y mi pantalla todo el día se toca. ¿Qué aparato soy?",
+    "respuestas": [
+      "celular",
+      "el celular",
+      "telefono",
+      "el telefono",
+      "teléfono",
+      "el teléfono",
+      "smartphone"
+    ],
+    "displayRespuesta": "El celular / teléfono 📱"
+  },
+  {
+    "pregunta": "Cuatro patas tengo y no puedo andar, tengo colchón y almohada para hacerte soñar. ¿Qué mueble soy?",
+    "respuestas": [
+      "cama",
+      "la cama"
+    ],
+    "displayRespuesta": "La cama 🛏️"
+  },
+  {
+    "pregunta": "Tengo puerta pero no soy casa, guardo el frío adentro y la comida conservo fresca. ¿Qué electrodoméstico soy?",
+    "respuestas": [
+      "refrigerador",
+      "el refrigerador",
+      "nevera",
+      "la nevera",
+      "heladera",
+      "la heladera"
+    ],
+    "displayRespuesta": "El refrigerador / nevera 🧊"
+  },
+  {
+    "pregunta": "Blanda y suave para tu cabeza, duermes sobre mí cada noche con pereza. ¿Qué soy?",
+    "respuestas": [
+      "almohada",
+      "la almohada"
+    ],
+    "displayRespuesta": "La almohada 🛌"
+  },
+  {
+    "pregunta": "En el agua me deshago, hago espuma sin cesar, te dejo limpio y perfumado después de frotar. ¿Qué producto soy?",
+    "respuestas": [
+      "jabon",
+      "el jabon",
+      "jabón",
+      "el jabón"
+    ],
+    "displayRespuesta": "El jabón 🧼"
+  },
+  {
+    "pregunta": "Camino sobre las olas sin tener patas ni pies, llevo tripulantes y carga a través del mar inglés. ¿Qué soy?",
+    "respuestas": [
+      "barco",
+      "el barco",
+      "navio",
+      "buque"
+    ],
+    "displayRespuesta": "El barco 🚢"
+  },
+  {
+    "pregunta": "Tengo alas de metal y rugiente motor, cruzo los cielos por las nubes con velocidad y valor. ¿Qué medio de transporte soy?",
+    "respuestas": [
+      "avion",
+      "el avion",
+      "avión",
+      "el avión"
+    ],
+    "displayRespuesta": "El avión ✈️"
+  },
+  {
+    "pregunta": "Tengo dos ruedas y pedales para andar, si dejas de pedalear el equilibrio vas a perder sin dudar. ¿Qué vehículo soy?",
+    "respuestas": [
+      "bicicleta",
+      "la bicicleta",
+      "bici",
+      "la bici"
+    ],
+    "displayRespuesta": "La bicicleta 🚲"
+  },
+  {
+    "pregunta": "Tengo cuatro dientes y no muerdo, pincho la comida en la mesa y te ayudo a comer sin mancharte. ¿Qué cubierto soy?",
+    "respuestas": [
+      "tenedor",
+      "el tenedor"
+    ],
+    "displayRespuesta": "El tenedor 🍴"
+  },
+  {
+    "pregunta": "Tengo filo pero no soy espada, corto el pan y la carne en la mesa ordenada. ¿Qué cubierto soy?",
+    "respuestas": [
+      "cuchillo",
+      "el cuchillo"
+    ],
+    "displayRespuesta": "El cuchillo 🔪"
+  },
+  {
+    "pregunta": "Agua fui al nacer, duro como roca en el invierno frío, pero al calor del fuego me derrito ligerito. ¿Qué soy?",
+    "respuestas": [
+      "hielo",
+      "el hielo"
+    ],
+    "displayRespuesta": "El hielo 🧊"
+  },
+  {
+    "pregunta": "No tengo voz pero te respondo, si me gritas en la cueva te lo devuelvo desde el fondo. ¿Qué fenómeno soy?",
+    "respuestas": [
+      "eco",
+      "el eco"
+    ],
+    "displayRespuesta": "El eco 📢"
+  },
+  {
+    "pregunta": "Nazco del fuego sin hacer ruido, subo gris hacia el cielo y me desvanezco en el olvido. ¿Qué soy?",
+    "respuestas": [
+      "humo",
+      "el humo"
+    ],
+    "displayRespuesta": "El humo 💨"
+  },
+  {
+    "pregunta": "Vuelo de flor en flor vestida de rayas amarillas, fabrico rica miel y si me molestas te pico sin vacilar. ¿Quién soy?",
+    "respuestas": [
+      "abeja",
+      "la abeja"
+    ],
+    "displayRespuesta": "La abeja 🐝"
+  },
+  {
+    "pregunta": "Chiquita y muy trabajadora, camino en hilera sin cesar, llevo hojas a mi hormiguero para el invierno pasar. ¿Quién soy?",
+    "respuestas": [
+      "hormiga",
+      "la hormiga"
+    ],
+    "displayRespuesta": "La hormiga 🐜"
+  },
+  {
+    "pregunta": "Primero fui oruga que se arrastró, luego me encerré en un capullo y con hermosas alas de colores desperté yo. ¿Quién soy?",
+    "respuestas": [
+      "mariposa",
+      "la mariposa"
+    ],
+    "displayRespuesta": "La mariposa 🦋"
+  },
+  {
+    "pregunta": "El mejor amigo del hombre me llaman, cuido la casa, muevo la cola y ladro cuando me llaman. ¿Quién soy?",
+    "respuestas": [
+      "perro",
+      "el perro"
+    ],
+    "displayRespuesta": "El perro 🐶"
+  },
+  {
+    "pregunta": "Siete vidas dicen que tengo, cazo ratones con sigilo y ronroneo cuando me acaricias con mimo. ¿Quién soy?",
+    "respuestas": [
+      "gato",
+      "el gato"
+    ],
+    "displayRespuesta": "El gato 🐱"
+  },
+  {
+    "pregunta": "Relincho con fuerza, galopo por la pradera y llevo herraduras de metal en mis pezuñas ligeras. ¿Quién soy?",
+    "respuestas": [
+      "caballo",
+      "el caballo"
+    ],
+    "displayRespuesta": "El caballo 🐴"
+  },
+  {
+    "pregunta": "Tengo orejas gigantes y una trompa singular, soy el mamífero terrestre más pesado que podrás hallar. ¿Quién soy?",
+    "respuestas": [
+      "elefante",
+      "el elefante"
+    ],
+    "displayRespuesta": "El elefante 🐘"
+  },
+  {
+    "pregunta": "Ave soy pero no puedo volar, con mi plumaje negro y blanco nado veloz en el frío mar polar. ¿Quién soy?",
+    "respuestas": [
+      "pinguino",
+      "el pinguino",
+      "pingüino",
+      "el pingüino"
+    ],
+    "displayRespuesta": "El pingüino 🐧"
+  },
+  {
+    "pregunta": "Rey de la selva me coronan por mi gran melena, rujo con fiereza y en la sabana mi presencia resuena. ¿Quién soy?",
+    "respuestas": [
+      "leon",
+      "el leon",
+      "león",
+      "el león"
+    ],
+    "displayRespuesta": "El león 🦁"
+  },
+  {
+    "pregunta": "Tengo el cuello más largo de todo el reino animal, alcanzo las hojas más altas del árbol tropical. ¿Quién soy?",
+    "respuestas": [
+      "jirafa",
+      "la jirafa"
+    ],
+    "displayRespuesta": "La jirafa 🦒"
+  },
+  {
+    "pregunta": "Giro la cabeza casi completa, salgo de noche con grandes ojos y ululo en la rama quieta. ¿Quién soy?",
+    "respuestas": [
+      "buho",
+      "el buho",
+      "búho",
+      "el búho"
+    ],
+    "displayRespuesta": "El búho 🦉"
+  },
+  {
+    "pregunta": "De bronce y metal brillo al brillar, tres pistones presionas para hacerme sonar en la banda militar. ¿Qué instrumento soy?",
+    "respuestas": [
+      "trompeta",
+      "la trompeta"
+    ],
+    "displayRespuesta": "La trompeta 🎺"
+  },
+  {
+    "pregunta": "Tengo una aguja imantada que siempre apunta al norte, para los navegantes y exploradores soy de gran soporte. ¿Qué instrumento soy?",
+    "respuestas": [
+      "brujula",
+      "la brujula",
+      "brújula",
+      "la brújula"
+    ],
+    "displayRespuesta": "La brújula 🧭"
+  },
+  {
+    "pregunta": "Entro en tu pie antes que el zapato, caliente y de lana te acompaño todo el rato. ¿Qué prenda soy?",
+    "respuestas": [
+      "calcetin",
+      "el calcetin",
+      "calcetín",
+      "el calcetín",
+      "media",
+      "la media"
+    ],
+    "displayRespuesta": "El calcetín / media 🧦"
+  },
+  {
+    "pregunta": "Rodeo tu cintura con hebilla de metal, sostengo tus pantalones para que no caigan fatal. ¿Qué accesorio soy?",
+    "respuestas": [
+      "cinturon",
+      "el cinturon",
+      "cinturón",
+      "el cinturón",
+      "correa",
+      "la correa"
+    ],
+    "displayRespuesta": "El cinturón 🥋"
+  },
+  {
+    "pregunta": "Dos ventanas en tu rostro que se abren de día y se cierran de noche para soñar con alegría. ¿Qué son?",
+    "respuestas": [
+      "ojos",
+      "los ojos",
+      "ojo",
+      "el ojo"
+    ],
+    "displayRespuesta": "Los ojos 👁️"
+  },
+  {
+    "pregunta": "En medio de tu cara me encuentro situada, huelo los perfumes y estornudo constipada. ¿Qué parte del cuerpo soy?",
+    "respuestas": [
+      "nariz",
+      "la nariz"
+    ],
+    "displayRespuesta": "La nariz 👃"
+  },
+  {
+    "pregunta": "Vivo en una cueva húmeda detrás de treinta y dos soldados, hablo, saboreo y disfruto ricos helados. ¿Qué órgano soy?",
+    "respuestas": [
+      "lengua",
+      "la lengua"
+    ],
+    "displayRespuesta": "La lengua 👅"
+  },
+  {
+    "pregunta": "Treinta y dos sillitas blancas en un comedor, muerden la comida con gran primor. ¿Qué somos?",
+    "respuestas": [
+      "dientes",
+      "los dientes",
+      "diente"
+    ],
+    "displayRespuesta": "Los dientes 🦷"
+  },
+  {
+    "pregunta": "Día y noche bombea sin parar, late en tu pecho para mantenerte vivo sin descansar. ¿Qué órgano soy?",
+    "respuestas": [
+      "corazon",
+      "el corazon",
+      "corazón",
+      "el corazón"
+    ],
+    "displayRespuesta": "El corazón ❤️"
+  },
+  {
+    "pregunta": "¿Qué cosa es que cuanto más le quitas, más grande se hace?",
+    "respuestas": [
+      "agujero",
+      "el agujero",
+      "hoyo",
+      "el hoyo"
+    ],
+    "displayRespuesta": "El agujero / hoyo 🕳️"
+  },
+  {
+    "pregunta": "¿Qué invento permite mirar a través de una pared?",
+    "respuestas": [
+      "ventana",
+      "la ventana"
+    ],
+    "displayRespuesta": "La ventana 🪟"
+  },
+  {
+    "pregunta": "Si me nombras, desaparezco. ¿Quién soy?",
+    "respuestas": [
+      "silencio",
+      "el silencio"
+    ],
+    "displayRespuesta": "El silencio 🤫"
+  },
+  {
+    "pregunta": "¿Qué se moja mientras seca?",
+    "respuestas": [
+      "toalla",
+      "la toalla"
+    ],
+    "displayRespuesta": "La toalla 🧖"
+  },
+  {
+    "pregunta": "¿Qué tiene cuello pero no tiene cabeza?",
+    "respuestas": [
+      "botella",
+      "la botella",
+      "camisa",
+      "la camisa"
+    ],
+    "displayRespuesta": "La botella / La camisa 🍾"
+  },
+  {
+    "pregunta": "¿Qué sube y baja pero siempre se queda en el mismo lugar?",
+    "respuestas": [
+      "escalera",
+      "la escalera",
+      "las escaleras",
+      "ascensor",
+      "el ascensor"
+    ],
+    "displayRespuesta": "La escalera / ascensor 🪜"
+  },
+  {
+    "pregunta": "Tengo ciudades pero no casas, tengo montañas pero no árboles, tengo agua pero no peces. ¿Qué soy?",
+    "respuestas": [
+      "mapa",
+      "el mapa"
+    ],
+    "displayRespuesta": "El mapa 🗺️"
+  },
+  {
+    "pregunta": "¿Qué se rompe tan pronto como se pronuncia?",
+    "respuestas": [
+      "silencio",
+      "el silencio"
+    ],
+    "displayRespuesta": "El silencio 🤫"
+  },
+  {
+    "pregunta": "Tengo un ojo pero no puedo ver nada. ¿Qué soy?",
+    "respuestas": [
+      "aguja",
+      "la aguja",
+      "huracan",
+      "el huracán",
+      "el huracan"
+    ],
+    "displayRespuesta": "La aguja (o el huracán) 🪡"
+  },
+  {
+    "pregunta": "¿Qué se puede atrapar pero nunca lanzar?",
+    "respuestas": [
+      "resfriado",
+      "un resfriado",
+      "gripe",
+      "la gripe"
+    ],
+    "displayRespuesta": "Un resfriado / la gripe 🤧"
+  },
+  {
+    "pregunta": "Tengo patas pero no puedo caminar, sostengo tu comida y platos al almorzar. ¿Qué mueble soy?",
+    "respuestas": [
+      "mesa",
+      "la mesa"
+    ],
+    "displayRespuesta": "La mesa 🪑"
+  },
+  {
+    "pregunta": "¿Qué corre por todo el jardín sin moverse ni un solo centímetro?",
+    "respuestas": [
+      "cerca",
+      "la cerca",
+      "valla",
+      "la valla",
+      "manguera",
+      "la manguera"
+    ],
+    "displayRespuesta": "La cerca / valla 🏡"
+  },
+  {
+    "pregunta": "¿Qué cosa tiene un pulgar y cuatro dedos pero no está viva?",
+    "respuestas": [
+      "guante",
+      "el guante"
+    ],
+    "displayRespuesta": "El guante 🧤"
+  },
+  {
+    "pregunta": "Llego sin avisar, me voy cuando despiertas, y en tus sueños abro mil puertas. ¿Qué soy?",
+    "respuestas": [
+      "sueno",
+      "el sueno",
+      "sueño",
+      "el sueño",
+      "los sueños",
+      "suenos"
+    ],
+    "displayRespuesta": "El sueño 💤"
+  },
+  {
+    "pregunta": "¿Qué cosa vuela sin motor, planea con el viento y los niños sostienen con un hilo contento?",
+    "respuestas": [
+      "cometa",
+      "la cometa",
+      "papalote",
+      "el papalote",
+      "volantin",
+      "el volantin"
+    ],
+    "displayRespuesta": "La cometa / papalote 🪁"
+  },
+  {
+    "pregunta": "Caigo de un edificio alto y no me rompo, pero caigo en el agua y me deshago pronto. ¿Qué soy?",
+    "respuestas": [
+      "papel",
+      "el papel",
+      "hoja de papel",
+      "una hoja"
+    ],
+    "displayRespuesta": "El papel 📄"
+  },
+  {
+    "pregunta": "¿Qué instrumento musical puedes escuchar pero nunca puedes ver ni tocar directamente?",
+    "respuestas": [
+      "voz",
+      "la voz",
+      "la voz humana"
+    ],
+    "displayRespuesta": "La voz humana 🗣️"
+  },
+  {
+    "pregunta": "Tengo un mango largo y cerdas en la punta, dibujo paisajes y pinto con acuarela junta. ¿Qué soy?",
+    "respuestas": [
+      "pincel",
+      "el pincel",
+      "brocha",
+      "la brocha"
+    ],
+    "displayRespuesta": "El pincel 🖌️"
   }
 ]

@@ -4,6 +4,8 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const axios = require('axios');
 const config = require('../config');
 const logger = require('../lib/logger');
+const economy = require('../lib/economy');
+const userNames = require('../lib/userNames');
 
 const getGroqApiKey = () => {
     let key = (process.env.GROQ_API_KEY || config.groqApiKey || '').trim();
@@ -23,38 +25,54 @@ const getGroqApiKey = () => {
 // Almacenamiento centralizado de sesiones activas en memoria indexado por JID del chat
 global.akinatorSessions = global.akinatorSessions || new Map();
 
-const SESSION_TIMEOUT_MS = 90000; // Temporizador realista de inactividad (90 segundos)
+const SESSION_TIMEOUT_MS = 90000; // Temporizador de inactividad (90 segundos)
 
+// Modelos activos y comprobados en la API de Groq Cloud
 const CANDIDATE_MODELS = [
     process.env.GROQ_MODEL?.trim(),
     'openai/gpt-oss-20b',
     'qwen/qwen3.8-27b',
     'openai/gpt-oss-120b',
-    config.groqModel,
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant'
-].filter(Boolean);
+    config.groqModel
+].filter((m) => m && !m.includes('llama-3.3') && !m.includes('llama-3.1'));
+
+// Banco de preguntas estratégicas de eliminación como red de seguridad infalible
+const STRATEGIC_QUESTIONS = [
+    "¿Tu personaje es una persona real de carne y hueso?",
+    "¿Tu personaje es o era de sexo masculino?",
+    "¿Tu personaje proviene del mundo del anime, manga o animación?",
+    "¿Tu personaje proviene de una película o serie con actores reales?",
+    "¿Tu personaje proviene del mundo de los videojuegos?",
+    "¿Tu personaje tiene superpoderes, magia o habilidades sobrehumanas?",
+    "¿Tu personaje es el protagonista principal de su propia historia?",
+    "¿Tu personaje lucha usando armas, espadas o artes de combate?",
+    "¿Tu personaje está relacionado con el mundo del deporte profesional?",
+    "¿Tu personaje es un cantante, músico o figura del espectáculo?",
+    "¿Tu personaje es un creador de contenido de YouTube, Twitch o redes sociales?",
+    "¿Tu personaje tiene o tenía fama a nivel mundial?",
+    "¿Tu personaje es de origen japonés o asiático?",
+    "¿Tu personaje tiene más de 30 años de edad?",
+    "¿Tu personaje forma parte de una franquicia o universo muy conocido?",
+    "¿Tu personaje tiene un traje, uniforme o vestimenta característica?",
+    "¿Tu personaje ha fallecido o ya no está activo?",
+    "¿Tu personaje es un villano o antagonista?"
+];
 
 const SYSTEM_PROMPT =
 `Eres el genio Akinator en español. El usuario está pensando en un personaje real o ficticio (celebridad, anime, cine, videojuegos, historia, etc.).
 Tu objetivo es adivinarlo formulando preguntas de eliminación estratégicas.
-En cada turno el usuario responderá estrictamente con una de estas 5 opciones:
-1 = Sí
-2 = No
-3 = No sé
-4 = Probablemente sí
-5 = Probablemente no
+En cada turno el usuario responde estrictamente con una de estas opciones: Sí, No, No sé, Probablemente sí o Probablemente no.
 
 Reglas fundamentales:
 1. Formula UNA SOLA pregunta a la vez, concisa y directa en español.
-2. Si tienes certeza alta (más del 80%) o has alcanzado entre 10 y 14 preguntas, debes emitir tu adivinanza final.
+2. Si tienes certeza alta (>80%) o has alcanzado entre 10 y 14 preguntas, debes emitir tu adivinanza final.
 3. Devuelve SIEMPRE y ÚNICAMENTE un JSON válido con una de estas dos estructuras:
 
 Si continúas preguntando:
 {
   "tipo": "pregunta",
   "pregunta": "¿Tu personaje es real?",
-  "progreso": 15
+  "progreso": 25
 }
 
 Si estás listo para adivinar:
@@ -66,75 +84,162 @@ Si estás listo para adivinar:
 }`;
 
 /**
- * Parsea y normaliza de forma ultra robusta la respuesta JSON de Akinator (Groq o Pollinations)
+ * Parsea y normaliza de forma ultra robusta la respuesta JSON de Akinator (Groq, Pollinations o texto plano)
  */
-const parseAndNormalizeAkinator = (raw) => {
+const parseAndNormalizeAkinator = (raw, currentStep = 1) => {
     if (!raw) return null;
     let parsed = null;
-    if (typeof raw === 'object') {
-        parsed = raw;
-    } else {
-        const str = String(raw).trim();
-        try {
-            parsed = JSON.parse(str);
-        } catch (_) {}
+    const str = typeof raw === 'object' ? JSON.stringify(raw) : String(raw).trim();
 
-        if (!parsed) {
-            const first = str.indexOf('{');
-            const last = str.lastIndexOf('}');
-            if (first !== -1 && last !== -1 && last > first) {
-                try {
-                    parsed = JSON.parse(str.slice(first, last + 1));
-                } catch (_) {}
+    // 1. Intento directo de JSON.parse
+    try {
+        parsed = JSON.parse(str);
+    } catch (_) {}
+
+    // 2. Limpieza de bloques de código markdown ```json ... ```
+    if (!parsed) {
+        const mdClean = str.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
+        try {
+            parsed = JSON.parse(mdClean);
+        } catch (_) {}
+    }
+
+    // 3. Extracción entre llaves {}
+    if (!parsed) {
+        const first = str.indexOf('{');
+        const last = str.lastIndexOf('}');
+        if (first !== -1 && last !== -1 && last > first) {
+            try {
+                parsed = JSON.parse(str.slice(first, last + 1));
+            } catch (_) {}
+        }
+    }
+
+    // 4. Si se parseó un objeto estructurado, normalizar campos
+    if (parsed && typeof parsed === 'object') {
+        const isExplicitGuess = parsed.tipo === 'adivinanza' || parsed.tipo === 'guess' || Boolean(parsed.adivinanza);
+        let extractedName = parsed.nombre || parsed.name || parsed.personaje || parsed.adivinanza ||
+            parsed.character || parsed.resultado || parsed.respuesta || parsed.personaje_adivinado || parsed.guess || '';
+
+        // Si el modelo marcó adivinanza o progreso >= 95 pero puso el nombre en la descripción o en la pregunta
+        if (!extractedName && (isExplicitGuess || parsed.progreso >= 95 || currentStep >= 12)) {
+            const rawQ = parsed.pregunta || parsed.question || '';
+            const rawDesc = parsed.descripcion || parsed.description || parsed.texto || '';
+
+            // Caso: "¿Estás pensando en Spider-Man?" o "¿Tu personaje es Naruto?"
+            const qClean = rawQ.replace(/^¿?\s*(?:estás pensando en|es|tu personaje es|se trata de)\s*/i, '').replace(/[?.]/g, '').trim();
+            if (qClean && qClean.length >= 3 && qClean.length <= 40 && !qClean.toLowerCase().startsWith('tu personaje')) {
+                extractedName = qClean;
+            } else if (rawDesc) {
+                const descMatch = rawDesc.match(/(?:es|trata de|adivino|personaje es)\s*[:]?\s*([A-ZÁÉÍÓÚÑa-záéíóúñ0-9\s.-]+)/i);
+                if (descMatch) {
+                    extractedName = descMatch[1].replace(/[¿?¡!.]/g, '').trim();
+                } else if (rawDesc.length <= 35) {
+                    extractedName = rawDesc.replace(/[¿?¡!.]/g, '').trim();
+                }
             }
         }
 
-        if (!parsed) {
-            try {
-                const cleaned = str.replace(/^\{+/, '{').replace(/\}+$/, '}');
-                parsed = JSON.parse(cleaned);
-            } catch (_) {}
-        }
+        const isGuess = isExplicitGuess || Boolean(extractedName && (parsed.progreso >= 90 || currentStep >= 12));
 
-        if (!parsed) {
-            try {
-                const matches = str.match(/\{[^{}]*"(?:tipo|pregunta|nombre)"[^{}]*\}/g);
-                if (matches) {
-                    for (const m of matches) {
-                        try {
-                            parsed = JSON.parse(m);
-                            if (parsed) break;
-                        } catch (_) {}
-                    }
-                }
-            } catch (_) {}
+        const normalized = {
+            tipo: isGuess ? 'adivinanza' : 'pregunta',
+            pregunta: parsed.pregunta || parsed.question || parsed.pregunta_actual || parsed.texto || '',
+            progreso: typeof parsed.progreso === 'number' ? parsed.progreso : (parsed.progress || Math.min(95, currentStep * 7)),
+            nombre: extractedName || (isGuess ? 'Personaje Misterioso' : ''),
+            descripcion: parsed.descripcion || parsed.description || parsed.detalles || (extractedName ? `Personaje identificado: ${extractedName}` : '')
+        };
+
+        if (normalized.pregunta || normalized.nombre) {
+            return normalized;
         }
     }
 
-    if (!parsed || typeof parsed !== 'object') return null;
+    // 5. Fallback ultra robusto para respuestas en texto plano del modelo
+    const cleanStr = str.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
 
-    const normalized = {
-        tipo: parsed.tipo || (parsed.nombre || parsed.name ? 'adivinanza' : 'pregunta'),
-        pregunta: parsed.pregunta || parsed.question || parsed.pregunta_actual || parsed.texto,
-        progreso: typeof parsed.progreso === 'number' ? parsed.progreso : (parsed.progress || 10),
-        nombre: parsed.nombre || parsed.name || parsed.personaje,
-        descripcion: parsed.descripcion || parsed.description || parsed.detalles
-    };
-
-    if (normalized.pregunta || normalized.nombre) {
-        return normalized;
+    // Detección de adivinanza en texto plano
+    const guessMatch = cleanStr.match(/(?:tu personaje es|creo que es|se trata de|adivino que es|el personaje es|pensando en)\s*[:]?\s*([A-ZÁÉÍÓÚÑa-záéíóúñ0-9\s.-]+)/i);
+    if (guessMatch) {
+        const name = guessMatch[1].replace(/[¿?¡!.]/g, '').trim();
+        return {
+            tipo: 'adivinanza',
+            nombre: name || 'Personaje Misterioso',
+            descripcion: cleanStr,
+            progreso: 100,
+            pregunta: ''
+        };
     }
+
+    // Detección de pregunta en texto plano
+    const qMatch = cleanStr.match(/(?:¿|^)([A-ZÁÉÍÓÚÑa-záéíóúñ\s,¿?¡!-]+?\?)/);
+    if (qMatch) {
+        let qText = qMatch[1].trim();
+        if (!qText.startsWith('¿')) qText = '¿' + qText;
+        return {
+            tipo: 'pregunta',
+            pregunta: qText,
+            progreso: Math.min(95, currentStep * 7),
+            nombre: '',
+            descripcion: ''
+        };
+    }
+
     return null;
 };
 
 /**
- * Consulta la IA de Groq o fallback a Pollinations AI garantizando formato JSON
+ * Selecciona la siguiente pregunta estratégica de eliminación que no se haya formulado aún
  */
-const queryAkinatorAI = async (messages) => {
-    const apiKey = getGroqApiKey();
-    let lastError = null;
+const getFallbackQuestion = (session) => {
+    const askedSet = new Set((session.history || []).map((h) => (h.q || '').trim().toLowerCase()));
+    for (const q of STRATEGIC_QUESTIONS) {
+        if (!askedSet.has(q.trim().toLowerCase())) {
+            return {
+                tipo: 'pregunta',
+                pregunta: q,
+                progreso: Math.min(95, session.step * 7),
+                nombre: '',
+                descripcion: ''
+            };
+        }
+    }
+    return {
+        tipo: 'pregunta',
+        pregunta: '¿Tu personaje tiene características o habilidades fuera de lo común?',
+        progreso: Math.min(95, session.step * 7),
+        nombre: '',
+        descripcion: ''
+    };
+};
 
-    // 1. Intentar con Groq Cloud si la API Key está configurada
+/**
+ * Consulta la IA de forma compacta y veloz para el siguiente turno
+ */
+const getNextAkinatorTurn = async (session) => {
+    const apiKey = getGroqApiKey();
+    const historySummary = (session.history && session.history.length > 0)
+        ? session.history.map((h, i) => `${i + 1}. ${h.q} -> ${h.a}`).join('\n')
+        : 'Inicio del juego.';
+
+    let instruction = '';
+    if (session.step >= 14) {
+        instruction = `Estamos en el turno #${session.step} (límite alcanzado). Debes emitir OBLIGATORIAMENTE tu adivinanza final con el personaje más probable que coincida con las pistas: {"tipo":"adivinanza", "nombre":"Nombre del Personaje", "descripcion":"Breve descripción", "progreso":100}.`;
+    } else if (session.step >= 10 || (session.progress && session.progress >= 85)) {
+        instruction = `Estamos en el turno #${session.step} y el progreso es alto (${session.progress || 90}%). Si ya sospechas con probabilidad razonable quién es el personaje, realiza tu adivinanza final ahora {"tipo":"adivinanza", "nombre":"...", "descripcion":"...", "progreso":100}. Si no, formula una última pregunta decisiva.`;
+    } else {
+        instruction = `Estamos en el turno #${session.step}. Formula una pregunta estratégica de eliminación para reducir el espacio de búsqueda. Si ya tienes certeza alta (>80%), puedes adivinar.`;
+    }
+
+    const messages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        {
+            role: 'user',
+            content: `Historial de preguntas y respuestas hasta ahora:\n${historySummary}\n\n${instruction}\nResponde únicamente en formato JSON válido.`
+        }
+    ];
+
+    // 1. Intentar con Groq Cloud (ultra rápido, con contexto compacto < 350 tokens)
     if (apiKey) {
         const uniqueModels = [...new Set(CANDIDATE_MODELS)];
         for (const model of uniqueModels) {
@@ -145,32 +250,31 @@ const queryAkinatorAI = async (messages) => {
                         model,
                         messages,
                         response_format: { type: 'json_object' },
-                        temperature: 0.6
+                        temperature: 0.5
                     },
                     {
                         headers: {
-                            'Authorization': `Bearer ${apiKey}`,
+                            Authorization: `Bearer ${apiKey}`,
                             'Content-Type': 'application/json'
                         },
-                        timeout: 15000
+                        timeout: 6000
                     }
                 );
 
                 const content = res.data?.choices?.[0]?.message?.content?.trim();
-                const normalized = parseAndNormalizeAkinator(content);
-                if (normalized) {
+                const normalized = parseAndNormalizeAkinator(content, session.step);
+                if (normalized && (normalized.pregunta || normalized.nombre)) {
                     return normalized;
                 }
             } catch (err) {
-                lastError = err;
                 const status = err.response?.status;
-                if (status === 401) break; // Clave inválida, pasar a fallback
+                if (status === 401) break;
                 continue;
             }
         }
     }
 
-    // 2. Fallback automático a Pollinations AI (sin necesidad de API Key)
+    // 2. Fallback secundario a Pollinations con timeout corto
     try {
         const fbRes = await axios.post(
             'https://text.pollinations.ai/',
@@ -178,54 +282,53 @@ const queryAkinatorAI = async (messages) => {
                 messages,
                 model: 'openai',
                 jsonMode: true,
-                temperature: 0.6
+                temperature: 0.5
             },
-            { timeout: 15000 }
+            { timeout: 4500 }
         );
-
-        const content = fbRes.data?.choices?.[0]?.message?.content || fbRes.data;
-        const normalized = parseAndNormalizeAkinator(content);
-        if (normalized) {
+        const fbContent = fbRes.data?.choices?.[0]?.message?.content || fbRes.data;
+        const normalized = parseAndNormalizeAkinator(fbContent, session.step);
+        if (normalized && (normalized.pregunta || normalized.nombre)) {
             return normalized;
         }
-    } catch (fbErr) {
-        logger.warn('[AKINATOR FALLBACK WARN]:', fbErr.message);
-        if (!lastError) lastError = fbErr;
-    }
+    } catch (_) {}
 
-    throw lastError || new Error('No se pudo contactar el servidor de Akinator AI');
+    // 3. Fallback infalible del motor estratégico de preguntas (Garantiza que la partida NUNCA falle)
+    return getFallbackQuestion(session);
 };
 
 /**
- * Reintento silencioso de red: si el primer intento falla por socket, timeout o ECONNRESET,
- * espera 800ms y reintenta automáticamente 1 vez antes de emitir error.
+ * Descarga el buffer de la imagen oficial del personaje desde Wikipedia usando cabeceras seguras de navegador
  */
-const queryAkinatorWithRetry = async (messages) => {
-    try {
-        return await queryAkinatorAI(messages);
-    } catch (firstErr) {
-        logger.warn('[AKINATOR] Error de red en primer intento, reintentando tras 800ms:', firstErr.message);
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        return await queryAkinatorAI(messages);
-    }
-};
-
-/**
- * Obtiene la imagen oficial del personaje desde Wikipedia (opcional, no bloqueante)
- */
-const getCharacterImage = async (characterName) => {
+const getCharacterImageBuffer = async (characterName) => {
     if (!characterName) return null;
     try {
         const cleanName = characterName.replace(/\s+/g, '_');
         const url = `https://es.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`;
-        const res = await axios.get(url, {
+        const summaryRes = await axios.get(url, {
             headers: {
-                'User-Agent': 'Unsk1ngMD-Bot/1.0 (Node.js; contact: unknowncodex)',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'application/json'
             },
-            timeout: 5000
+            timeout: 3000
         });
-        return res.data?.thumbnail?.source || null;
+
+        const imgUrl = summaryRes.data?.thumbnail?.source;
+        if (!imgUrl) return null;
+
+        const imgRes = await axios.get(imgUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+            },
+            responseType: 'arraybuffer',
+            timeout: 3500
+        });
+
+        if (imgRes.status === 200 && imgRes.data && imgRes.data.length > 0) {
+            return Buffer.from(imgRes.data);
+        }
+        return null;
     } catch (_) {
         return null;
     }
@@ -263,44 +366,41 @@ const startGame = async (sock, m) => {
         text: '🧞‍♂️ *[AKINATOR - EL GENIO]*\n\n🔮 _Piensa en un personaje real o ficticio. Conéctate mentalmente... Preparando la primera pregunta..._'
     }, { quoted: m });
 
-    const initialMessages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: 'Inicia el juego. Formula la pregunta número 1 en formato json.' }
-    ];
-
     try {
-        const aiResponse = await queryAkinatorWithRetry(initialMessages);
-
-        if (!aiResponse || !aiResponse.pregunta) {
-            throw new Error('Respuesta inicial de Akinator inválida');
-        }
-
         const session = {
             chatId,
             player: m.sender,
             step: 1,
             currentStep: 1,
-            progress: aiResponse.progreso || 5,
-            processing: false,    // Mutex para bloquear llamadas simultáneas
-            isProcessing: false,  // Alias retrocompatible
+            progress: 5,
+            history: [],
+            lastQuestion: '¿Tu personaje es una persona real de carne y hueso?',
+            processing: false,
+            isProcessing: false,
             timeout: setSessionTimeout(sock, chatId),
             aki: {
                 currentStep: 1,
-                progress: aiResponse.progreso || 5,
-                lastQuestion: aiResponse.pregunta,
-                messages: [
-                    ...initialMessages,
-                    { role: 'assistant', content: JSON.stringify(aiResponse) }
-                ]
+                progress: 5,
+                lastQuestion: '¿Tu personaje es una persona real de carne y hueso?',
+                messages: []
             }
         };
+
+        // Consultar primera pregunta a la IA o usar la pregunta estratégica clásica
+        const firstTurn = await getNextAkinatorTurn(session);
+        if (firstTurn && firstTurn.pregunta) {
+            session.lastQuestion = firstTurn.pregunta;
+            session.progress = firstTurn.progreso || 5;
+            session.aki.lastQuestion = firstTurn.pregunta;
+            session.aki.progress = session.progress;
+        }
 
         global.akinatorSessions.set(chatId, session);
 
         const promptText =
             `🧞‍♂️ *AKINATOR - PREGUNTA #${session.step}*\n` +
-            `📊 *Progreso:* ${session.aki.progress}%\n\n` +
-            `❓ *${aiResponse.pregunta}*\n\n` +
+            `📊 *Progreso:* ${session.progress}%\n\n` +
+            `❓ *${session.lastQuestion}*\n\n` +
             `1️⃣ *1:* Sí\n` +
             `2️⃣ *2:* No\n` +
             `3️⃣ *3:* No sé\n` +
@@ -338,7 +438,7 @@ const checkAnswer = async (sock, m) => {
     if (!body) return false;
 
     // 1. Cancelación voluntaria
-    if (body === 'cancelar' || body === '.cancelar' || body === '.cancelakinator') {
+    if (body === 'cancelar' || body === '.cancelar' || body === '.cancelakinator' || body === 'stopaki') {
         if (session.timeout) clearTimeout(session.timeout);
         global.akinatorSessions.delete(chatId);
         await sock.sendMessage(chatId, {
@@ -347,22 +447,30 @@ const checkAnswer = async (sock, m) => {
         return true;
     }
 
-    // 2. Validación estricta de opciones
+    // 2. Validación de opciones (1 al 5 y variantes naturales)
     const validAnswers = {
-        '1': '1 (Sí)',
-        'si': '1 (Sí)',
-        'sí': '1 (Sí)',
-        '2': '2 (No)',
-        'no': '2 (No)',
-        '3': '3 (No sé)',
-        'no se': '3 (No sé)',
-        'no sé': '3 (No sé)',
-        'nose': '3 (No sé)',
-        '4': '4 (Probablemente sí)',
-        'probablemente si': '4 (Probablemente sí)',
-        'probablemente sí': '4 (Probablemente sí)',
-        '5': '5 (Probablemente no)',
-        'probablemente no': '5 (Probablemente no)'
+        '1': 'Sí',
+        'si': 'Sí',
+        'sí': 'Sí',
+        's': 'Sí',
+        '2': 'No',
+        'no': 'No',
+        'n': 'No',
+        '3': 'No sé',
+        'no se': 'No sé',
+        'no sé': 'No sé',
+        'nose': 'No sé',
+        '4': 'Probablemente sí',
+        'probablemente si': 'Probablemente sí',
+        'probablemente sí': 'Probablemente sí',
+        'quiza si': 'Probablemente sí',
+        'quizas si': 'Probablemente sí',
+        'tal vez si': 'Probablemente sí',
+        '5': 'Probablemente no',
+        'probablemente no': 'Probablemente no',
+        'quiza no': 'Probablemente no',
+        'quizas no': 'Probablemente no',
+        'tal vez no': 'Probablemente no'
     };
 
     const answerText = validAnswers[body];
@@ -382,76 +490,123 @@ const checkAnswer = async (sock, m) => {
         return false;
     }
 
-    // 3. Bloqueo de peticiones simultáneas (Mutex)
-    // Si ya hay una respuesta procesándose, ignorar llamadas repetidas o concurrentes
+    // 3. Mutex para bloquear peticiones simultáneas o spam
     if (session.processing || session.isProcessing) {
         return true;
     }
     session.processing = true;
     session.isProcessing = true;
 
-    // 4. Renovar temporizador de 90 segundos desde este momento
+    // Temporizador de seguridad para desbloquear mutex si ocurre un cuelgue inesperado
+    const safetyUnlock = setTimeout(() => {
+        session.processing = false;
+        session.isProcessing = false;
+    }, 12000);
+
+    // 4. Renovar temporizador de 90 segundos
     if (session.timeout) clearTimeout(session.timeout);
     session.timeout = setSessionTimeout(sock, chatId);
+
+    // 5. Registrar respuesta en el historial estructurado
+    session.history.push({
+        q: session.lastQuestion,
+        a: answerText
+    });
 
     session.step += 1;
     session.currentStep = session.step;
     session.aki.currentStep = session.step;
 
-    const userMessageEntry = {
-        role: 'user',
-        content: `El usuario respondió: ${answerText}. Formula la siguiente pregunta o tu adivinanza final en formato json.`
-    };
-    session.aki.messages.push(userMessageEntry);
-
     await m.react('🔮');
 
     try {
-        // Ejecución con reintento automático de 800ms
-        const aiResponse = await queryAkinatorWithRetry(session.aki.messages);
-        session.aki.messages.push({ role: 'assistant', content: JSON.stringify(aiResponse) });
+        const aiResponse = await getNextAkinatorTurn(session);
 
-        const isGuess = aiResponse.tipo === 'adivinanza' || (aiResponse.progreso && aiResponse.progreso >= 80) || session.step >= 15;
+        const isGuess = aiResponse.tipo === 'adivinanza' && Boolean(aiResponse.nombre);
 
         // Fin del juego: Akinator adivina el personaje
-        if (isGuess && (aiResponse.nombre || aiResponse.tipo === 'adivinanza')) {
-            if (session.timeout) clearTimeout(session.timeout);
-            global.akinatorSessions.delete(chatId);
-
+        if (isGuess) {
             const charName = aiResponse.nombre || 'Personaje Misterioso';
             const charDesc = aiResponse.descripcion || 'Sin descripción disponible';
-            const charImg = await getCharacterImage(charName);
+
+            // Descargar buffer de imagen con User-Agent seguro
+            let charImgBuffer = null;
+            try {
+                charImgBuffer = await getCharacterImageBuffer(charName);
+            } catch (_) {}
+
+            // Recompensa en economía por completar partida
+            try {
+                if (economy && typeof economy.addCoins === 'function') {
+                    economy.addCoins(m.sender, 350);
+                }
+                if (economy && typeof economy.addExp === 'function') {
+                    economy.addExp(m.sender, 150);
+                }
+            } catch (_) {}
+
+            const displayName = (userNames && typeof userNames.get === 'function')
+                ? userNames.get(m.sender)
+                : null;
+            const playerTag = displayName ? `*${displayName}* (@${m.sender.split('@')[0]})` : `@${m.sender.split('@')[0]}`;
 
             const resultCard =
                 `🧞‍♂️ *¡AKINATOR HA ADIVINADO!* 🧞‍♂️\n\n` +
                 `🔮 *Personaje:* *${charName}*\n` +
                 `📝 *Detalles:* ${charDesc}\n\n` +
                 `🎯 *Preguntas requeridas:* ${session.step}\n` +
+                `👤 *Jugador:* ${playerTag}\n` +
+                `💰 *Premio de partida:* +$350 monedas | ⚡ +150 EXP\n\n` +
                 `✨ _¿He acertado tu personaje? ¡El genio nunca falla!_`;
 
-            if (charImg) {
-                await sock.sendMessage(chatId, {
-                    image: { url: charImg },
-                    caption: resultCard
-                }, { quoted: m });
-            } else {
-                await sock.sendMessage(chatId, { text: resultCard }, { quoted: m });
+            let sentSuccessfully = false;
+
+            // 1. Intentar enviar con imagen Buffer nativo
+            if (charImgBuffer) {
+                try {
+                    await sock.sendMessage(chatId, {
+                        image: charImgBuffer,
+                        caption: resultCard,
+                        mentions: [m.sender]
+                    }, { quoted: m });
+                    sentSuccessfully = true;
+                } catch (imgSendErr) {
+                    logger.warn('[AKINATOR] Falló envío con imagen buffer, procediendo con texto:', imgSendErr.message);
+                }
             }
 
-            await m.react('🎉');
+            // 2. Fallback garantizado: enviar como texto si la imagen falló o no existe
+            if (!sentSuccessfully) {
+                try {
+                    await sock.sendMessage(chatId, {
+                        text: resultCard,
+                        mentions: [m.sender]
+                    }, { quoted: m });
+                    sentSuccessfully = true;
+                } catch (txtSendErr) {
+                    logger.error('[AKINATOR] Error crítico enviando tarjeta final:', txtSendErr.message);
+                }
+            }
+
+            // Limpieza de sesión en memoria SOLO después de enviar
+            if (session.timeout) clearTimeout(session.timeout);
+            global.akinatorSessions.delete(chatId);
+
+            await m.react('🎉').catch(() => {});
             return true;
         }
 
-        // Actualizar y preservar estado de la sesión
+        // Si continúa preguntando: actualizar estado
         const progress = Math.min(95, aiResponse.progreso || (session.step * 7));
         session.progress = progress;
         session.aki.progress = progress;
-        session.aki.lastQuestion = aiResponse.pregunta || '¿Tu personaje sigue activo?';
+        session.lastQuestion = aiResponse.pregunta || '¿Tu personaje sigue activo?';
+        session.aki.lastQuestion = session.lastQuestion;
 
         const promptText =
             `🧞‍♂️ *AKINATOR - PREGUNTA #${session.step}*\n` +
             `📊 *Progreso:* ${progress}%\n\n` +
-            `❓ *${session.aki.lastQuestion}*\n\n` +
+            `❓ *${session.lastQuestion}*\n\n` +
             `1️⃣ *1:* Sí\n` +
             `2️⃣ *2:* No\n` +
             `3️⃣ *3:* No sé\n` +
@@ -464,23 +619,31 @@ const checkAnswer = async (sock, m) => {
         return true;
 
     } catch (err) {
-        logger.error('[AKINATOR STEP ERROR]:', err.message);
+        logger.error('[AKINATOR UNEXPECTED ERROR]:', err.message);
 
-        // Revertir paso en memoria para no desfasar la sesión y permitir que el usuario reintente
-        session.step -= 1;
-        session.currentStep = session.step;
-        session.aki.currentStep = session.step;
-        if (session.aki.messages[session.aki.messages.length - 1] === userMessageEntry) {
-            session.aki.messages.pop();
-        }
+        // En caso de cualquier excepción inesperada, usar la red estratégica para no detener la partida
+        const fallback = getFallbackQuestion(session);
+        session.lastQuestion = fallback.pregunta;
+        session.progress = fallback.progreso;
+        session.aki.lastQuestion = fallback.pregunta;
+        session.aki.progress = fallback.progreso;
 
-        // NO destruir la sesión ante un error temporal de red; pedir al usuario que reenvíe su número
-        await sock.sendMessage(chatId, {
-            text: '⚠️ *[AKINATOR]* Ocurrió una demora temporal con el servidor de IA.\n👉 Tu partida sigue guardada. Por favor, reenvía tu número (*1 al 5*) para continuar.'
-        }, { quoted: m });
+        const promptText =
+            `🧞‍♂️ *AKINATOR - PREGUNTA #${session.step}*\n` +
+            `📊 *Progreso:* ${session.progress}%\n\n` +
+            `❓ *${session.lastQuestion}*\n\n` +
+            `1️⃣ *1:* Sí\n` +
+            `2️⃣ *2:* No\n` +
+            `3️⃣ *3:* No sé\n` +
+            `4️⃣ *4:* Probablemente sí\n` +
+            `5️⃣ *5:* Probablemente no\n\n` +
+            `💡 _Escribe tu opción (1 al 5)._`;
+
+        await sock.sendMessage(chatId, { text: promptText }, { quoted: m });
         return true;
 
     } finally {
+        clearTimeout(safetyUnlock);
         session.processing = false;
         session.isProcessing = false;
     }
@@ -510,7 +673,19 @@ const commands = [
         category: 'juegos',
         desc: 'El genio Akinator intenta adivinar el personaje real o ficticio en el que estás pensando',
         usage: '.akinator',
-        execute: async ({ sock, m }) => {
+        execute: async ({ sock, m, args }) => {
+            const sub = (args && args[0] ? args[0] : '').toLowerCase();
+            if (sub === 'stop' || sub === 'cancel' || sub === 'cancelar') {
+                const cancelled = cancelGame(m.chat);
+                if (cancelled) {
+                    return await sock.sendMessage(m.chat, {
+                        text: '🧞‍♂️ La partida de Akinator ha sido cancelada.'
+                    }, { quoted: m });
+                }
+                return await sock.sendMessage(m.chat, {
+                    text: 'ℹ️ No hay ninguna partida de Akinator activa en este chat.'
+                }, { quoted: m });
+            }
             await startGame(sock, m);
         }
     },

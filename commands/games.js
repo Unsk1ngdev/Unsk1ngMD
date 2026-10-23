@@ -112,8 +112,31 @@ module.exports = [
         category: 'juegos',
         desc: 'Inicia una trivia de cultura general con opciones A, B, C y D (45 seg límite)',
         usage: '.trivia',
-        execute: async ({ sock, m }) => {
+        execute: async ({ sock, m, args }) => {
+            const sub = (args && args[0] ? args[0] : '').toLowerCase();
+            if (sub === 'stop' || sub === 'cancel' || sub === 'cancelar') {
+                const cancelled = triviaManager.cancelGame(m.chat);
+                if (cancelled) {
+                    return await sock.sendMessage(m.chat, { text: '🧠 Partida de trivia cancelada con éxito.' }, { quoted: m });
+                }
+                return await sock.sendMessage(m.chat, { text: 'ℹ️ No hay ninguna trivia activa en este chat.' }, { quoted: m });
+            }
             await triviaManager.startGame(sock, m);
+        }
+    },
+    {
+        name: 'canceltrivia',
+        alias: ['stoptrivia', 'stopquiz'],
+        category: 'juegos',
+        desc: 'Cancela la trivia en curso en el chat',
+        usage: '.canceltrivia',
+        execute: async ({ sock, m }) => {
+            const cancelled = triviaManager.cancelGame(m.chat);
+            if (cancelled) {
+                await sock.sendMessage(m.chat, { text: '🧠 Partida de trivia cancelada con éxito.' }, { quoted: m });
+            } else {
+                await sock.sendMessage(m.chat, { text: 'ℹ️ No hay ninguna trivia activa en este chat.' }, { quoted: m });
+            }
         }
     }
 ];
