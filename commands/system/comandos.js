@@ -152,6 +152,14 @@ module.exports = {
 │    _Escáner y verificación de estado de puertos TCP en red (Premium)._
 │    *Ej:* \`${prefix}portcheck google.com 443\` | \`${prefix}portcheck 1.1.1.1 common\`
 │
+│ 🔹 *${prefix}groupjid* [enlace?] (Premium)
+│    _Lista los JIDs y cantidad de miembros de todos los grupos del bot o analiza un enlace._
+│    *Ej:* \`${prefix}groupjid\` | \`${prefix}groupjid https://chat.whatsapp.com/...\`
+│
+│ 🔹 *${prefix}invisible* [jid?] [texto] (Premium)
+│    _Envía mensajes en modo invisible/desconectado. En grupos realiza hidetag silencioso._
+│    *Ej:* \`${prefix}invisible Hola\` | \`${prefix}invisible 1203630...@g.us Aviso importante\`
+│
 │ 🔹 *${prefix}banco* [saldo | depositar <cant> | retirar <cant> | pedir <cant> | pagar <cant|todo> | deuda]
 │    _Sistema bancario completo: administra tus cuentas, solicita préstamos y paga deudas._
 │    *Ej:* \`${prefix}banco saldo\` | \`${prefix}banco depositar 5000\` | \`${prefix}banco pedir 50000\`
