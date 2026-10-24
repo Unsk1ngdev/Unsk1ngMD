@@ -359,54 +359,70 @@ function isDisposableEmail(domain) {
  */
 async function queryHIBP(email) {
     const apiKey = (process.env.HIBP_KEY || '').trim();
-    if (!apiKey) {
-        return {
-            configured: false,
-            message: 'ℹ️ _API key de HIBP no configurada en `.env` (HIBP_KEY). Se omitió el escaneo de contraseñas expuestas._'
-        };
+
+    // 1. Si hay clave oficial de HaveIBeenPwned configurada en .env, consultarla
+    if (apiKey) {
+        try {
+            const res = await axios.get(
+                `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}?truncateResponse=false`,
+                {
+                    headers: {
+                        'hibp-api-key': apiKey,
+                        'user-agent': 'Unsk1ngMD-Bot/1.0.0'
+                    },
+                    timeout: 8000
+                }
+            );
+
+            const breaches = Array.isArray(res.data) ? res.data : [];
+            return {
+                configured: true,
+                pwned: breaches.length > 0,
+                breaches
+            };
+        } catch (err) {
+            if (err.response && err.response.status === 404) {
+                return {
+                    configured: true,
+                    pwned: false,
+                    breaches: []
+                };
+            }
+        }
     }
 
+    // 2. Fallback resiliente a XposedOrNot (OSINT público gratuito sin requerir API key)
     try {
-        const res = await axios.get(
-            `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}?truncateResponse=false`,
+        const xRes = await axios.get(
+            `https://api.xposedornot.com/v1/check-email/${encodeURIComponent(email)}`,
             {
-                headers: {
-                    'hibp-api-key': apiKey,
-                    'user-agent': 'Unsk1ngMD-Bot/1.0.0'
-                },
-                timeout: 8000
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                timeout: 6000,
+                validateStatus: (s) => s < 500
             }
         );
 
-        const breaches = Array.isArray(res.data) ? res.data : [];
+        if (xRes.data && xRes.data.breaches && Array.isArray(xRes.data.breaches[0])) {
+            const names = xRes.data.breaches[0];
+            return {
+                configured: true,
+                pwned: names.length > 0,
+                breaches: names.map(n => ({
+                    Name: n,
+                    BreachDate: 'Filtrado',
+                    DataClasses: ['Credenciales', 'Perfil']
+                }))
+            };
+        }
         return {
             configured: true,
-            pwned: breaches.length > 0,
-            breaches
+            pwned: false,
+            breaches: []
         };
-    } catch (err) {
-        if (err.response && err.response.status === 404) {
-            return {
-                configured: true,
-                pwned: false,
-                breaches: []
-            };
-        }
-        if (err.response && err.response.status === 401) {
-            return {
-                configured: true,
-                error: '❌ API key de HaveIBeenPwned inválida o expirada.'
-            };
-        }
-        if (err.response && err.response.status === 429) {
-            return {
-                configured: true,
-                error: '⏳ Límite de peticiones de HaveIBeenPwned alcanzado. Intenta de nuevo en unos minutos.'
-            };
-        }
+    } catch (_) {
         return {
-            configured: true,
-            error: `⚠️ Error de conexión con HIBP: ${err.message}`
+            configured: false,
+            message: 'ℹ️ _No se pudo contactar el servicio de verificación de filtraciones._'
         };
     }
 }

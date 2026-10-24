@@ -60,6 +60,14 @@ module.exports = {
 │    _Consulta perfil de WhatsApp, foto HD, estado/bio y cuenta de empresa._
 │    *Ej:* \`${prefix}info +584160666286\`
 │
+│ 🔹 *${prefix}email* [correo]
+│    _Verifica existencia, proveedor, DNS y filtraciones de un correo (HaveIBeenPwned / XposedOrNot)._
+│    *Ej:* \`${prefix}email usuario@gmail.com\`
+│
+│ 🔹 *${prefix}usuario* [nombre_usuario]
+│    _Rastrea la presencia de un nick en más de 15 plataformas sociales (estilo Sherlock)._
+│    *Ej:* \`${prefix}usuario torvalds\`
+│
 │ 🔹 *${prefix}s* / *${prefix}sticker*
 │    _Convierte imágenes o videos cortos a sticker WebP con metadatos._
 │    *Ej:* Responder a foto con \`${prefix}s\`

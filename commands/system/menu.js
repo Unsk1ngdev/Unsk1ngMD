@@ -158,6 +158,8 @@ module.exports = {
                     ['📸', 'perfil', 'Foto de perfil HD'],
                     ['💌', 'carta', 'Carta emotiva'],
                     ['🔍', 'info', 'Info de número'],
+                    ['📧', 'email', 'Auditoría y filtraciones de email'],
+                    ['🕵️', 'usuario', 'Rastreo de nick en redes (Sherlock)'],
                     ['🌐', 'ip', 'Info de IP o dominio'],
                     ['🌍', 'pais', 'Info y bandera de país'],
                     ['🤫', 'chismografo', 'Chisme falso'],
