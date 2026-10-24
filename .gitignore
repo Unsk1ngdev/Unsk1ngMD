@@ -82,6 +82,11 @@ auth_backup_*.zip
 !assets/**
 
 # 7. Archivos de sistema operativo y entornos de desarrollo (IDE)
+.agents/
+.claude/
+.playwright/
+.playwright-cli/
+temp_ui_skill/
 .DS_Store
 .DS_Store?
 ._*

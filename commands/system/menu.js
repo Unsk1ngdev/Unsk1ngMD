@@ -136,7 +136,7 @@ module.exports = {
                 cmds: [
                     ['🖼️', 'sticker', 'Crear sticker WebP'],
                     ['🎞️', 'gif', 'Video a sticker GIF'],
-                    ['🎬', 'togif', 'Video/Sticker a GIF'],
+                    ['🎬', 'togif', 'Video a GIF'],
                     ['🔄', 'toimg', 'Sticker a imagen'],
                     ['🎥', 'tovideo', 'Sticker a video'],
                     ['🎵', 'tomp3', 'Extraer audio MP3'],

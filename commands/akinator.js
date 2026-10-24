@@ -29,10 +29,10 @@ const SESSION_TIMEOUT_MS = 90000; // Temporizador de inactividad (90 segundos)
 
 // Modelos activos y comprobados en la API de Groq Cloud
 const CANDIDATE_MODELS = [
-    process.env.GROQ_MODEL?.trim(),
-    'openai/gpt-oss-20b',
     'qwen/qwen3.8-27b',
     'openai/gpt-oss-120b',
+    'openai/gpt-oss-20b',
+    process.env.GROQ_MODEL?.trim(),
     config.groqModel
 ].filter((m) => m && !m.includes('llama-3.3') && !m.includes('llama-3.1'));
 
@@ -59,27 +59,32 @@ const STRATEGIC_QUESTIONS = [
 ];
 
 const SYSTEM_PROMPT =
-`Eres el genio Akinator en español. El usuario está pensando en un personaje real o ficticio (celebridad, anime, cine, videojuegos, historia, etc.).
-Tu objetivo es adivinarlo formulando preguntas de eliminación estratégicas.
-En cada turno el usuario responde estrictamente con una de estas opciones: Sí, No, No sé, Probablemente sí o Probablemente no.
+`Eres el genio Akinator en español. Tu misión es adivinar EXACTAMENTE en qué personaje (real o ficticio) está pensando el usuario.
+El usuario SOLO puede responder a tus preguntas con una de estas opciones: Sí, No, No sé, Probablemente sí o Probablemente no.
 
-Reglas fundamentales:
-1. Formula UNA SOLA pregunta a la vez, concisa y directa en español.
-2. Si tienes certeza alta (>80%) o has alcanzado entre 10 y 14 preguntas, debes emitir tu adivinanza final.
-3. Devuelve SIEMPRE y ÚNICAMENTE un JSON válido con una de estas dos estructuras:
+REGLAS DE ORO:
+1. Toda pregunta DEBE responderse estrictamente con Sí o No (NUNCA hagas preguntas de opción múltiple como "¿es X o Y?" ni abiertas).
+2. NUNCA formules el nombre del personaje que sospechas dentro de una pregunta normal (ej. NUNCA preguntes "¿Tu personaje es Messi?"). En su lugar, cuando tengas un candidato claro con probabilidad razonable (>70%), ¡emite DIRECTAMENTE la adivinanza con "tipo": "adivinanza"!
+3. METODOLOGÍA DEDUCTIVA:
+   - Turnos 1-3: Filtra el universo principal (¿Es una persona real? Si es ficticio: ¿Es de anime o manga? ¿Es de videojuegos? ¿De cine/Marvel? Si es real: ¿Es deportista/futbolista? ¿Es cantante/músico? ¿Youtuber/Streamer?).
+   - Turnos 4-7: Mantén internamente 3 a 5 candidatos sospechosos ("candidatos": [...]) y formula preguntas clave que distingan entre ellos (color de pelo, poderes, vestimenta, franquicia, accesorios).
+   - Turno 7+: En cuanto uno de los candidatos coincida fuertemente con las pistas o alcances el turno 10-12, ¡ADIVINA con su nombre universal y oficial!
 
-Si continúas preguntando:
+ESTRUCTURA DE RESPUESTA (Responde SIEMPRE y ÚNICAMENTE en JSON válido):
+
+Si estás preguntando:
 {
   "tipo": "pregunta",
-  "pregunta": "¿Tu personaje es real?",
-  "progreso": 25
+  "candidatos": ["Goku", "Naruto", "Luffy"],
+  "pregunta": "¿Tu personaje pertenece a la franquicia Dragon Ball?",
+  "progreso": 60
 }
 
-Si estás listo para adivinar:
+Si estás adivinando:
 {
   "tipo": "adivinanza",
-  "nombre": "Nombre del Personaje",
-  "descripcion": "Breve descripción o profesión",
+  "nombre": "Son Goku",
+  "descripcion": "Protagonista saiyajin de la serie Dragon Ball",
   "progreso": 100
 }`;
 
@@ -121,14 +126,14 @@ const parseAndNormalizeAkinator = (raw, currentStep = 1) => {
         let extractedName = parsed.nombre || parsed.name || parsed.personaje || parsed.adivinanza ||
             parsed.character || parsed.resultado || parsed.respuesta || parsed.personaje_adivinado || parsed.guess || '';
 
-        // Si el modelo marcó adivinanza o progreso >= 95 pero puso el nombre en la descripción o en la pregunta
-        if (!extractedName && (isExplicitGuess || parsed.progreso >= 95 || currentStep >= 12)) {
+        // Si el modelo marcó adivinanza explícita o se alcanzó el límite de turnos (step >= 12), pero puso el nombre en la pregunta o descripción
+        if (!extractedName && (isExplicitGuess || currentStep >= 12 || (parsed.progreso && parsed.progreso >= 98))) {
             const rawQ = parsed.pregunta || parsed.question || '';
             const rawDesc = parsed.descripcion || parsed.description || parsed.texto || '';
 
             // Caso: "¿Estás pensando en Spider-Man?" o "¿Tu personaje es Naruto?"
             const qClean = rawQ.replace(/^¿?\s*(?:estás pensando en|es|tu personaje es|se trata de)\s*/i, '').replace(/[?.]/g, '').trim();
-            if (qClean && qClean.length >= 3 && qClean.length <= 40 && !qClean.toLowerCase().startsWith('tu personaje')) {
+            if (qClean && qClean.length >= 3 && qClean.length <= 40 && !qClean.toLowerCase().startsWith('tu personaje') && !qClean.toLowerCase().startsWith('un ') && !qClean.toLowerCase().startsWith('una ')) {
                 extractedName = qClean;
             } else if (rawDesc) {
                 const descMatch = rawDesc.match(/(?:es|trata de|adivino|personaje es)\s*[:]?\s*([A-ZÁÉÍÓÚÑa-záéíóúñ0-9\s.-]+)/i);
@@ -140,7 +145,7 @@ const parseAndNormalizeAkinator = (raw, currentStep = 1) => {
             }
         }
 
-        const isGuess = isExplicitGuess || Boolean(extractedName && (parsed.progreso >= 90 || currentStep >= 12));
+        const isGuess = isExplicitGuess || Boolean(extractedName && (isExplicitGuess || currentStep >= 12 || (parsed.progreso && parsed.progreso >= 98)));
 
         const normalized = {
             tipo: isGuess ? 'adivinanza' : 'pregunta',
@@ -219,27 +224,27 @@ const getFallbackQuestion = (session) => {
 const getNextAkinatorTurn = async (session) => {
     const apiKey = getGroqApiKey();
     const historySummary = (session.history && session.history.length > 0)
-        ? session.history.map((h, i) => `${i + 1}. ${h.q} -> ${h.a}`).join('\n')
+        ? session.history.map((h, i) => `${i + 1}. ${h.q} [${h.a}]`).join(' | ')
         : 'Inicio del juego.';
 
     let instruction = '';
-    if (session.step >= 14) {
-        instruction = `Estamos en el turno #${session.step} (límite alcanzado). Debes emitir OBLIGATORIAMENTE tu adivinanza final con el personaje más probable que coincida con las pistas: {"tipo":"adivinanza", "nombre":"Nombre del Personaje", "descripcion":"Breve descripción", "progreso":100}.`;
-    } else if (session.step >= 10 || (session.progress && session.progress >= 85)) {
-        instruction = `Estamos en el turno #${session.step} y el progreso es alto (${session.progress || 90}%). Si ya sospechas con probabilidad razonable quién es el personaje, realiza tu adivinanza final ahora {"tipo":"adivinanza", "nombre":"...", "descripcion":"...", "progreso":100}. Si no, formula una última pregunta decisiva.`;
+    if (session.step >= 12) {
+        instruction = `Estamos en el turno #${session.step} (fase final). Revisa el historial de pistas acumuladas y emite tu ADIVINANZA definitiva con el personaje más probable que coincida: {"tipo":"adivinanza","nombre":"Nombre del Personaje","descripcion":"Breve descripción","progreso":100}.`;
+    } else if (session.step >= 6) {
+        instruction = `Estamos en el turno #${session.step}. Si las pistas acumuladas coinciden claramente con uno de tus candidatos sospechosos (>70% de certeza), ¡emite tu ADIVINANZA ahora! De lo contrario, formula una pregunta decisiva de Sí/No que descarte a los demás candidatos.`;
     } else {
-        instruction = `Estamos en el turno #${session.step}. Formula una pregunta estratégica de eliminación para reducir el espacio de búsqueda. Si ya tienes certeza alta (>80%), puedes adivinar.`;
+        instruction = `Estamos en el turno #${session.step}. Formula una pregunta estratégica de Sí/No para descartar candidatos o, si ya tienes certeza alta (>75%), ¡adivina ya!`;
     }
 
     const messages = [
         { role: 'system', content: SYSTEM_PROMPT },
         {
             role: 'user',
-            content: `Historial de preguntas y respuestas hasta ahora:\n${historySummary}\n\n${instruction}\nResponde únicamente en formato JSON válido.`
+            content: `Historial de turnos anteriores:\n${historySummary}\n\n${instruction}\nResponde únicamente con el JSON válido.`
         }
     ];
 
-    // 1. Intentar con Groq Cloud (ultra rápido, con contexto compacto < 350 tokens)
+    // 1. Intentar con Groq Cloud (modelos rotativos ultra rápidos con 300 max_tokens)
     if (apiKey) {
         const uniqueModels = [...new Set(CANDIDATE_MODELS)];
         for (const model of uniqueModels) {
@@ -249,15 +254,15 @@ const getNextAkinatorTurn = async (session) => {
                     {
                         model,
                         messages,
-                        response_format: { type: 'json_object' },
-                        temperature: 0.5
+                        temperature: 0.2,
+                        max_tokens: 300
                     },
                     {
                         headers: {
                             Authorization: `Bearer ${apiKey}`,
                             'Content-Type': 'application/json'
                         },
-                        timeout: 6000
+                        timeout: 7000
                     }
                 );
 
@@ -282,7 +287,7 @@ const getNextAkinatorTurn = async (session) => {
                 messages,
                 model: 'openai',
                 jsonMode: true,
-                temperature: 0.5
+                temperature: 0.3
             },
             { timeout: 4500 }
         );

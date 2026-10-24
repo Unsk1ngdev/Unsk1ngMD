@@ -65,7 +65,7 @@ module.exports = {
 │    *Ej:* Responder a foto con \`${prefix}s\`
 │
 │ 🔹 *${prefix}togif* / *${prefix}vgif*
-│    _Convierte un video corto o sticker animado en un GIF animado de WhatsApp._
+│    _Convierte un video corto (o sticker animado) en un GIF de WhatsApp._
 │    *Ej:* Responder a video con \`${prefix}togif\`
 │
 │ 🔹 *${prefix}toimg* / *${prefix}tovideo*
@@ -89,8 +89,8 @@ module.exports = {
 │    *Ej:* Responder a foto con \`${prefix}imglink\`
 │
 │ 🔹 *${prefix}gif*
-│    _Convierte video corto o sticker en bucle a GIF interactivo._
-│    *Ej:* Responder a sticker con \`${prefix}gif\`
+│    _Convierte un video corto (máx. 10s) en un sticker animado._
+│    *Ej:* Responder a video con \`${prefix}gif\`
 │
 │ 🔹 *${prefix}cmeme* [texto superior | inferior]
 │    _Genera memes clásicos con fuente Impact citando una foto._

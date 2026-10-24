@@ -9,8 +9,8 @@ module.exports = {
     name: 'togif',
     alias: ['vgif', 'videogif', 'agif'],
     category: 'multimedia',
-    desc: 'Convierte un video corto o sticker animado en un GIF animado de WhatsApp (en bucle continuo)',
-    usage: '.togif [citando o enviando video o sticker]',
+    desc: 'Convierte un video corto (o sticker animado) en un GIF animado de WhatsApp (en bucle continuo)',
+    usage: '.togif [citando o enviando video corto o sticker animado]',
 
     execute: async ({ sock, m }) => {
         let mediaBuffer = null;
@@ -136,7 +136,7 @@ module.exports = {
             await sock.sendMessage(m.chat, {
                 video: finalBuffer,
                 gifPlayback: true,
-                caption: '> 🎬 *Video convertido a GIF con éxito.*'
+                caption: `> 🎬 *${isSticker ? 'Sticker' : 'Video'} convertido a GIF con éxito.*`
             }, { quoted: m });
 
             await m.react('✅');
