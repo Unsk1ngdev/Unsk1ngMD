@@ -214,6 +214,10 @@ module.exports = {
 │    _Envía saludo personalizado con foto de perfil y descripción a recién llegados._
 │    *Ej:* \`${prefix}bienvenido/a on\`
 │
+│ 🔹 *${prefix}despedida* [on / off / reset / test / mensaje]
+│    _Despide con foto y tarjeta visual a quienes abandonen el grupo._
+│    *Ej:* \`${prefix}despedida on\`
+│
 │ 🔹 *${prefix}promote* [@mención / respuesta]
 │    _Asciende a un participante al rol de Administrador._
 │    *Ej:* \`${prefix}promote @usuario\`

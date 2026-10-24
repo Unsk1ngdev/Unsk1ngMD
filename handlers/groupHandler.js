@@ -20,22 +20,47 @@ const handleGroupUpdate = async (sock, update) => {
                 try {
                     groupMeta = await sock.groupMetadata(id);
                 } catch (_) {}
-                const nombreGrupo = groupMeta?.subject || 'el grupo';
+                const groupName = groupMeta?.subject || 'el grupo';
+                const memberCount = groupMeta?.participants ? groupMeta.participants.length : undefined;
+                const groupDesc = groupMeta?.desc || '';
+
+                // Foto de perfil del grupo como fallback
+                let groupPfpUrl = null;
+                try {
+                    groupPfpUrl = await sock.profilePictureUrl(id, 'image');
+                } catch (_) {}
 
                 for (const participante of participants) {
-                    const numero = participante.replace(/:\d+@/, '@').split('@')[0];
-                    let rawMsg = (configDespedida.mensaje || '').trim();
-                    if (!rawMsg || rawMsg.toLowerCase() === 'on' || rawMsg.toLowerCase() === 'activar') {
-                        rawMsg = '👋 Hasta luego {usuario} de {grupo}!';
-                    }
-                    const mensaje = rawMsg
-                        .replace(/{usuario}/g, `+${numero}`)
-                        .replace(/{grupo}/g, nombreGrupo);
+                    const userTag = participante.replace(/:\d+@/, '@').split('@')[0].replace(/[^0-9]/g, '');
 
-                    await sock.sendMessage(id, {
-                        text: mensaje,
-                        mentions: [participante]
-                    }).catch(() => {});
+                    // Intentar obtener foto de perfil del usuario que se fue
+                    let pfpUrl = null;
+                    try {
+                        pfpUrl = await sock.profilePictureUrl(participante, 'image');
+                    } catch (_) {
+                        pfpUrl = groupPfpUrl;
+                    }
+
+                    const template = configDespedida.mensaje || despedidaManager.DEFAULT_DESPEDIDA;
+                    const mensaje = despedidaManager.formatMessage(template, {
+                        userTag,
+                        groupName,
+                        memberCount,
+                        groupDesc
+                    });
+
+                    if (pfpUrl) {
+                        await sock.sendMessage(id, {
+                            image: { url: pfpUrl },
+                            caption: mensaje,
+                            mentions: [participante]
+                        }).catch(() => {});
+                    } else {
+                        await sock.sendMessage(id, {
+                            text: mensaje,
+                            mentions: [participante]
+                        }).catch(() => {});
+                    }
                 }
             }
             return;
