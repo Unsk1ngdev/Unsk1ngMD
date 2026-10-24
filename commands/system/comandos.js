@@ -140,9 +140,9 @@ module.exports = {
 │    _Inteligencia profunda y perfil de Discord vía Snowflake (Premium)._
 │    *Ej:* \`${prefix}discord 155149108183695360\`
 │
-│ 🔹 *${prefix}osint* [email|num|ip] <valor> (Premium)
-│    _Inteligencia OSINT: filtraciones HIBP, datos de número e IP (Premium)._
-│    *Ej:* \`${prefix}osint email prueba@gmail.com\` | \`${prefix}osint ip 8.8.8.8\`
+│ 🔹 *${prefix}osint* [num|email|ip|user|domain] <valor> (Premium)
+│    _Inteligencia OSINT: número/WhatsApp, email (SPF/DMARC/HIBP), IP, huella de usuario y DNS._
+│    *Ej:* \`${prefix}osint email prueba@gmail.com\` | \`${prefix}osint user torvalds\` | \`${prefix}osint 8.8.8.8\`
 │
 │ 🔹 *${prefix}reverseip* [ip|dominio] (Premium)
 │    _Reverse DNS (PTR) y dominios alojados en la misma IP (Premium)._

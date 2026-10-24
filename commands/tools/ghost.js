@@ -4,7 +4,7 @@ const premium = require('../../lib/premium');
 
 module.exports = {
     name: 'ghost',
-    alias: ['fantasma', 'invisible', 'ghostmode'],
+    alias: ['fantasma', 'ghostmode', 'modofantasma'],
     category: 'herramientas',
     desc: 'Simula desconexión real de WhatsApp durante un tiempo determinado (solo owner o premium)',
     usage: '.ghost [segundos] | .ghost stop',

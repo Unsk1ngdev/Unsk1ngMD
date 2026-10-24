@@ -19,6 +19,7 @@ const personalidadEngine = require('../lib/personalidadEngine');
 const debateEngine = require('../lib/debateEngine');
 const recentMessagesManager = require('../lib/recentMessages');
 const userNames = require('../lib/userNames');
+const { isLikelyLid } = require('../lib/phoneInfo');
 
 // Cache simple de metadatos de grupos con TTL de 30 segundos
 const groupCache = new Map();
@@ -197,6 +198,25 @@ const handleMessage = async (sock, rawMsg) => {
             participants = perms.participants;
             groupAdmins = perms.groupAdmins;
             isBotAdmin = perms.isBotAdmin;
+
+            // Sincronización continua de LIDs y números reales de los participantes del grupo
+            if (Array.isArray(participants) && participants.length > 0) {
+                for (const p of participants) {
+                    const pLid = p.lid || (p.id && isLikelyLid(p.id) ? p.id : null) || (p.jid && isLikelyLid(p.jid) ? p.jid : null);
+                    const pPhone = (p.jid && !isLikelyLid(p.jid)) ? p.jid :
+                                  (p.id && !isLikelyLid(p.id)) ? p.id :
+                                  (p.phoneNumber && !isLikelyLid(p.phoneNumber)) ? p.phoneNumber :
+                                  (p.phone_number && !isLikelyLid(p.phone_number)) ? p.phone_number : null;
+                    if (pLid && pPhone) {
+                        userNames.linkLid(pLid, pPhone);
+                    }
+                    const pName = p.notify || p.name || p.verifiedName;
+                    if (pName) {
+                        if (pLid) userNames.set(pLid, pName);
+                        if (pPhone) userNames.set(pPhone, pName);
+                    }
+                }
+            }
 
             // Resolución definitiva de Owner con LID en grupos
             if (!isOwner && groupMetadata && Array.isArray(participants)) {

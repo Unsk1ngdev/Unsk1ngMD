@@ -125,7 +125,7 @@ module.exports = {
                     '🎭 `.fake` — Perfil falso',
                     '🎭 `.fakechat` — Mensaje falso de alguien',
                     '🎮 `.discord` — Inteligencia y perfil de Discord',
-                    '🕵️ `.osint` — Inteligencia OSINT (email, número e IP)',
+                    '🕵️ `.osint` — Inteligencia OSINT (número, WhatsApp, email, IP, usuario, DNS)',
                     '🔄 `.reverseip` — Reverse DNS y dominios alojados',
                     '🔌 `.portcheck` — Escáner y verificación de puertos TCP',
                     '📱 `.dispositivo` — Ver dispositivo',

@@ -72,13 +72,13 @@ module.exports = [
                         const palabraFinal = juego.palabra.toUpperCase();
                         delete global.ahorcado[chatId];
 
-                        // Otorgar premio de partida
+                        // Otorgar premio de partida directo al banco
                         try {
-                            if (economy && typeof economy.addCoins === 'function') {
-                                economy.addCoins(m.sender, 350);
-                            }
-                            if (economy && typeof economy.addExp === 'function') {
-                                economy.addExp(m.sender, 150);
+                            if (economy && typeof economy.addGameReward === 'function') {
+                                economy.addGameReward(m.sender, 350, 150, chatId);
+                            } else {
+                                if (economy?.addCoins) economy.addCoins(m.sender, 350);
+                                if (economy?.addExp) economy.addExp(m.sender, 150);
                             }
                         } catch (_) {}
 
@@ -91,7 +91,7 @@ module.exports = [
                             text: `🎉 *¡Felicidades, han ganado!*\n\n` +
                                   `👑 *Adivinado por:* ${winnerTag}\n` +
                                   `📝 *Palabra exacta:* *${palabraFinal}*\n` +
-                                  `💰 *Premio de partida:* +$350 monedas | ⚡ +150 EXP\n\n` +
+                                  `💰 *Premio de partida:* +$350 monedas (al banco) | ⚡ +150 EXP\n\n` +
                                   `_Unknown Codexツ</>_`,
                             mentions: [m.sender]
                         }, { quoted: m });
@@ -134,13 +134,13 @@ module.exports = [
                     const palabraFinal = juego.palabra.toUpperCase();
                     delete global.ahorcado[chatId];
 
-                    // Otorgar premio de partida
+                    // Otorgar premio de partida directo al banco
                     try {
-                        if (economy && typeof economy.addCoins === 'function') {
-                            economy.addCoins(m.sender, 350);
-                        }
-                        if (economy && typeof economy.addExp === 'function') {
-                            economy.addExp(m.sender, 150);
+                        if (economy && typeof economy.addGameReward === 'function') {
+                            economy.addGameReward(m.sender, 350, 150, chatId);
+                        } else {
+                            if (economy?.addCoins) economy.addCoins(m.sender, 350);
+                            if (economy?.addExp) economy.addExp(m.sender, 150);
                         }
                     } catch (_) {}
 
@@ -153,7 +153,7 @@ module.exports = [
                         text: `🎉 *¡Felicidades, han ganado!*\n\n` +
                               `👑 *Adivinado por:* ${winnerTag}\n` +
                               `📝 *La palabra era:* *${palabraFinal}*\n` +
-                              `💰 *Premio de partida:* +$350 monedas | ⚡ +150 EXP\n\n` +
+                              `💰 *Premio de partida:* +$350 monedas (al banco) | ⚡ +150 EXP\n\n` +
                               `_Unknown Codexツ</>_`,
                         mentions: [m.sender]
                     }, { quoted: m });
@@ -175,7 +175,7 @@ module.exports = [
                           `📝 *${mostrar}*\n\n` +
                           `❤️ Intentos restantes: *${juego.intentos}*\n` +
                           `🔤 Letras usadas: *${juego.letrasUsadas.join(', ') || 'Ninguna'}*\n` +
-                          `💰 *Premio de partida:* +$350 monedas | ⚡ +150 EXP\n\n` +
+                          `💰 *Premio de partida:* +$350 monedas (al banco) | ⚡ +150 EXP\n\n` +
                           `Adivina con *.ahorcado [letra]* o *.ahorcado [palabra]*\n\n` +
                           `_Unknown Codexツ</>_`
                 }, { quoted: m });
@@ -194,7 +194,7 @@ module.exports = [
                           `📝 *${mostrar}*\n` +
                           `❤️ Intentos restantes: *${juego.intentos}*\n` +
                           `🔤 Letras usadas: *${juego.letrasUsadas.join(', ') || 'Ninguna'}*\n` +
-                          `💰 *Premio de partida:* +$350 monedas | ⚡ +150 EXP\n\n` +
+                          `💰 *Premio de partida:* +$350 monedas (al banco) | ⚡ +150 EXP\n\n` +
                           `👉 Responde con *.ahorcado [letra]* o escribe *.ahorcado stop* para reiniciar.`
                 }, { quoted: m });
             }
@@ -215,7 +215,7 @@ module.exports = [
                       `📝 *${mostrar}*\n` +
                       `📏 Longitud: *${palabra.length}* letras\n` +
                       `❤️ Intentos: *6*\n` +
-                      `💰 *Premio de partida:* +$350 monedas | ⚡ +150 EXP\n\n` +
+                      `💰 *Premio de partida:* +$350 monedas (al banco) | ⚡ +150 EXP\n\n` +
                       `💡 Adivina con *.ahorcado [letra]* o *.ahorcado [palabra]*\n` +
                       `_Ejemplo:_ \`.ahorcado a\` o \`.ahorcado ${palabra.slice(0, 3)}...\`\n` +
                       `_(Escribe *.ahorcado stop* para cancelar)_\n\n` +

@@ -94,6 +94,10 @@ console.log('🧪 [TEST] Iniciando pruebas del sistema de reconexión controlada
     assert(connectionManager.stabilityTimer !== null, 'Debe configurar el temporizador de estabilidad');
 
     connectionManager.cancelPendingReconnect();
+    if (connectionManager.stabilityTimer) {
+        clearTimeout(connectionManager.stabilityTimer);
+        connectionManager.stabilityTimer = null;
+    }
     console.log('  ✅ Prueba 5 superada: Gestión de estabilidad y restablecimiento de contadores.');
 }
 

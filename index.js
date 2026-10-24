@@ -382,6 +382,23 @@ const startBot = async () => {
         } catch (_) {}
     });
 
+    sock.ev.on('contacts.update', (updates) => {
+        try {
+            if (Array.isArray(updates)) {
+                for (const c of updates) {
+                    const cJid = c.id || c.jid;
+                    const cName = c.notify || c.verifiedName || c.name;
+                    if (cJid && cName) userNames.set(cJid, cName);
+                    if (c && c.lid && cName) userNames.set(c.lid, cName);
+                    if (c && c.lid && cJid) userNames.linkLid(c.lid, cJid);
+                    if (c && c.lid && database.isOwner(c.id || c.jid, sock)) {
+                        database.registerOwnerLid(c.lid);
+                    }
+                }
+            }
+        } catch (_) {}
+    });
+
         connectionManager.isStarting = false;
         connectionManager.activeSock = sock;
     } catch (err) {
