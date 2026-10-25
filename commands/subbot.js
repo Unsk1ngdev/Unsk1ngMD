@@ -186,7 +186,9 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
             try {
                 if (chatUpdate.type !== 'notify') return;
                 for (const rawMsg of chatUpdate.messages) {
-                    await handleMessage(subSock, rawMsg);
+                    handleMessage(subSock, rawMsg).catch(err => {
+                        logger.error(`[SUB-BOT +${cleanNumber}] Error procesando mensaje:`, err.message);
+                    });
                 }
             } catch (err) {
                 logger.error(`[SUB-BOT +${cleanNumber}] Error procesando mensaje:`, err.message);

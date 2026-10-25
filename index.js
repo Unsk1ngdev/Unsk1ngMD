@@ -337,7 +337,11 @@ const startBot = async () => {
                 const isSpam = await antispamMiddleware(sock, rawMsg);
                 if (isSpam) continue;
 
-                await handleMessage(sock, rawMsg);
+                // Despachar handleMessage de forma concurrente para evitar que un comando pesado
+                // (descargas, conversiones o IA) congele o retrase la respuesta a mensajes y comandos posteriores
+                handleMessage(sock, rawMsg).catch(err => {
+                    logger.error('Error procesando handleMessage:', err);
+                });
             }
         } catch (err) {
             logger.error('Error procesando messages.upsert:', err);
