@@ -337,6 +337,8 @@ module.exports = {
 │ 🔹 *${prefix}reiniciar* - Reinicia el proceso del bot (Owner). Ej: \`${prefix}reiniciar\`
 │ 🔹 *${prefix}banear* [@usuario/num] - Banea del bot y gestiona lista negra (Owner). Ej: \`${prefix}banear @user\`
 │ 🔹 *${prefix}desbanear* [@usuario/num] - Remueve ban de la lista negra (Owner). Ej: \`${prefix}desbanear @user\`
+│ 🔹 *${prefix}mute* [@usuario/num] [minutos] - Silencia al usuario en el bot (Owner). Ej: \`${prefix}mute @user 10\`
+│ 🔹 *${prefix}unmute* [@usuario/num] - Quita el silencio al usuario (Owner). Ej: \`${prefix}unmute @user\`
 │ 🔹 *${prefix}addowner* [número] - Otorga rango de Dueño y VIP permanente (Owner). Ej: `${prefix}addowner 18494509905`
 │ 🔹 *${prefix}bangroup* [motivo] - Suspende el uso del bot en el grupo (Owner). Ej: `${prefix}bangroup`
 │ 🔹 *${prefix}unbangroup* - Reactiva el uso del bot en el grupo suspendido (Owner). Ej: `${prefix}unbangroup`
