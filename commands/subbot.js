@@ -10,10 +10,15 @@ const fs = require('fs-extra');
 const logger = require('../lib/logger');
 const { handleMessage } = require('../handlers/messageHandler');
 const { handleGroupUpdate } = require('../handlers/groupHandler');
+const recentMessagesManager = require('../lib/recentMessages');
 
 // Mapa global de sub-bots activos en memoria
 global.subBots = global.subBots || new Map();
 global.activeSubBots = global.subBots; // Compatibilidad retroactiva
+
+// Control de reintentos por sub-bot para evitar bucles infinitos y saturación de la terminal
+const subBotRetries = new Map();
+const MAX_SUBBOT_RETRIES = 5;
 
 /**
  * Inicializa y administra el socket de un sub-bot
@@ -60,8 +65,9 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
             markOnlineOnConnect: true,
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 0,
-            keepAliveIntervalMs: 10000,
-            getMessage: async () => ({ conversation: '' })
+            keepAliveIntervalMs: 15000,
+            // Recuperación de mensajes reales o undefined para evitar tormentas de reintentos
+            getMessage: async (key) => recentMessagesManager.getMessage(key)
         });
 
         // 4. Guardar credenciales obligatoriamente
@@ -72,6 +78,9 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
             const { connection, lastDisconnect } = update;
 
             if (connection === 'open') {
+                // Conexión exitosa: restablecer contador de reintentos
+                subBotRetries.delete(cleanNumber);
+
                 global.subBots.set(cleanNumber, {
                     sock: subSock,
                     connectedAt: Date.now(),
@@ -80,9 +89,10 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
 
                 logger.success(`[SUB-BOT +${cleanNumber}] ✅ ¡Sub-bot vinculado y conectado exitosamente!`);
 
-                if (sock && chatJid) {
+                const notifySock = global.mainSock || sock;
+                if (notifySock && chatJid) {
                     try {
-                        await sock.sendMessage(chatJid, {
+                        await notifySock.sendMessage(chatJid, {
                             text: `✅ *¡Sub-bot vinculado y conectado exitosamente!*\n\n` +
                                   `🤖 *Número:* +${cleanNumber}\n` +
                                   `⚡ Tu sub-bot ya está operativo y responderá a todos los comandos del sistema (.ia, .info, descargas, etc.).`
@@ -99,14 +109,16 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
 
                 logger.warn(`[SUB-BOT +${cleanNumber}] Conexión cerrada. Código de estado: ${statusCode || 'desconocido'}`);
 
-                // Limpiar listeners del sub-bot para evitar fugas de memoria
+                // Limpieza exhaustiva de listeners y socket para prevenir fugas de memoria
                 try {
                     subSock.ev.removeAllListeners();
                     if (subSock.ws && typeof subSock.ws.close === 'function') subSock.ws.close();
+                    if (typeof subSock.end === 'function') subSock.end(undefined);
                 } catch (_) {}
 
                 if (isLoggedOut || isForbidden) {
                     logger.error(`[SUB-BOT +${cleanNumber}] Sesión invalidada o cerrada desde el dispositivo. Eliminando datos...`);
+                    subBotRetries.delete(cleanNumber);
                     global.subBots.delete(cleanNumber);
                     try {
                         fs.removeSync(sessionDir);
@@ -116,21 +128,55 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
                         } catch (_) {}
                     }
 
-                    if (sock && chatJid) {
+                    const notifySock = global.mainSock || sock;
+                    if (notifySock && chatJid) {
                         try {
-                            await sock.sendMessage(chatJid, {
+                            await notifySock.sendMessage(chatJid, {
                                 text: `⚠️ *[SUB-BOT DESCONECTADO]*\nLa sesión de +${cleanNumber} fue cerrada o invalidada en WhatsApp.`
                             });
                         } catch (_) {}
                     }
                 } else if (isConflict) {
+                    subBotRetries.delete(cleanNumber);
                     logger.warn(`[SUB-BOT +${cleanNumber}] Conexión reemplazada por otra instancia activa. Deteniendo reconexión.`);
+                } else if (!state.creds.registered) {
+                    subBotRetries.delete(cleanNumber);
+                    global.subBots.delete(cleanNumber);
+                    logger.warn(`[SUB-BOT +${cleanNumber}] Sesión no registrada. Cancelando reconexión automática para evitar bucles.`);
                 } else {
-                    // Reconexión automática controlada ante desconexión temporal de red
-                    logger.info(`[SUB-BOT +${cleanNumber}] Reconectando automáticamente en 5 segundos...`);
+                    // Reconexión automática con Exponential Backoff y tope máximo de reintentos
+                    const currentRetries = (subBotRetries.get(cleanNumber) || 0) + 1;
+                    if (currentRetries > MAX_SUBBOT_RETRIES) {
+                        subBotRetries.delete(cleanNumber);
+                        global.subBots.delete(cleanNumber);
+                        logger.error(`[SUB-BOT +${cleanNumber}] Se superó el límite de ${MAX_SUBBOT_RETRIES} reintentos consecutivos. Reconexión cancelada.`);
+
+                        const notifySock = global.mainSock || sock;
+                        if (notifySock && chatJid) {
+                            try {
+                                await notifySock.sendMessage(chatJid, {
+                                    text: `⚠️ *[SUB-BOT]* La reconexión automática para *+${cleanNumber}* fue detenida tras alcanzar el límite de reintentos.`
+                                });
+                            } catch (_) {}
+                        }
+                        return;
+                    }
+
+                    subBotRetries.set(cleanNumber, currentRetries);
+                    const delayMs = Math.min(5000 * Math.pow(2, currentRetries - 1), 60000);
+                    logger.warn(`[SUB-BOT +${cleanNumber}] Reintentando conexión en ${(delayMs / 1000).toFixed(0)}s (Intento ${currentRetries}/${MAX_SUBBOT_RETRIES})...`);
+
                     setTimeout(() => {
-                        createSubBotSocket({ cleanNumber, sock, chatJid, isReconnect: true });
-                    }, 5000);
+                        // Verificar que no haya sido cancelado o detenido mientras esperaba
+                        if (subBotRetries.has(cleanNumber)) {
+                            createSubBotSocket({
+                                cleanNumber,
+                                sock: global.mainSock || sock,
+                                chatJid,
+                                isReconnect: true
+                            });
+                        }
+                    }, delayMs);
                 }
             }
         });
@@ -157,8 +203,9 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
 
         // 7. Solicitud Segura del Pairing Code si no está registrado
         if (!subSock.authState.creds.registered && !isReconnect) {
-            if (sock && chatJid) {
-                await sock.sendMessage(chatJid, {
+            const notifySock = global.mainSock || sock;
+            if (notifySock && chatJid) {
+                await notifySock.sendMessage(chatJid, {
                     text: `⏳ *Generando código de emparejamiento para +${cleanNumber}... Espera 3 segundos.*`
                 });
             }
@@ -186,13 +233,13 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
 ┃ ⏱️ *Expira en aproximadamente 60 segundos.*
 ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣`;
 
-                if (sock && chatJid) {
-                    await sock.sendMessage(chatJid, { text: pairingMessage });
+                if (notifySock && chatJid) {
+                    await notifySock.sendMessage(chatJid, { text: pairingMessage });
                 }
             } catch (codeErr) {
                 logger.error(`[SUB-BOT +${cleanNumber}] Error solicitando pairing code:`, codeErr);
-                if (sock && chatJid) {
-                    await sock.sendMessage(chatJid, {
+                if (notifySock && chatJid) {
+                    await notifySock.sendMessage(chatJid, {
                         text: `❌ Error al solicitar el código de emparejamiento para +${cleanNumber}.\nDetalle: ${codeErr.message || 'Error de conexión con WhatsApp'}`
                     });
                 }
@@ -202,8 +249,9 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
         return subSock;
     } catch (err) {
         logger.error(`[SUB-BOT +${cleanNumber}] Error inicializando socket:`, err);
-        if (sock && chatJid && !isReconnect) {
-            await sock.sendMessage(chatJid, {
+        const notifySock = global.mainSock || sock;
+        if (notifySock && chatJid && !isReconnect) {
+            await notifySock.sendMessage(chatJid, {
                 text: `❌ Error al inicializar el Sub-Bot: ${err.message || 'Error desconocido'}`
             });
         }
@@ -245,9 +293,15 @@ const stopSubBot = async (m, target) => {
         return await m.reply(`❌ No hay un Sub-Bot activo con el número +${targetNum}.`);
     }
 
-    try {
-        existing.sock.end(new Error('Detenido manualmente por usuario'));
-    } catch (_) {}
+    subBotRetries.delete(targetNum);
+
+    if (existing.sock) {
+        try {
+            existing.sock.ev.removeAllListeners();
+            if (existing.sock.ws && typeof existing.sock.ws.close === 'function') existing.sock.ws.close();
+            if (typeof existing.sock.end === 'function') existing.sock.end(new Error('Detenido manualmente'));
+        } catch (_) {}
+    }
 
     global.subBots.delete(targetNum);
     const sessionDir = path.join(process.cwd(), 'subbots', `session_${targetNum}`);

@@ -217,8 +217,12 @@ const startBot = async () => {
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 25000,
         defaultQueryTimeoutMs: 60000,
-        getMessage: async () => ({ conversation: '' })
+        // Recuperación de mensajes reales o undefined para evitar tormentas de reintentos
+        getMessage: async (key) => recentMessagesManager.getMessage(key)
     });
+
+    // Exponer el socket principal de forma global para sub-bots y comandos
+    global.mainSock = sock;
 
     // 5. Manejo del código de emparejamiento interactivo
     if (!isSessionActive && authMethod === '2' && !sock.authState.creds.registered) {
@@ -252,6 +256,8 @@ const startBot = async () => {
         }
 
         if (connection === 'close') {
+            if (global.mainSock === sock) global.mainSock = null;
+
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const evalResult = connectionManager.evaluateDisconnection(statusCode);
 
@@ -286,6 +292,7 @@ const startBot = async () => {
                 startBot();
             });
         } else if (connection === 'open') {
+            global.mainSock = sock;
             connectionManager.onConnectionOpen(sock);
             renderBanner('Conectado y Operativo ⚡');
             logger.success(`¡Bot conectado exitosamente como ${sock.user.name || sock.user.id}!`);
@@ -420,13 +427,51 @@ const startBot = async () => {
     return sock;
 };
 
-// Manejo robusto de excepciones no capturadas para mantener el servidor siempre activo
+// Manejo robusto y resiliente de excepciones para mantener el servidor siempre activo sin saturar la terminal
+const isTransientError = (err) => {
+    const msg = String(err?.message || err?.stack || err || '').toLowerCase();
+    return msg.includes('connection closed') ||
+           msg.includes('timed out') ||
+           msg.includes('econnreset') ||
+           msg.includes('enotfound') ||
+           msg.includes('epipe') ||
+           msg.includes('rate-overlimit') ||
+           msg.includes('qr refs attempts ended') ||
+           msg.includes('bad mac') ||
+           msg.includes('session error') ||
+           msg.includes('sessionerror') ||
+           msg.includes('stream errored') ||
+           msg.includes('conflict');
+};
+
+let lastErrorPrintTime = 0;
+let throttledCount = 0;
+
+const logResilientError = (label, err) => {
+    const msg = err?.message || String(err);
+    if (isTransientError(err)) {
+        const now = Date.now();
+        if (now - lastErrorPrintTime > 6000) {
+            if (throttledCount > 0) {
+                logger.warn(`⚠️ [RED]: ${throttledCount} advertencias de red adicionales silenciadas para proteger la fluidez del bot.`);
+                throttledCount = 0;
+            }
+            logger.warn(`⚠️ [SOCKET/RED RESILIENTE]: ${msg}`);
+            lastErrorPrintTime = now;
+        } else {
+            throttledCount++;
+        }
+        return;
+    }
+    logger.error(`${label}:`, err?.stack || msg);
+};
+
 process.on('uncaughtException', (err) => {
-    logger.error('💥 [UNCAUGHT EXCEPTION]:', err?.stack || err?.message || err);
+    logResilientError('💥 [UNCAUGHT EXCEPTION]', err);
 });
 
 process.on('unhandledRejection', (reason) => {
-    logger.error('⚠️ [UNHANDLED REJECTION]:', reason?.stack || reason?.message || reason);
+    logResilientError('⚠️ [UNHANDLED REJECTION]', reason);
 });
 
 process.on('SIGINT', () => {
@@ -441,4 +486,3 @@ process.on('SIGTERM', () => {
 
 // Arrancar el bot
 startBot();
-

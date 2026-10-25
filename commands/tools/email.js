@@ -218,3 +218,4 @@ module.exports = {
         await sock.sendMessage(m.chat, { text: report }, { quoted: m });
     }
 };
+
