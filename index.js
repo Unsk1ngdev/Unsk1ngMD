@@ -123,21 +123,16 @@ const startBot = async () => {
     global.akinatorSessions = global.akinatorSessions || new Map();
     global.spamTracker = global.spamTracker || new Map();
 
-    // 3. Comprobación segura de variables de entorno (.env)
+    // 3. Comprobación limpia de variables de entorno (.env)
     const envPath = path.join(process.cwd(), '.env');
     if (!fs.existsSync(envPath)) {
-        console.warn(chalk.yellow.bold('\n⚠️ [CONFIGURACIÓN] Archivo .env no encontrado en la raíz.'));
-        console.warn(chalk.yellow('Variables recomendadas:'));
-        console.warn(chalk.white('  • GROQ_API_KEY (Para IA y enciclopedia .wiki)'));
-        console.warn(chalk.white('  • OWNER_NUMBER (Tu número internacional, ej: 584160666286)'));
-        console.warn(chalk.white('  • PREFIX       (Prefijo de comandos, por defecto: .)'));
-        console.warn(chalk.cyan('El bot continuará iniciando con valores predeterminados.\n'));
+        logger.info('Iniciando con configuración predeterminada.');
     }
 
-    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
-        console.warn(chalk.yellow('⚠️ [AVISO]: GROQ_API_KEY no detectada en .env. Activando fallback gratuito (Pollinations AI) para funciones de IA.'));
+    if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== '') {
+        logger.info('Motor de IA: Groq Cloud activo.');
     } else {
-        console.log(chalk.green('✅ [GROQ]: API Key detectada correctamente.'));
+        logger.info('Motor de IA: Fallback gratuito (Pollinations AI) activo.');
     }
 
     // 4. Iniciar verificación y preparación de yt-dlp en segundo plano (sin retrasar el arranque)
