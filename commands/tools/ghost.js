@@ -6,12 +6,13 @@ module.exports = {
     name: 'ghost',
     alias: ['fantasma', 'ghostmode', 'modofantasma'],
     category: 'herramientas',
-    desc: 'Simula desconexión real de WhatsApp durante un tiempo determinado (solo owner o premium)',
-    usage: '.ghost [segundos] | .ghost stop',
+    desc: 'Simula desconexión total de WhatsApp de forma indefinida hasta usar .ghost stop (solo owner o premium)',
+    usage: '.ghost | .ghost stop',
 
-    execute: async ({ sock, m, args, isOwner }) => {
+    execute: async ({ sock, m, args, isOwner, prefix }) => {
         const jid = m.chat || m.key.remoteJid;
         const sender = m.sender;
+        const pfx = prefix || '.';
 
         if (!isOwner && !premium.isPremium(sender)) {
             return await sock.sendMessage(jid, {
@@ -19,14 +20,13 @@ module.exports = {
             }, { quoted: m });
         }
 
-        const ownerJid = '18494509905@s.whatsapp.net';
         const subCmd = (args[0] || '').toLowerCase().trim();
 
-        // ── Detener ghost mode ──
+        // ── 1. Detener ghost mode (.ghost stop / .ghost off / .ghost desactivar) ──
         if (subCmd === 'stop' || subCmd === 'desactivar' || subCmd === 'off') {
             if (!global.ghostMode) {
                 return await sock.sendMessage(jid, {
-                    text: '⚠️ El modo ghost no está activo.'
+                    text: '⚠️ *El modo ghost no está activo en este momento.*'
                 }, { quoted: m });
             }
 
@@ -36,70 +36,48 @@ module.exports = {
                 global.ghostTimer = null;
             }
 
-            // Volver a conectarse normalmente
+            // Volver a aparecer disponible en WhatsApp
             try {
                 await sock.sendPresenceUpdate('available');
             } catch (_) {}
 
             return await sock.sendMessage(jid, {
-                text: '👻 *Modo Ghost desactivado*\n\n' +
-                      '✅ Bot visible nuevamente.\n\n' +
-                      '_Unknown Codexツ</>_'
+                text: `👻 *[MODO GHOST DESACTIVADO]*\n\n` +
+                      `✅ *Estado:* Bot visible y activo nuevamente.\n` +
+                      `⚡ Todas las funciones y comandos responden con normalidad.\n\n` +
+                      `_Unknown Codexツ</>_`
             }, { quoted: m });
         }
 
+        // ── 2. Comprobar si ya está activo ──
         if (global.ghostMode) {
             return await sock.sendMessage(jid, {
-                text: '⚠️ El modo ghost ya está activo.\nUsa *.ghost stop* para desactivarlo.'
+                text: `⚠️ *El modo ghost ya está activo.*\n\n` +
+                      `📵 El bot está simulando desconexión total.\n` +
+                      `Para desactivarlo usa: *${pfx}ghost stop*`
             }, { quoted: m });
         }
 
-        const segundos = parseInt(args[0], 10) || 60;
-
-        if (segundos < 5 || segundos > 3600) {
-            return await sock.sendMessage(jid, {
-                text: '❌ El tiempo debe ser entre *5* y *3600* segundos.\n' +
-                      'Ejemplo: *.ghost 120*'
-            }, { quoted: m });
-        }
-
-        // Activar ghost mode global
+        // ── 3. Activar ghost mode indefinido (sin tiempo de expiración) ──
         global.ghostMode = true;
 
-        // Aparecer desconectado
+        if (global.ghostTimer) {
+            clearTimeout(global.ghostTimer);
+            global.ghostTimer = null;
+        }
+
+        // Aparecer desconectado ante WhatsApp
         try {
             await sock.sendPresenceUpdate('unavailable');
         } catch (_) {}
 
-        await sock.sendMessage(jid, {
-            text: `👻 *Modo Ghost activado*\n\n` +
-                  `⏱️ Duración: *${segundos} segundos*\n` +
-                  `🔕 El bot no responderá nada.\n` +
-                  `📵 Aparecerás desconectado.\n\n` +
-                  `Usa *.ghost stop* para salir antes.\n\n` +
+        return await sock.sendMessage(jid, {
+            text: `👻 *[MODO GHOST ACTIVADO]*\n\n` +
+                  `📵 *Estado:* Simulación de desconexión total activa.\n` +
+                  `🔕 *Comportamiento:* El bot no responderá a ningún comando ni mensaje en ningún chat o grupo.\n` +
+                  `⏳ *Duración:* Indefinida (funcionará hasta que ejecutes *${pfx}ghost stop*).\n\n` +
+                  `🛑 *Para salir del modo ghost:* Usa *${pfx}ghost stop*\n\n` +
                   `_Unknown Codexツ</>_`
         }, { quoted: m });
-
-        // Timer para salir automáticamente
-        if (global.ghostTimer) clearTimeout(global.ghostTimer);
-        global.ghostTimer = setTimeout(async () => {
-            global.ghostMode = false;
-            global.ghostTimer = null;
-
-            // Volver a conectarse
-            try {
-                await sock.sendPresenceUpdate('available');
-            } catch (_) {}
-
-            // Notificar al owner en privado
-            try {
-                await sock.sendMessage(ownerJid, {
-                    text: `👻 *Modo Ghost finalizado*\n\n` +
-                          `⏱️ Duración: *${segundos} segundos*\n` +
-                          `✅ Bot visible y activo nuevamente.\n\n` +
-                          `_Unknown Codexツ</>_`
-                });
-            } catch (_) {}
-        }, segundos * 1000);
     }
 };

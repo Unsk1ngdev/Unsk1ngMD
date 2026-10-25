@@ -1,6 +1,7 @@
 const { serialize } = require('../lib/serialize');
 const { getCommand } = require('./commandLoader');
 const database = require('../lib/database');
+const premium = require('../lib/premium');
 const groupSettings = require('../lib/groupSettings');
 const acertijoManager = require('../lib/acertijo');
 const triviaManager = require('../lib/trivia');
@@ -72,12 +73,27 @@ const handleMessage = async (sock, rawMsg) => {
             return;
         }
 
-        // Modo Ghost: simular desconexión e ignorar todo excepto .ghost stop
+        // Modo Ghost: simular desconexión e ignorar absolutamente todo excepto .ghost stop
         if (global.ghostMode) {
             const prefix = database.getPrefix();
             const textBody = (m.body || '').trim().toLowerCase();
-            const isGhostCommand = textBody.startsWith(`${prefix}ghost`) || textBody.startsWith(`${prefix}fantasma`);
-            if (!isGhostCommand) {
+            const isGhostStop = textBody.startsWith(`${prefix}ghost stop`) ||
+                                textBody.startsWith(`${prefix}ghost off`) ||
+                                textBody.startsWith(`${prefix}ghost desactivar`) ||
+                                textBody.startsWith(`${prefix}fantasma stop`) ||
+                                textBody.startsWith(`${prefix}fantasma off`) ||
+                                textBody.startsWith(`${prefix}fantasma desactivar`);
+
+            if (!isGhostStop) {
+                return;
+            }
+
+            const isAuthorized = database.isOwner(m.sender, sock) ||
+                                 database.isOwner(m.key?.participant, sock) ||
+                                 Boolean(m.fromMe) ||
+                                 premium.isPremium(m.sender);
+
+            if (!isAuthorized) {
                 return;
             }
         }
@@ -100,6 +116,22 @@ const handleMessage = async (sock, rawMsg) => {
                 } catch (_) {}
             }
             if (!isOwner) return;
+        }
+
+        // Si el grupo está baneado (bangroup), ignorar completamente todas las interacciones del grupo
+        // a menos que sea un Owner ejecutando el comando de desbaneo (.unbangroup)
+        if (m.isGroup && bannedManager.isGroupBanned(m.chat)) {
+            const prefix = database.getPrefix();
+            const textBody = (m.body || '').trim().toLowerCase();
+            const isUnbanCmd = textBody.startsWith(`${prefix}unbangroup`) ||
+                               textBody.startsWith(`${prefix}unbangp`) ||
+                               textBody.startsWith(`${prefix}desbaneargrupo`) ||
+                               textBody.startsWith(`${prefix}unbangk`) ||
+                               textBody.startsWith(`${prefix}unbanchat`);
+
+            if (!isUnbanCmd || !isOwner) {
+                return;
+            }
         }
 
         // Monitoreo de respuestas interactivas de .verdadoreto

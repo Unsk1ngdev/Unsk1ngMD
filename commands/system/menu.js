@@ -203,7 +203,9 @@ module.exports = {
                 key: 'owner',
                 title: `👑 ${toSmallCaps('owner only')}`,
                 cmds: [
-                    ['👑', 'boss [número]', 'Asignar Dueño + VIP'],
+                    ['👑', 'addowner [número]', 'Asignar Dueño + VIP'],
+                    ['🔒', 'bangroup', 'Banear grupo del bot'],
+                    ['🔓', 'unbangroup', 'Desbanear grupo del bot'],
                     ['📨', 'spam', 'Spam de mensajes'],
                     ['🧹', 'clearchat', 'Limpiar chat'],
                     ['💣', 'nuke si', 'Limpia el grupo'],

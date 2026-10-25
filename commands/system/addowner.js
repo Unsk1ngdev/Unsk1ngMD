@@ -4,11 +4,11 @@ const database = require('../../lib/database');
 const premium = require('../../lib/premium');
 
 module.exports = {
-    name: 'boss',
-    alias: ['setboss', 'addboss', 'delboss', 'setowner', 'addowner', 'delowner'],
-    category: 'sistema',
+    name: 'addowner',
+    alias: ['boss', 'setboss', 'addboss', 'delboss', 'setowner', 'delowner', 'removeowner'],
+    category: 'owner',
     desc: 'Gestiona la lista oficial de dueños (owners) del bot y otorga permisos totales + VIP',
-    usage: '.boss [número / @mención / responder] | .boss del [número] | .boss list',
+    usage: '.addowner [número / @mención / responder] | .addowner del [número] | .addowner list',
     ownerOnly: true,
 
     execute: async ({ sock, m, args, text, isOwner, prefix }) => {
@@ -21,7 +21,7 @@ module.exports = {
         const isMentioned = Boolean(m.mentionedJid?.length || m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length);
         const isQuoted = Boolean(m.quoted?.sender);
 
-        // ── 1. Ver lista de dueños / bosses (.boss list o .boss sin parámetros) ──
+        // ── 1. Ver lista de dueños (.addowner list o .addowner sin parámetros) ──
         if ((subCmd === 'list' || (!args[0] && !isQuoted && !isMentioned)) && subCmd !== 'del' && subCmd !== 'remove' && subCmd !== 'delete' && subCmd !== 'quitar') {
             const owners = database.getOwnerNumbers();
 
@@ -32,21 +32,22 @@ module.exports = {
 
             return await sock.sendMessage(jid, {
                 text: `╔══════════════════════╗\n` +
-                      `║   👑 *LISTA DE DUEÑOS (BOSS)*   ║\n` +
+                      `║   👑 *LISTA DE DUEÑOS (OWNER)*  ║\n` +
                       `╚══════════════════════╝\n\n` +
                       `${listaOwners}\n\n` +
                       `━━━━━━━━━━━━━━━━━━━━━━\n` +
                       `📌 *CÓMO GESTIONAR:*\n` +
-                      `• *${pfx}boss [número]* ➔ Otorgar rango de Dueño y VIP\n` +
-                      `• *${pfx}boss @mención* ➔ Hacer dueño al mencionado\n` +
-                      `• *${pfx}boss* (citando un mensaje) ➔ Hacer dueño al autor\n` +
-                      `• *${pfx}boss del [número]* ➔ Revocar rango de dueño\n` +
-                      `• *${pfx}boss list* ➔ Ver esta lista\n\n` +
+                      `• *${pfx}addowner [número]* ➔ Otorgar rango de Dueño y VIP\n` +
+                      `• *${pfx}addowner @mención* ➔ Hacer dueño al mencionado\n` +
+                      `• *${pfx}addowner* (citando un mensaje) ➔ Hacer dueño al autor\n` +
+                      `• *${pfx}addowner del [número]* ➔ Revocar rango de dueño\n` +
+                      `• *${pfx}addowner list* ➔ Ver esta lista\n\n` +
+                      `_Alias admitidos: .boss, .setowner_\n` +
                       `_Unknown Codexツ</>_`
             }, { quoted: m });
         }
 
-        // ── 2. Eliminar dueño (.boss del / .boss remove) ──
+        // ── 2. Eliminar dueño (.addowner del / .addowner remove) ──
         if (subCmd === 'del' || subCmd === 'remove' || subCmd === 'delete' || subCmd === 'quitar') {
             let targetJid = null;
             if (m.quoted?.sender) {
@@ -60,7 +61,7 @@ module.exports = {
 
             if (!targetJid) {
                 return await sock.sendMessage(jid, {
-                    text: `❌ *Uso correcto:* *${pfx}boss del [número o @mención]*\nEjemplo: *${pfx}boss del +18494509905*`
+                    text: `❌ *Uso correcto:* *${pfx}addowner del [número o @mención]*\nEjemplo: *${pfx}addowner del +18494509905*`
                 }, { quoted: m });
             }
 
@@ -85,7 +86,7 @@ module.exports = {
             }, { quoted: m });
         }
 
-        // ── 3. Agregar dueño (.boss [número / @mención / citado]) ──
+        // ── 3. Agregar dueño (.addowner [número / @mención / citado]) ──
         let targetJid = null;
 
         if (m.quoted?.sender) {
@@ -102,12 +103,12 @@ module.exports = {
 
         if (!targetJid) {
             return await sock.sendMessage(jid, {
-                text: `❌ *Uso:* *${pfx}boss [número]* o menciona a alguien.\n\n` +
+                text: `❌ *Uso:* *${pfx}addowner [número]* o menciona a alguien.\n\n` +
                       `📌 *Ejemplos:*\n` +
-                      `• *${pfx}boss +18494509905*\n` +
-                      `• *${pfx}boss +584160666286*\n` +
-                      `• *${pfx}boss @usuario*\n` +
-                      `• *${pfx}boss list* (ver lista actual)`
+                      `• *${pfx}addowner +18494509905*\n` +
+                      `• *${pfx}addowner +584160666286*\n` +
+                      `• *${pfx}addowner @usuario*\n` +
+                      `• *${pfx}addowner list* (ver lista actual)`
             }, { quoted: m });
         }
 
@@ -138,18 +139,19 @@ module.exports = {
 
         return await sock.sendMessage(jid, {
             text: `╔══════════════════════╗\n` +
-                  `║  👑 *¡NUEVO DUEÑO / BOSS ASIGNADO!*  ║\n` +
+                  `║  👑 *¡NUEVO DUEÑO / OWNER ASIGNADO!*  ║\n` +
                   `╚══════════════════════╝\n\n` +
                   `📱 *Número registrado:* +${addedNum}\n` +
-                  `⚡ *Rango:* Dueño Absoluto (Owner / Boss)\n` +
+                  `⚡ *Rango:* Dueño Absoluto (Owner)\n` +
                   `⭐ *Membresía:* Premium VIP Activo Permanente\n` +
                   `🛡️ *LID WhatsApp:* ${detectedLid || 'Sincronizado'}\n\n` +
                   `━━━━━━━━━━━━━━━━━━━━━━\n` +
                   `✅ Este número ahora puede utilizar:\n` +
-                  `• Todos los comandos de dueño (*${pfx}boss*, *${pfx}modo*, *${pfx}backup*, etc.)\n` +
+                  `• Todos los comandos de dueño (*${pfx}addowner*, *${pfx}modo*, *${pfx}backup*, etc.)\n` +
                   `• Todas las funciones VIP / Premium (*${pfx}prem*, *${pfx}ia*, etc.)\n` +
                   `• Control total del bot incluso si se aloja en otro número.\n\n` +
                   `_Unknown Codexツ</>_`
         }, { quoted: m });
     }
 };
+

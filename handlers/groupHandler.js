@@ -4,6 +4,7 @@ const logger = require('../lib/logger');
 const groupSettings = require('../lib/groupSettings');
 const database = require('../lib/database');
 const despedidaManager = require('../lib/despedida');
+const bannedManager = require('../lib/banned');
 
 /**
  * Manejador de eventos de participantes de grupo (entradas, salidas, ascensos)
@@ -11,6 +12,11 @@ const despedidaManager = require('../lib/despedida');
 const handleGroupUpdate = async (sock, update) => {
     try {
         const { id, participants, action } = update;
+
+        // Si el grupo está baneado (bangroup), ignorar completamente eventos de grupo
+        if (id && bannedManager.isGroupBanned(id)) {
+            return;
+        }
 
         // Manejo de Despedida cuando alguien sale o es expulsado
         if (action === 'remove' || action === 'leave') {

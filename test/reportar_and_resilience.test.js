@@ -112,3 +112,4 @@ runAsyncTests().catch(err => {
     console.error('Error en pruebas asíncronas:', err);
     process.exit(1);
 });
+
