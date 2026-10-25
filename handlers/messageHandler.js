@@ -225,7 +225,7 @@ const handleMessage = async (sock, rawMsg) => {
             rankManager.increment(m.chat, m.sender);
 
             const cachedMeta = await getCachedGroupMetadata(sock, m.chat);
-            const perms = await checkGroupPermissions(sock, m.chat, m.sender, cachedMeta);
+            const perms = await checkGroupPermissions(sock, m.chat, m.sender, cachedMeta, m);
             groupMetadata = perms.groupMetadata;
             participants = perms.participants;
             groupAdmins = perms.groupAdmins;
@@ -552,11 +552,21 @@ const handleMessage = async (sock, rawMsg) => {
         }
 
         if (cmd.adminOnly && !isAdmin && !isOwner) {
-            return await m.reply('❌ Este comando es exclusivo para administradores.');
+            const freshPerms = await checkGroupPermissions(sock, m.chat, m.sender, null, m);
+            if (freshPerms.isSenderAdmin || database.isOwner(m.sender, sock) || database.isOwner(m.key?.participant, sock)) {
+                isAdmin = true;
+            } else {
+                return await m.reply('❌ Este comando es exclusivo para administradores del grupo.');
+            }
         }
 
         if (cmd.botAdminRequired && !isBotAdmin) {
-            return await m.reply('❌ Necesito ser administrador del grupo para cambiar la configuración.');
+            const freshPerms = await checkGroupPermissions(sock, m.chat, m.sender, null, m);
+            if (freshPerms.isBotAdmin) {
+                isBotAdmin = true;
+            } else {
+                return await m.reply('❌ El bot necesita ser administrador del grupo para ejecutar este comando.');
+            }
         }
 
         // Logger de Comandos en Consola (Terminal)
