@@ -139,20 +139,20 @@ module.exports = {
 
         // Avatar predeterminado por algoritmo oficial de Discord (según Snowflake ID)
         const defaultIndex = Number((snowflakeBig >> 22n) % 6n);
-        const defaultAvatarUrl = `https://cdn.discordapp.com/embed/avatars/${defaultIndex}.png`;
+        const defaultAvatarUrl = `https://cdn.discordapp.com/embed/avatars/${defaultIndex}.png?size=4096`;
 
         if (typeof m.react === 'function') {
             try { await m.react('🔍'); } catch (_) {}
         }
 
-        // 3. Intento de consulta a la API oficial de Discord si hay token configurado
+        // 3. Obtención del perfil real de Discord:
+        //    Paso 3A: Consultar API oficial de Discord si hay DISCORD_TOKEN configurado en .env
         const DISCORD_TOKEN = config.discordToken || process.env.DISCORD_TOKEN;
         let d = null;
-        let apiNotice = null;
 
         if (DISCORD_TOKEN) {
             const controller = new AbortController();
-            const timeoutTimer = setTimeout(() => controller.abort(), 7000);
+            const timeoutTimer = setTimeout(() => controller.abort(), 6000);
 
             try {
                 const res = await fetch(`https://discord.com/api/v10/users/${cleanId}`, {
@@ -174,21 +174,49 @@ module.exports = {
 
                 if (res.ok) {
                     d = await res.json();
-                } else if (res.status === 401) {
-                    apiNotice = 'Token de Discord en .env inválido o revocado (mostrando análisis autónomo)';
-                } else if (res.status === 429) {
-                    apiNotice = 'Límite de peticiones de Discord alcanzado (mostrando análisis autónomo)';
-                } else {
-                    apiNotice = `API Discord respondió con código ${res.status}`;
                 }
-            } catch (err) {
+            } catch (_) {
                 clearTimeout(timeoutTimer);
-                apiNotice = err.name === 'AbortError' ? 'Tiempo de espera con Discord agotado' : 'Conexión a la API de Discord no disponible';
+            }
+        }
+
+        //    Paso 3B: Si no hay token en .env o la API oficial no respondió,
+        //    consultar endpoint público de lookup para obtener foto y perfil real para todos
+        if (!d) {
+            const japiController = new AbortController();
+            const japiTimer = setTimeout(() => japiController.abort(), 6000);
+
+            try {
+                const japiRes = await fetch(`https://japi.rest/discord/v1/user/${cleanId}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Unsk1ngMD-WhatsAppBot/1.0'
+                    },
+                    signal: japiController.signal
+                });
+                clearTimeout(japiTimer);
+
+                if (japiRes.status === 404) {
+                    return await sock.sendMessage(jid, {
+                        text: `❌ No se encontró ningún usuario de Discord con el ID *${cleanId}*.\n\n` +
+                              `Verifica que el Snowflake copiado sea correcto.\n\n` +
+                              `_Unknown Codexツ</>_`
+                    }, { quoted: m });
+                }
+
+                if (japiRes.ok) {
+                    const japiJson = await japiRes.json();
+                    if (japiJson?.data && japiJson.data.id) {
+                        d = japiJson.data;
+                    }
+                }
+            } catch (_) {
+                clearTimeout(japiTimer);
             }
         }
 
         // ─────────────────────────────────────────────────────────────────
-        // 4A. CASO SIN PERFIL DE API (Modo Autónomo / Fallback Snowflake)
+        // 4A. CASO SIN PERFIL DE RED (Modo Forense Autónomo Offline)
         // ─────────────────────────────────────────────────────────────────
         if (!d) {
             const cardSections = [
@@ -198,7 +226,6 @@ module.exports = {
                 `┃ ✦ *Snowflake ID:* \`${cleanId}\``,
                 `┃ ✦ *Perfil Directo:* https://discord.com/users/${cleanId}`,
                 `┃ ✦ *Modo de Análisis:* ⚡ Matemática Forense Snowflake`,
-                apiNotice ? `┃ ✦ *Aviso de API:* ⚠️ ${apiNotice}` : null,
                 '┃',
                 '┃ 📅 ═〔 *CRONOLOGÍA DE REGISTRO* 〕═',
                 `┃ ✦ *Fecha Exacta:* ${dateStr}`,
@@ -215,12 +242,6 @@ module.exports = {
                 '┃ 🎨 ═〔 *APARIENCIA PREDETERMINADA* 〕═',
                 `┃ ✦ *Color Asignado:* Paleta Discord \`#${defaultIndex}\``,
                 `┃ ✦ *Avatar Predeterminado:* ${defaultAvatarUrl}`,
-                '┃',
-                '┃ 💡 ═〔 *¿DESEAS FOTO HD, BANNERS Y NITRO?* 〕═',
-                '┃ El bot puede consultar la API oficial completa si agregas un token:',
-                '┃ 1. Ingresa a: *discord.com/developers* y crea una App/Bot.',
-                '┃ 2. En la sección *Bot* copia el *Token*.',
-                '┃ 3. Agrégalo en tu archivo `.env`: `DISCORD_TOKEN="tu_token"`',
                 '┃',
                 '╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n_Unknown Codexツ</>_'
             ];
@@ -245,9 +266,9 @@ module.exports = {
         }
 
         // ─────────────────────────────────────────────────────────────────
-        // 4B. CASO CON PERFIL DE API DISCORD (Token Activo)
+        // 4B. CASO CON PERFIL REAL (Foto Real en Máxima Calidad 4096px HD)
         // ─────────────────────────────────────────────────────────────────
-        // Avatar de usuario (animado GIF o PNG) y enlaces HD
+        // Avatar de usuario en MÁXIMA CALIDAD (4096px HD o GIF animado)
         let avatarUrl = '';
         let avatarUrlHd = '';
         let isAvatarAnim = false;
@@ -255,18 +276,18 @@ module.exports = {
         if (d.avatar) {
             isAvatarAnim = d.avatar.startsWith('a_');
             const ext = isAvatarAnim ? 'gif' : 'png';
-            avatarUrl = `https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.${ext}?size=1024`;
-            avatarUrlHd = `https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.${ext}?size=4096`;
-            avatarTipo = isAvatarAnim ? '🎞️ GIF Animado (Exclusivo Nitro)' : '🖼️ Imagen Estática (PNG)';
+            avatarUrl = `https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.${ext}?size=4096`;
+            avatarUrlHd = avatarUrl;
+            avatarTipo = isAvatarAnim ? '🎞️ GIF Animado (Exclusivo Nitro)' : '🖼️ Imagen Estática Máxima Calidad (4096px HD)';
         } else {
-            const calculatedIndex = d.discriminator === '0'
-                ? defaultIndex
-                : (Number(d.discriminator) % 5);
-            avatarUrl = `https://cdn.discordapp.com/embed/avatars/${calculatedIndex}.png`;
+            const calculatedIndex = (d.discriminator && d.discriminator !== '0')
+                ? (Number(d.discriminator) % 5)
+                : defaultIndex;
+            avatarUrl = `https://cdn.discordapp.com/embed/avatars/${calculatedIndex}.png?size=4096`;
             avatarUrlHd = avatarUrl;
         }
 
-        // Banner de perfil (estático o animado)
+        // Banner de perfil en MÁXIMA CALIDAD (4096px HD o GIF animado)
         let bannerUrl = null;
         let bannerUrlHd = null;
         let isBannerAnim = false;
@@ -274,9 +295,9 @@ module.exports = {
         if (d.banner) {
             isBannerAnim = d.banner.startsWith('a_');
             const ext = isBannerAnim ? 'gif' : 'png';
-            bannerUrl = `https://cdn.discordapp.com/banners/${d.id}/${d.banner}.${ext}?size=1024`;
-            bannerUrlHd = `https://cdn.discordapp.com/banners/${d.id}/${d.banner}.${ext}?size=4096`;
-            bannerTipo = isBannerAnim ? '🎞️ GIF Animado (Exclusivo Nitro)' : '🖼️ Imagen Estática (PNG)';
+            bannerUrl = `https://cdn.discordapp.com/banners/${d.id}/${d.banner}.${ext}?size=4096`;
+            bannerUrlHd = bannerUrl;
+            bannerTipo = isBannerAnim ? '🎞️ GIF Animado (Exclusivo Nitro)' : '🖼️ Imagen Estática Máxima Calidad (4096px HD)';
         }
 
         // Color de acento / Banner color
@@ -380,10 +401,10 @@ module.exports = {
 
         const msg = cardSections.filter(Boolean).join('\n');
 
-        // Enviar con imagen del avatar si está disponible
+        // Enviar con imagen del avatar en máxima calidad si está disponible
         if (avatarUrl) {
             try {
-                const imgRes = await fetch(avatarUrl, { signal: AbortSignal.timeout(6000) });
+                const imgRes = await fetch(avatarUrl, { signal: AbortSignal.timeout(7000) });
                 if (imgRes.ok) {
                     const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
                     if (typeof m.react === 'function') await m.react('🎮');

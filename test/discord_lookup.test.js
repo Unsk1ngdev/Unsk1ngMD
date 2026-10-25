@@ -118,9 +118,70 @@ const createMockContext = () => {
         assert(sentText.includes(testSnowflake), 'Debe mostrar el Snowflake ID');
         assert(sentText.includes('2016'), 'Debe calcular correctamente el año 2016');
         assert(sentText.includes('Era Clásica / Primitiva'), 'Debe identificar la Era de Discord');
-        assert(sentText.includes('discord.com/developers'), 'Debe incluir la guía para administradores');
+        assert(!sentText.includes('discord.com/developers'), 'NO debe incluir la guía de desarrolladores ni pasos de configuración');
+        assert(!sentText.includes('archivo .env'), 'NO debe mencionar el archivo .env');
 
         console.log('  ✅ Prueba 5 superada: Modo autónomo Snowflake sin token ejecutado exitosamente con cálculo preciso.');
+    }
+
+    // 6. Prueba con resolución de perfil público (Avatar en 4096px HD sin token)
+    {
+        const oldFetch = global.fetch;
+        const testSnowflake = '155149108183695360';
+
+        // Mock fetch para simular respuesta exitosa de japi.rest y descarga de imagen
+        global.fetch = async (url) => {
+            if (url.includes('japi.rest')) {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        data: {
+                            id: testSnowflake,
+                            username: 'test_user',
+                            discriminator: '0',
+                            global_name: 'Test Global',
+                            avatar: '0123456789abcdef0123456789abcdef',
+                            banner: 'fedcba9876543210fedcba9876543210',
+                            public_flags: 4194304
+                        }
+                    })
+                };
+            }
+            if (url.includes('cdn.discordapp.com')) {
+                return {
+                    ok: true,
+                    status: 200,
+                    arrayBuffer: async () => Buffer.from('fake-image-bytes-4096')
+                };
+            }
+            return { ok: false, status: 500 };
+        };
+
+        const ctx = createMockContext();
+        await discordCmd.execute({
+            sock: ctx.sock,
+            m: ctx.m,
+            args: [testSnowflake],
+            text: testSnowflake,
+            isOwner: true
+        });
+
+        // Restaurar fetch
+        global.fetch = oldFetch;
+
+        assert(ctx.sentMessages.length > 0, 'Debe enviar mensaje con imagen y caption');
+        const sentMsg = ctx.sentMessages[0].content;
+        assert(sentMsg.image, 'Debe adjuntar la imagen de perfil');
+        assert(sentMsg.caption, 'Debe tener caption estructurado');
+        assert(sentMsg.caption.includes('@test_user'), 'Debe incluir el usuario');
+        assert(sentMsg.caption.includes('Test Global'), 'Debe incluir el nombre global');
+        assert(sentMsg.caption.includes('size=4096'), 'Debe incluir URL de imagen en calidad 4096px HD');
+        assert(sentMsg.caption.includes('Desarrollador Activo'), 'Debe mapear flags e insignias');
+        assert(!sentMsg.caption.includes('discord.com/developers'), 'NO debe incluir guía de configuración de bot');
+        assert(!sentMsg.caption.includes('archivo .env'), 'NO debe mencionar archivo .env');
+
+        console.log('  ✅ Prueba 6 superada: Perfil público con foto en máxima calidad 4096px HD verificado.');
     }
 
     console.log('🎉 [TEST] ¡Todas las pruebas de .discord pasaron exitosamente!');
