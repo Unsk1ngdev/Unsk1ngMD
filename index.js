@@ -149,13 +149,27 @@ const startBot = async () => {
 
     // 3. Preparar estado de autenticación multi-archivo
     fs.ensureDirSync(config.sessionDir);
-    const { state, saveCreds } = await useMultiFileAuthState(config.sessionDir);
     const credsFile = path.join(config.sessionDir, 'creds.json');
-    const isSessionActive = Boolean(
-        state?.creds?.registered ||
-        state?.creds?.me ||
-        (fs.existsSync(credsFile) && fs.statSync(credsFile).size > 100)
-    );
+    let isSessionRegistered = false;
+    if (fs.existsSync(credsFile)) {
+        try {
+            const rawCreds = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
+            isSessionRegistered = Boolean(rawCreds.registered);
+        } catch (_) {
+            isSessionRegistered = false;
+        }
+    }
+
+    // Si existen archivos de sesión pero NO está registrada (intento previo fallido, interrumpido o cancelado),
+    // limpiar la carpeta para evitar que WhatsApp rechace nuevos códigos por claves previas corruptas o desfasadas.
+    if (!isSessionRegistered && fs.existsSync(config.sessionDir)) {
+        try {
+            fs.emptyDirSync(config.sessionDir);
+        } catch (_) {}
+    }
+
+    const { state, saveCreds } = await useMultiFileAuthState(config.sessionDir);
+    const isSessionActive = Boolean(isSessionRegistered || state?.creds?.registered);
 
     let authMethod = global.authMethod || '1'; // 1 = QR, 2 = Pairing Code
     let pairingNumber = global.pairingNumber || '';
@@ -172,11 +186,11 @@ const startBot = async () => {
 
         if (authMethod === '2') {
             pairingNumber = await askQuestion(chalk.green.bold('Ingresa tu número de teléfono con código de país (ej: 18494509905): '));
-            pairingNumber = pairingNumber.replace(/[^0-9]/g, '');
+            pairingNumber = pairingNumber.replace(/[^0-9]/g, '').replace(/^0+/, '');
             global.pairingNumber = pairingNumber;
 
-            if (!pairingNumber || pairingNumber.length < 8) {
-                logger.error('Número de teléfono inválido. Reinicia el bot e intenta de nuevo.');
+            if (!pairingNumber || pairingNumber.length < 8 || pairingNumber.length > 16) {
+                logger.error('Número de teléfono inválido. Debe contener entre 8 y 16 dígitos numéricos sin símbolos ni ceros iniciales.');
                 process.exit(1);
             }
         } else {
@@ -209,7 +223,7 @@ const startBot = async () => {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
         },
-        browser: Browsers.macOS('Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false, // Fundamental: evita cargar historiales antiguos a la RAM
         generateHighQualityLinkPreview: false,
         markOnlineOnConnect: true,
@@ -223,16 +237,23 @@ const startBot = async () => {
     // Exponer el socket principal de forma global para sub-bots y comandos
     global.mainSock = sock;
 
-    // 5. Manejo del código de emparejamiento interactivo con reintentos (Optimizado para Termux / Redes móviles)
+    // 5. Manejo del código de emparejamiento interactivo (Sincronizado con el estado real del WebSocket)
     if (!isSessionActive && authMethod === '2' && !sock.authState.creds.registered && !global.pairingCodeDone) {
-        const tryRequestPairing = async (retryCount = 1) => {
-            // Dar tiempo inicial a que el websocket complete la apertura
-            await new Promise(res => setTimeout(res, retryCount === 1 ? 3000 : 4500));
-
-            if (sock.authState?.creds?.registered || global.pairingCodeDone) return;
-
+        (async () => {
             try {
-                logger.info(`[VINCULACIÓN] Solicitando código de emparejamiento (intento ${retryCount}/3) para: +${pairingNumber}...`);
+                // Esperar a que el WebSocket complete la apertura física
+                let waited = 0;
+                while ((!sock.ws || !sock.ws.isOpen) && waited < 12000) {
+                    await new Promise(res => setTimeout(res, 250));
+                    waited += 250;
+                }
+
+                // Pausa de 2.5s para permitir que el handshake Noise y el intercambio inicial concluyan
+                await new Promise(res => setTimeout(res, 2500));
+
+                if (sock.authState?.creds?.registered || global.pairingCodeDone) return;
+
+                logger.info(`[VINCULACIÓN] Solicitando código de emparejamiento para: +${pairingNumber}...`);
                 const code = await sock.requestPairingCode(pairingNumber);
                 if (code) {
                     global.pairingCodeDone = true;
@@ -248,17 +269,10 @@ const startBot = async () => {
                     console.log(chalk.cyan('👉 Abre WhatsApp > Dispositivos vinculados > Vincular con el número de teléfono e ingresa este código.\n'));
                 }
             } catch (err) {
-                if (retryCount < 3 && !sock.authState?.creds?.registered) {
-                    logger.warn(`[VINCULACIÓN] Reintentando generación de código por latencia (${err.message})...`);
-                    return tryRequestPairing(retryCount + 1);
-                } else {
-                    logger.error('Error al generar código de emparejamiento tras reintentos:', err.message);
-                    console.log(chalk.yellow('💡 En Termux: Comprueba tu conexión a datos/WiFi o reinicia el bot para reintentar.'));
-                }
+                logger.error('Error al generar código de emparejamiento:', err.message);
+                console.log(chalk.yellow('💡 Comprueba que tu número esté bien escrito y que tengas conexión de red estable.'));
             }
-        };
-
-        tryRequestPairing();
+        })();
     }
 
     // 6. Eventos de Conexión y Reconexión Automática Controlada
@@ -272,6 +286,12 @@ const startBot = async () => {
 
         if (connection === 'close') {
             if (global.mainSock === sock) global.mainSock = null;
+
+            // Si el socket se cerró antes de completar el emparejamiento en el teléfono,
+            // restablecer la bandera global para permitir generar un nuevo código limpio al reconectar.
+            if (!sock.authState?.creds?.registered) {
+                global.pairingCodeDone = false;
+            }
 
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const evalResult = connectionManager.evaluateDisconnection(statusCode);
