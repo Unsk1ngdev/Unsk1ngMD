@@ -2,7 +2,7 @@ const axios = require('axios');
 
 module.exports = {
     name: 'genimg',
-    alias: ['dalle', 'imagine', 'crearimagen'],
+    alias: ['dalle', 'imagine', 'crearimagen', 'flux'],
     category: 'herramientas',
     desc: 'Genera una imagen con Inteligencia Artificial a partir de una descripción',
     usage: '.genimg [descripción de la imagen]',

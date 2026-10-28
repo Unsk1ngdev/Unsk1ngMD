@@ -48,6 +48,31 @@ const handleMessage = async (sock, rawMsg) => {
         if (!rawMsg.message) return;
         if (rawMsg.key && rawMsg.key.remoteJid === 'status@broadcast') return;
 
+        // --- ANTIDELETE: Detección y revelación de mensajes borrados ---
+        const protoType = rawMsg.message?.protocolMessage?.type;
+        if (protoType === 0 || protoType === 'REVOKE' || protoType === 'revoke') {
+            const protoKey = rawMsg.message.protocolMessage?.key;
+            const chatJid = protoKey?.remoteJid || rawMsg.key?.remoteJid;
+            if (chatJid && groupSettings.getGroup(chatJid)?.antidelete) {
+                const cached = recentMessagesManager.getMessage(protoKey);
+                if (cached) {
+                    const participant = protoKey.participant || rawMsg.key?.participant || protoKey.remoteJid;
+                    const phone = participant ? participant.replace(/:.*@/, '@').split('@')[0] : 'Alguien';
+                    const deletedText = cached.conversation ||
+                                      cached.extendedTextMessage?.text ||
+                                      cached.imageMessage?.caption ||
+                                      cached.videoMessage?.caption || '';
+
+                    const notice = `🛡️ *[ANTIDELETE]* @${phone} eliminó este mensaje:\n\n${deletedText || '_[Mensaje multimedia / Sin texto]_'}\n\n_Unknown Codexツ</>_`;
+
+                    try {
+                        sock.sendMessage(chatJid, { text: notice, mentions: [participant] }).catch(() => {});
+                    } catch (_) {}
+                }
+            }
+            return;
+        }
+
         const m = serialize(sock, rawMsg);
         const hasMedia = Boolean(
             m.message?.imageMessage ||
@@ -296,6 +321,24 @@ const handleMessage = async (sock, rawMsg) => {
                         mentions: [m.sender]
                     });
                     return; // No procesar más el mensaje con enlace
+                }
+            }
+
+            // --- 2. FILTRO ANTIBADWORD (INSULTOS / PALABRAS OFENSIVAS) ---
+            const isAntibadwordActive = groupSettings.getGroup(m.chat)?.antibadword;
+            if (isAntibadwordActive && !isAdmin && !isOwner && m.body) {
+                const badWordsRegex = /\b(?:hdp|hijo\s*de\s*puta|malparido|gonorrea|maricon|mierda|estupido|idiota|imbecil|puta|prostituta|zorra|maldito|coño|coño\s*de\s*tu\s*madre|pendejo)\b/i;
+                if (badWordsRegex.test(m.body)) {
+                    try {
+                        await sock.sendMessage(m.chat, { delete: m.key });
+                    } catch (_) {}
+
+                    const userNum = m.sender ? m.sender.replace(/:.*@/, '@').split('@')[0] : 'usuario';
+                    await sock.sendMessage(m.chat, {
+                        text: `⚠️ @${userNum}, el filtro de malas palabras está activo en este grupo. Evita el vocabulario ofensivo.`,
+                        mentions: [m.sender]
+                    });
+                    return;
                 }
             }
 

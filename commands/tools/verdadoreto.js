@@ -64,7 +64,7 @@ const retosPicantes = [
 
 module.exports = {
     name: 'verdadoreto',
-    alias: ['vdr', 'truthordare', 'reto', 'verdad'],
+    alias: ['vdr', 'truthordare', 'reto', 'verdad', 'truth', 'dare'],
     category: 'juegos',
     desc: 'Juega al clásico verdad o reto con detección de respuestas y evidencia multimedia',
     usage: '.verdadoreto [verdad / reto / picante / stop]',

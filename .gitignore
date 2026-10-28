@@ -39,6 +39,7 @@ database/userNames.json
 database/backups/
 data/settings.json
 data/antilink.json
+data/warns.json
 # Preservar colecciones de juegos estáticos
 !data/acertijos.json
 !data/trivia.json

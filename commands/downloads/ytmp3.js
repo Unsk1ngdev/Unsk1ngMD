@@ -18,7 +18,7 @@ const MAX_DURATION_SECONDS = 15 * 60; // Límite máximo: 15 minutos
 
 module.exports = {
     name: 'ytmp3',
-    alias: ['yta', 'audioyt', 'mp3yt', 'playaudio'],
+    alias: ['yta', 'audioyt', 'mp3yt', 'playaudio', 'song', 'play', 'musica'],
     category: 'descargas',
     desc: 'Descarga y recodifica audio de YouTube a MP3 estándar (128kbps/44.1kHz) con yt-dlp y FFmpeg',
     usage: '.ytmp3 [enlace de YouTube o Shorts]',

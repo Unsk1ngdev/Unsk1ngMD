@@ -2,7 +2,7 @@ const axios = require('axios');
 
 module.exports = {
     name: 'trad',
-    alias: ['translate', 'traductor'],
+    alias: ['translate', 'traductor', 'trt', 'tr'],
     category: 'herramientas',
     desc: 'Traduce texto a cualquier idioma (ej: en, es, fr, de, it, pt, ja)',
     usage: '.trad [idioma_destino] [texto o citando un mensaje]',

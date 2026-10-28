@@ -32,8 +32,12 @@ const userNames = require('./lib/userNames');
 /**
  * Renderiza el banner cyberpunk con cfonts y la caja de información neón
  */
+let isFirstRender = true;
 const renderBanner = (socketStatus = 'Iniciando conexión...') => {
-    console.clear();
+    if (isFirstRender) {
+        console.clear();
+        isFirstRender = false;
+    }
 
     // Tipografía de bloque retro y colores degradados cyberpunk (cyan y magenta)
     cfonts.say('Unsk1ngMD', {
@@ -187,7 +191,7 @@ const startBot = async () => {
         try {
             const vResult = await Promise.race([
                 fetchLatestBaileysVersion(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
             ]);
             if (vResult?.version) {
                 version = vResult.version;
@@ -205,7 +209,7 @@ const startBot = async () => {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
         },
-        browser: Browsers.ubuntu('Chrome'),
+        browser: Browsers.macOS('Desktop'),
         syncFullHistory: false, // Fundamental: evita cargar historiales antiguos a la RAM
         generateHighQualityLinkPreview: false,
         markOnlineOnConnect: true,
@@ -219,26 +223,42 @@ const startBot = async () => {
     // Exponer el socket principal de forma global para sub-bots y comandos
     global.mainSock = sock;
 
-    // 5. Manejo del código de emparejamiento interactivo
-    if (!isSessionActive && authMethod === '2' && !sock.authState.creds.registered) {
-        setTimeout(async () => {
-            try {
-                logger.info(`Solicitando código de emparejamiento para el número: +${pairingNumber}...`);
-                const code = await sock.requestPairingCode(pairingNumber);
-                const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+    // 5. Manejo del código de emparejamiento interactivo con reintentos (Optimizado para Termux / Redes móviles)
+    if (!isSessionActive && authMethod === '2' && !sock.authState.creds.registered && !global.pairingCodeDone) {
+        const tryRequestPairing = async (retryCount = 1) => {
+            // Dar tiempo inicial a que el websocket complete la apertura
+            await new Promise(res => setTimeout(res, retryCount === 1 ? 3000 : 4500));
 
-                console.log('\n' + chalk.cyan.bold('╭───────────────────────────────────────────────╮'));
-                console.log(chalk.cyan.bold('│ ') + chalk.white.bold('        🔑 CÓDIGO DE VINCULACIÓN:             ') + chalk.cyan.bold('│'));
-                console.log(chalk.cyan.bold('│                                               │'));
-                console.log(chalk.cyan.bold('│ ') + chalk.yellow.bold(`              👉  ${formattedCode}  👈              `) + chalk.cyan.bold('│'));
-                console.log(chalk.cyan.bold('│                                               │'));
-                console.log(chalk.cyan.bold('╰───────────────────────────────────────────────╯\n'));
-                console.log(chalk.white(' Código listo para copiar: ') + chalk.bgBlack.white.bold(` ${formattedCode} `) + '\n');
-                console.log(chalk.cyan('👉 Abre WhatsApp > Dispositivos vinculados > Vincular con el número de teléfono e ingresa este código.\n'));
+            if (sock.authState?.creds?.registered || global.pairingCodeDone) return;
+
+            try {
+                logger.info(`[VINCULACIÓN] Solicitando código de emparejamiento (intento ${retryCount}/3) para: +${pairingNumber}...`);
+                const code = await sock.requestPairingCode(pairingNumber);
+                if (code) {
+                    global.pairingCodeDone = true;
+                    const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+
+                    console.log('\n' + chalk.cyan.bold('╭───────────────────────────────────────────────╮'));
+                    console.log(chalk.cyan.bold('│ ') + chalk.white.bold('        🔑 CÓDIGO DE VINCULACIÓN:             ') + chalk.cyan.bold('│'));
+                    console.log(chalk.cyan.bold('│                                               │'));
+                    console.log(chalk.cyan.bold('│ ') + chalk.yellow.bold(`              👉  ${formattedCode}  👈              `) + chalk.cyan.bold('│'));
+                    console.log(chalk.cyan.bold('│                                               │'));
+                    console.log(chalk.cyan.bold('╰───────────────────────────────────────────────╯\n'));
+                    console.log(chalk.white(' Código listo para copiar: ') + chalk.bgBlack.white.bold(` ${formattedCode} `) + '\n');
+                    console.log(chalk.cyan('👉 Abre WhatsApp > Dispositivos vinculados > Vincular con el número de teléfono e ingresa este código.\n'));
+                }
             } catch (err) {
-                logger.error('Error al generar código de emparejamiento:', err.message);
+                if (retryCount < 3 && !sock.authState?.creds?.registered) {
+                    logger.warn(`[VINCULACIÓN] Reintentando generación de código por latencia (${err.message})...`);
+                    return tryRequestPairing(retryCount + 1);
+                } else {
+                    logger.error('Error al generar código de emparejamiento tras reintentos:', err.message);
+                    console.log(chalk.yellow('💡 En Termux: Comprueba tu conexión a datos/WiFi o reinicia el bot para reintentar.'));
+                }
             }
-        }, 3000);
+        };
+
+        tryRequestPairing();
     }
 
     // 6. Eventos de Conexión y Reconexión Automática Controlada

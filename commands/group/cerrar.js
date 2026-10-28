@@ -2,7 +2,7 @@ const { toggleGroup } = require('../../lib/groupPermissions');
 
 module.exports = {
     name: 'cerrar',
-    alias: ['closegroup', 'cerrargrupo'],
+    alias: ['closegroup', 'cerrargrupo', 'close'],
     category: 'grupo',
     desc: 'Restringe el envío de mensajes solo para los administradores',
     usage: '.cerrar',

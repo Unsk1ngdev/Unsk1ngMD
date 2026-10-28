@@ -17,7 +17,7 @@ const MAX_DURATION_SECONDS = 15 * 60; // Límite máximo: 15 minutos
 
 module.exports = {
     name: 'ytmp4',
-    alias: ['ytv', 'videoyt', 'mp4yt', 'playvideo'],
+    alias: ['ytv', 'videoyt', 'mp4yt', 'playvideo', 'video', 'play2'],
     category: 'descargas',
     desc: 'Descarga y transcodifica video de YouTube hasta 720p en MP4 compatible con WhatsApp (H.264/AAC)',
     usage: '.ytmp4 [enlace de YouTube o Shorts]',

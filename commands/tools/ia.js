@@ -9,7 +9,7 @@ const SYSTEM_PROMPT = "Eres Unsk1ngMD, una IA avanzada, analítica, directa y co
 
 module.exports = {
     name: 'ia',
-    alias: ['ai', 'ask', 'groq', 'llama'],
+    alias: ['ai', 'ask', 'groq', 'llama', 'gpt', 'gemini', 'chatgpt'],
     category: 'herramientas',
     desc: 'Consulta Inteligencia Artificial ultrarrápida con Groq Cloud (GPT-OSS / Llama)',
     usage: '.ia [pregunta o citando un mensaje previo]',

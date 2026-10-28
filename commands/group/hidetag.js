@@ -1,6 +1,6 @@
 module.exports = {
     name: 'hidetag',
-    alias: ['notificar', 'aviso', 'h'],
+    alias: ['notificar', 'aviso', 'h', 'mention'],
     category: 'grupo',
     desc: 'Envía un mensaje notificando a todos los miembros de forma invisible sin mostrar lista de números',
     usage: '.hidetag [texto opcional]',

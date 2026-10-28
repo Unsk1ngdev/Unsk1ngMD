@@ -2,7 +2,7 @@ const axios = require('axios');
 
 module.exports = {
     name: 'gitclone',
-    alias: ['github', 'repodl'],
+    alias: ['github', 'repodl', 'git', 'sc', 'script'],
     category: 'descargas',
     desc: 'Descarga el código fuente (.zip) de un repositorio público de GitHub',
     usage: '.gitclone [https://github.com/usuario/repositorio]',

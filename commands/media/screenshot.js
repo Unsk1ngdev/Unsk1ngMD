@@ -3,7 +3,7 @@ const logger = require('../../lib/logger');
 
 module.exports = {
     name: 'screenshot',
-    alias: ['ss', 'capture', 'captura'],
+    alias: ['ss', 'capture', 'captura', 'ssweb', 'webshot'],
     category: 'multimedia',
     desc: 'Captura de pantalla de cualquier página web pública usando la API de Microlink (sin Chromium/Puppeteer)',
     usage: '.screenshot [https://url-del-sitio.com]',

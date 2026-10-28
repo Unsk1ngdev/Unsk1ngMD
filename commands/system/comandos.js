@@ -1,3 +1,5 @@
+'use strict';
+
 const fs = require('fs');
 const path = require('path');
 const database = require('../../lib/database');
@@ -5,10 +7,11 @@ const config = require('../../config');
 
 module.exports = {
     name: 'comandos',
-    alias: ['commands', 'guia', 'manual', 'cmdlist'],
+    alias: ['comando', 'commands', 'guia', 'manual', 'cmdlist'],
     category: 'sistema',
     desc: 'Muestra la guía completa y detallada de comandos con descripciones y ejemplos prácticos',
     usage: '.comandos',
+
     execute: async ({ sock, m }) => {
         const prefix = database.getPrefix();
 
@@ -21,19 +24,19 @@ module.exports = {
 
 📥 *1. CATEGORÍA: DESCARGAS*
 │
-│ 🔹 *${prefix}ytmp4* [enlace]
+│ 🔹 *${prefix}ytmp4* [enlace] (alias: ${prefix}video)
 │    _Descarga videos de YouTube o Shorts en MP4 reproducible._
 │    *Ej:* \`${prefix}ytmp4 https://youtu.be/dQw4w9WgXcQ\`
 │
-│ 🔹 *${prefix}ytmp3* [enlace]
+│ 🔹 *${prefix}ytmp3* [enlace] (alias: ${prefix}song, ${prefix}play)
 │    _Descarga audio en MP3 de YouTube con stream de alta calidad._
 │    *Ej:* \`${prefix}ytmp3 https://youtu.be/dQw4w9WgXcQ\`
 │
-│ 🔹 *${prefix}fb* [enlace]
+│ 🔹 *${prefix}fb* [enlace] / *${prefix}facebook*
 │    _Descarga videos de Facebook / fb.watch en HD/SD con fallback._
 │    *Ej:* \`${prefix}fb https://www.facebook.com/watch/?v=123456789\`
 │
-│ 🔹 *${prefix}ig* [enlace]
+│ 🔹 *${prefix}ig* [enlace] / *${prefix}instagram*
 │    _Descarga Reels, fotos y videos públicos de Instagram._
 │    *Ej:* \`${prefix}ig https://www.instagram.com/reel/C8xyz123/\`
 │
@@ -41,190 +44,48 @@ module.exports = {
 │    _Descarga videos de TikTok en alta definición sin marca de agua._
 │    *Ej:* \`${prefix}tiktok https://vm.tiktok.com/ZM.../\`
 │
-│ 🔹 *${prefix}x* [enlace]
+│ 🔹 *${prefix}twitter* [enlace]
 │    _Descarga videos y clips de Twitter / X en MP4 reproducible._
-│    *Ej:* \`${prefix}x https://x.com/user/status/1234567890\`
+│    *Ej:* \`${prefix}twitter https://x.com/user/status/1234567890\`
 │
 │ 🔹 *${prefix}pinterest* [búsqueda]
 │    _Busca y envía imágenes en alta calidad desde Pinterest._
 │    *Ej:* \`${prefix}pinterest wallpapers neon 4k\`
 │
-│ 🔹 *${prefix}gitclone* [repo]
+│ 🔹 *${prefix}gitclone* [repo] (alias: ${prefix}git, ${prefix}github)
 │    _Descarga repositorios públicos de GitHub en archivo ZIP._
 │    *Ej:* \`${prefix}gitclone https://github.com/expressjs/express\`
 ╰────────────────────────────────────⬣
 
-🛠️ *2. CATEGORÍA: HERRAMIENTAS & MULTIMEDIA*
-│
-│ 🔹 *${prefix}info* [@mención / número]
-│    _Consulta perfil de WhatsApp, foto HD, estado/bio y cuenta de empresa._
-│    *Ej:* \`${prefix}info +584160666286\`
-│
-│ 🔹 *${prefix}email* [correo]
-│    _Verifica existencia, proveedor, DNS y filtraciones de un correo (HaveIBeenPwned / XposedOrNot)._
-│    *Ej:* \`${prefix}email usuario@gmail.com\`
-│
-│ 🔹 *${prefix}usuario* [nombre_usuario]
-│    _Rastrea la presencia de un nick en más de 15 plataformas sociales (estilo Sherlock)._
-│    *Ej:* \`${prefix}usuario torvalds\`
-│
-│ 🔹 *${prefix}s* / *${prefix}sticker*
-│    _Convierte imágenes o videos cortos a sticker WebP con metadatos._
-│    *Ej:* Responder a foto con \`${prefix}s\`
-│
-│ 🔹 *${prefix}togif* / *${prefix}vgif*
-│    _Convierte un video corto (o sticker animado) en un GIF de WhatsApp._
-│    *Ej:* Responder a video con \`${prefix}togif\`
-│
-│ 🔹 *${prefix}toimg* / *${prefix}tovideo*
-│    _Convierte stickers estáticos a JPEG y animados a video MP4 corto._
-│    *Ej:* Responder a sticker con \`${prefix}toimg\`
-│
-│ 🔹 *${prefix}tovn*
-│    _Transcodifica audios o videos a nota de voz real de WhatsApp (Opus PTT)._
-│    *Ej:* Responder a audio o video con \`${prefix}tovn\`
-│
-│ 🔹 *${prefix}tomp3*
-│    _Extrae el audio de videos o notas de voz a formato MP3 estándar limpio._
-│    *Ej:* Responder a video con \`${prefix}tomp3\`
-│
-│ 🔹 *${prefix}tourl*
-│    _Sube imagen o video citado a la nube y genera enlace directo (máx. 15 MB)._
-│    *Ej:* Responder a foto o video con \`${prefix}tourl\`
-│
-│ 🔹 *${prefix}imglink*
-│    _Sube imagen citada a ImgBB generando enlace directo, web y de borrado._
-│    *Ej:* Responder a foto con \`${prefix}imglink\`
-│
-│ 🔹 *${prefix}gif*
-│    _Convierte un video corto (máx. 10s) en un sticker animado._
-│    *Ej:* Responder a video con \`${prefix}gif\`
-│
-│ 🔹 *${prefix}cmeme* [texto superior | inferior]
-│    _Genera memes clásicos con fuente Impact citando una foto._
-│    *Ej:* Citar foto con \`${prefix}cmeme CUANDO COMPILA | A LA PRIMERA\`
-│
-│ 🔹 *${prefix}meme*
-│    _Obtiene un meme aleatorio de la comunidad para compartir._
-│    *Ej:* \`${prefix}meme\`
-│
-│ 🔹 *${prefix}qr* [texto / enlace]
-│    _Genera una imagen con código QR escaneable al instante._
-│    *Ej:* \`${prefix}qr https://google.com\`
-│
-│ 🔹 *${prefix}readqr*
-│    _Lee y decodifica el contenido de una imagen con código QR._
-│    *Ej:* Responder a imagen QR con \`${prefix}readqr\`
-│
-│ 🔹 *${prefix}blur* [nivel 1-20]
-│    _Aplica efecto de desenfoque gaussiano sobre una imagen._
-│    *Ej:* Responder a imagen con \`${prefix}blur 8\`
-│
-│ 🔹 *${prefix}clima* [ciudad]
-│    _Consulta temperatura, clima actual y sensación térmica._
-│    *Ej:* \`${prefix}clima Caracas\`
-│
-│ 🔹 *${prefix}calc* [operación]
-│    _Calculadora matemática rápida con soporte de fórmulas._
-│    *Ej:* \`${prefix}calc (15 * 4) + 100 / 2\`
-│
-│ 🔹 *${prefix}trad* [código idioma] [texto]
-│    _Traduce texto a cualquier idioma mediante Google Translate._
-│    *Ej:* \`${prefix}trad en Hola, cómo estás hoy?\`
-│
-│ 🔹 *${prefix}wiki* [tema a consultar]
-│    _Explicaciones enciclopédicas rigurosas y claras con IA (Groq Cloud)._
-│    *Ej:* \`${prefix}wiki El número Pi\`
-│
-│ 🔹 *${prefix}lyrics* [canción]
-│    _Obtiene la letra de canciones con título y autor._
-│    *Ej:* \`${prefix}lyrics Bohemian Rhapsody\`
-│
-│ 🔹 *${prefix}crypto* [moneda]
-│    _Cotización y precio en tiempo real de criptomonedas._
-│    *Ej:* \`${prefix}crypto btc\`
-│
-│ 🔹 *${prefix}discord* [ID] (Premium)
-│    _Inteligencia profunda y perfil de Discord vía Snowflake (Premium)._
-│    *Ej:* \`${prefix}discord 155149108183695360\`
-│
-│ 🔹 *${prefix}osint* [num|email|ip|user|domain] <valor> (Premium)
-│    _Inteligencia OSINT: número/WhatsApp, email (SPF/DMARC/HIBP), IP, huella de usuario y DNS._
-│    *Ej:* \`${prefix}osint email prueba@gmail.com\` | \`${prefix}osint user torvalds\` | \`${prefix}osint 8.8.8.8\`
-│
-│ 🔹 *${prefix}reverseip* [ip|dominio] (Premium)
-│    _Reverse DNS (PTR) y dominios alojados en la misma IP (Premium)._
-│    *Ej:* \`${prefix}reverseip 1.1.1.1\` | \`${prefix}reverseip google.com\`
-│
-│ 🔹 *${prefix}portcheck* [host] [puerto|common] (Premium)
-│    _Escáner y verificación de estado de puertos TCP en red (Premium)._
-│    *Ej:* \`${prefix}portcheck google.com 443\` | \`${prefix}portcheck 1.1.1.1 common\`
-│
-│ 🔹 *${prefix}groupjid* [enlace?] (Premium)
-│    _Lista los JIDs y cantidad de miembros de todos los grupos del bot o analiza un enlace._
-│    *Ej:* \`${prefix}groupjid\` | \`${prefix}groupjid https://chat.whatsapp.com/...\`
-│
-│ 🔹 *${prefix}invisible* [jid?] [texto] (Premium)
-│    _Envía mensajes en modo invisible/desconectado. En grupos realiza hidetag silencioso._
-│    *Ej:* \`${prefix}invisible Hola\` | \`${prefix}invisible 1203630...@g.us Aviso importante\`
-│
-│ 🔹 *${prefix}banco* [saldo | depositar <cant> | retirar <cant> | pedir <cant> | pagar <cant|todo> | deuda]
-│    _Sistema bancario completo: administra tus cuentas, solicita préstamos y paga deudas._
-│    *Ej:* \`${prefix}banco saldo\` | \`${prefix}banco depositar 5000\` | \`${prefix}banco pedir 50000\`
-│
-│ 🔹 *${prefix}diario*
-│    _Reclama tu bono económico y de experiencia cada 24 horas ($5,000 - $10,000)._
-│    *Ej:* \`${prefix}diario\`
-│
-│ 🔹 *${prefix}trabajar*
-│    _Trabaja en diversos oficios para ganar dinero y EXP cada 15 minutos._
-│    *Ej:* \`${prefix}trabajar\`
-│
-│ 🔹 *${prefix}transferir* [@usuario] [monto]
-│    _Transfiere monedas en mano a otro usuario del grupo de forma instantánea._
-│    *Ej:* \`${prefix}transferir @usuario 2000\`
-│
-│ 🔹 *${prefix}consejo*
-│    _Entrega un consejo reflexivo, práctico o de vida al azar._
-│    *Ej:* \`${prefix}consejo\`
-│
-│ 🔹 *${prefix}facto*
-│    _Dato curioso, científico o histórico fascinante._
-│    *Ej:* \`${prefix}facto\`
-╰────────────────────────────────────⬣
-
-🤖 *3. CATEGORÍA: INTELIGENCIA ARTIFICIAL (IA)*
-│
-│ 🔹 *${prefix}ia* [pregunta]
-│    _Consulta analítica y directa a la IA avanzada (Groq Cloud / Llama 3.3)._
-│    *Ej:* \`${prefix}ia Explica la memoria RAM en informática\`
-│
-│ 🔹 *${prefix}genimg* [prompt en inglés]
-│    _Genera imágenes creativas a partir de texto mediante IA._
-│    *Ej:* \`${prefix}genimg futuristic cybernetic warrior neon armor\`
-╰────────────────────────────────────⬣
-
-👥 *4. CATEGORÍA: MODERACIÓN Y ADMINISTRACIÓN DE GRUPO*
+👥 *2. CATEGORÍA: MODERACIÓN Y ADMINISTRACIÓN DE GRUPO*
 │
 │ 🔹 *${prefix}antilink* [on / off]
-│    _Borra enlaces no autorizados y expulsa automáticamente al infractor._
+│    _Borra enlaces no autorizados de grupos para evitar spam._
 │    *Ej:* \`${prefix}antilink on\`
 │
-│ 🔹 *${prefix}antispam* [on / off]
-│    _Filtro por ráfaga (>5 msgs en 3s): borra mensajes repetidos y advierte._
+│ 🔹 *${prefix}antidelete* [on / off]
+│    _Detecta y revela mensajes borrados en el grupo._
+│    *Ej:* \`${prefix}antidelete on\`
+│
+│ 🔹 *${prefix}antibadword* [on / off]
+│    _Filtro automático que elimina mensajes con insultos graves._
+│    *Ej:* \`${prefix}antibadword on\`
+│
+│ 🔹 *${prefix}warn* [@usuario] [motivo]
+│    _Aplica una advertencia (1/3). A las 3 advertencias expulsa al usuario._
+│    *Ej:* \`${prefix}warn @usuario Falta el respeto\`
+│
+│ 🔹 *${prefix}unwarn* [@usuario]
+│    _Remueve una advertencia acumulada a un miembro._
+│    *Ej:* \`${prefix}unwarn @usuario\`
+│
+│ 🔹 *${prefix}warnings* [@usuario opcional]
+│    _Consulta el historial de advertencias de un usuario en el grupo._
+│    *Ej:* \`${prefix}warnings @usuario\`
+│
+│ 🔹 *${prefix}antispam* [on / off] / *${prefix}antispamkick* [on / off]
+│    _Filtros por ráfaga de mensajes repetidos con advertencia o expulsión._
 │    *Ej:* \`${prefix}antispam on\`
-│
-│ 🔹 *${prefix}antispamkick* [on / off]
-│    _Modo estricto: borra mensajes y expulsa al spamer del grupo._
-│    *Ej:* \`${prefix}antispamkick on\`
-│
-│ 🔹 *${prefix}bienvenido/a* [on / off]
-│    _Envía saludo personalizado con foto de perfil y descripción a recién llegados._
-│    *Ej:* \`${prefix}bienvenido/a on\`
-│
-│ 🔹 *${prefix}despedida* [on / off / reset / test / mensaje]
-│    _Despide con foto y tarjeta visual a quienes abandonen el grupo._
-│    *Ej:* \`${prefix}despedida on\`
 │
 │ 🔹 *${prefix}promote* [@mención / respuesta]
 │    _Asciende a un participante al rol de Administrador._
@@ -234,56 +95,52 @@ module.exports = {
 │    _Degrada a un administrador a participante regular._
 │    *Ej:* \`${prefix}demote @usuario\`
 │
-│ 🔹 *${prefix}kick* / *${prefix}ban* [@mención / respuesta]
+│ 🔹 *${prefix}kick* [@mención / respuesta]
 │    _Expulsa a un participante regular del grupo._
 │    *Ej:* \`${prefix}kick @usuario\`
 │
-│ 🔹 *${prefix}cerrar*
+│ 🔹 *${prefix}cerrar* (alias: ${prefix}close)
 │    _Configura el grupo para que solo administradores envíen mensajes._
 │    *Ej:* \`${prefix}cerrar\`
 │
-│ 🔹 *${prefix}abrir*
+│ 🔹 *${prefix}abrir* (alias: ${prefix}open)
 │    _Abre el grupo para que todos los miembros puedan enviar mensajes._
 │    *Ej:* \`${prefix}abrir\`
 │
-│ 🔹 *${prefix}hidetag* [mensaje opcional]
+│ 🔹 *${prefix}hidetag* [mensaje] (alias: ${prefix}mention)
 │    _Menciona a todos los miembros de forma completamente silenciosa._
 │    *Ej:* \`${prefix}hidetag Comunicado oficial importante\`
 │
-│ 🔹 *${prefix}tagall* [motivo]
+│ 🔹 *${prefix}tagall* [motivo] (alias: ${prefix}tag)
 │    _Mención masiva a todos los miembros con lista visible en el chat._
 │    *Ej:* \`${prefix}tagall Reunión en 5 minutos\`
 │
-│ 🔹 *${prefix}linkgroup*
-│    _Obtiene el enlace de invitación oficial al grupo._
+│ 🔹 *${prefix}limpiar* [cantidad] (alias: ${prefix}delete, ${prefix}del)
+│    _Elimina mensajes recientes del grupo o el mensaje citado._
+│    *Ej:* \`${prefix}limpiar 20\`
+│
+│ 🔹 *${prefix}linkgroup* / *${prefix}revoke*
+│    _Obtiene o restablece el enlace oficial de invitación al grupo._
 │    *Ej:* \`${prefix}linkgroup\`
 │
-│ 🔹 *${prefix}revoke*
-│    _Restablece e invalida el enlace de invitación anterior del grupo._
-│    *Ej:* \`${prefix}revoke\`
-│
-│ 🔹 *${prefix}amigorandom* / *${prefix}amistad*
-│    _Elige a dos miembros aleatorios del grupo y los proclama amigos del día._
-│    *Ej:* \`${prefix}amigorandom\`
-│
-│ 🔹 *${prefix}formarpareja*
-│    _Forma 5 parejas aleatorias con porcentaje de compatibilidad (10+ miembros)._
-│    *Ej:* \`${prefix}formarpareja\`
+│ 🔹 *${prefix}bienvenido/a* [on / off] / *${prefix}despedida* [on / off]
+│    _Mensajes automáticos de bienvenida o despedida con foto._
+│    *Ej:* \`${prefix}bienvenido/a on\`
 ╰────────────────────────────────────⬣
 
-🎮 *5. CATEGORÍA: JUEGOS Y ENTRETENIMIENTO*
+🎮 *3. CATEGORÍA: JUEGOS Y ENTRETENIMIENTO*
 │
-│ 🔹 *${prefix}akinator*
-│    _El genio Akinator intenta adivinar el personaje en el que piensas._
-│    *Ej:* \`${prefix}akinator\`
+│ 🔹 *${prefix}tictactoe* [@usuario] (alias: ${prefix}ttt)
+│    _Partida interactiva de Tres en Raya en el chat con casillas del 1 al 9._
+│    *Ej:* \`${prefix}ttt @usuario\` | Jugar: \`${prefix}ttt 5\`
 │
-│ 🔹 *${prefix}cancelakinator*
-│    _Cancela la partida activa de Akinator en el chat._
-│    *Ej:* \`${prefix}cancelakinator\`
+│ 🔹 *${prefix}8ball* [pregunta]
+│    _Bola 8 mágica que responde preguntas con predicciones del destino._
+│    *Ej:* \`${prefix}8ball ¿Seré millonario?*\`
 │
-│ 🔹 *${prefix}ruleta*
-│    _Ruleta rusa grupal (1 de 6 probabilidad de bala letal y expulsión)._
-│    *Ej:* \`${prefix}ruleta\`
+│ 🔹 *${prefix}ahorcado* (alias: ${prefix}hangman)
+│    _Juego interactivo del ahorcado con palabras de anime y cultura pop._
+│    *Ej:* \`${prefix}ahorcado\` | Adivinar: \`${prefix}ahorcado a\`
 │
 │ 🔹 *${prefix}trivia*
 │    _Trivia interactiva de opción múltiple (A, B, C, D) con 45s de tiempo._
@@ -293,60 +150,108 @@ module.exports = {
 │    _Adivinanzas con respuestas abiertas y 60 segundos de límite._
 │    *Ej:* \`${prefix}acertijo\`
 │
-│ 🔹 *${prefix}debatir* [tema] | *${prefix}debatir stop*
-│    _Inicia un debate interactivo de 5 rondas contra la IA con análisis y puntuación._
-│    *Ej:* \`${prefix}debatir la inteligencia artificial\`
+│ 🔹 *${prefix}verdadoreto* (alias: ${prefix}truth, ${prefix}dare)
+│    _Juega al clásico verdad o reto con detección de respuestas y retos picantes._
+│    *Ej:* \`${prefix}verdadoreto verdad\` | \`${prefix}verdadoreto reto\`
 │
-│ 🔹 *${prefix}verdad* [picante]
-│    _Lanza una pregunta de verdad incómoda o picante al azar._
-│    *Ej:* \`${prefix}verdad\` | \`${prefix}verdad picante\`
+│ 🔹 *${prefix}akinator*
+│    _El genio Akinator intenta adivinar el personaje en el que piensas._
+│    *Ej:* \`${prefix}akinator\`
 │
-│ 🔹 *${prefix}punch* [@usuario] / *${prefix}patt* [@usuario]
-│    _Reacciones interactivas animadas: puñetazo o caricias en la cabeza._
-│    *Ej:* \`${prefix}punch @usuario\` | \`${prefix}patt @usuario\`
+│ 🔹 *${prefix}ruleta*
+│    _Ruleta rusa grupal (1 de 6 probabilidad de disparo y expulsión)._
+│    *Ej:* \`${prefix}ruleta\`
 │
-│ 🔹 *${prefix}scared* [@usuario]
-│    _Reacción animada de pegarle un susto a alguien o asustarse._
-│    *Ej:* \`${prefix}scared @usuario\`
+│ 🔹 *${prefix}debatir* [tema]
+│    _Inicia un debate de 5 rondas contra la IA con análisis y puntuación._
+│    *Ej:* \`${prefix}debatir la tecnología\`
 ╰────────────────────────────────────⬣
 
-⚡ *6. CATEGORÍA: SUB-BOTS (MULTI-SESIÓN)*
+🎌 *4. CATEGORÍA: REACCIONES ANIME GIF*
 │
-│ 🔹 *${prefix}subbot* / *${prefix}code* [número con código de país]
-│    _Genera un código seguro de 8 dígitos para vincular tu propio Sub-Bot._
-│    *Ej:* \`${prefix}subbot 584160666286\`
-│
-│ 🔹 *${prefix}subbot list* / *${prefix}subbots*
-│    _Muestra la lista de todos los Sub-Bots conectados en tiempo real y su tiempo activo._
-│    *Ej:* \`${prefix}subbot list\`
-│
-│ 🔹 *${prefix}subbot stop* [número]
-│    _Desconecta y elimina de forma definitiva la sesión del Sub-Bot indicado._
-│    *Ej:* \`${prefix}subbot stop 584160666286\`
+│ 🔹 *${prefix}kiss* [@usuario] - Envía un GIF animado dando un tierno beso.
+│ 🔹 *${prefix}hug* [@usuario] - Envía un cálido abrazo animado.
+│ 🔹 *${prefix}cry* [@usuario] - Llora desconsoladamente en el hombro de alguien.
+│ 🔹 *${prefix}poke* [@usuario] - Pica la mejilla para llamar la atención.
+│ 🔹 *${prefix}nom* [@usuario] - Da un mordisquito travieso.
+│ 🔹 *${prefix}wink* [@usuario] - Lanza un guiño coqueto.
+│ 🔹 *${prefix}facepalm* [@usuario] - Vergüenza ajena o decepción animada.
+│ 🔹 *${prefix}neko* - Envía una imagen o GIF de chica gato anime.
+│ 🔹 *${prefix}punch* [@usuario] / *${prefix}patt* [@usuario] - Puñetazo o caricias en la cabeza.
+│ 🔹 *${prefix}scared* [@usuario] - Susto o sobresalto animado.
 ╰────────────────────────────────────⬣
 
-⚙️ *7. CATEGORÍA: SISTEMA & CONTROL (OWNER)*
+✍️ *5. CATEGORÍA: TEXT MAKER (CREADOR DE LOGOS)*
 │
-│ 🔹 *${prefix}ping* - Comprueba la latencia del bot. Ej: \`${prefix}ping\`
-│ 🔹 *${prefix}status* - Estadísticas, RAM y uptime. Ej: \`${prefix}status\`
-│ 🔹 *${prefix}stats* - Estadísticas completas en tiempo real (Owner). Ej: \`${prefix}stats\`
-│ 🔹 *${prefix}chetar* [@usuario] - Maxea monedas, nivel, exp y stats al infinito (Owner). Ej: \`${prefix}chetar\`
-│ 🔹 *${prefix}owner* - Contacto directo del creador. Ej: \`${prefix}owner\`
-│ 🔹 *${prefix}prefix* [nuevo] - Cambia el prefijo global. Ej: \`${prefix}prefix !\`
-│ 🔹 *${prefix}mode* [public/private] - Alterna acceso al bot. Ej: \`${prefix}mode public\`
-│ 🔹 *${prefix}reiniciar* - Reinicia el proceso del bot (Owner). Ej: \`${prefix}reiniciar\`
-│ 🔹 *${prefix}banear* [@usuario/num] - Banea del bot y gestiona lista negra (Owner). Ej: \`${prefix}banear @user\`
-│ 🔹 *${prefix}desbanear* [@usuario/num] - Remueve ban de la lista negra (Owner). Ej: \`${prefix}desbanear @user\`
-│ 🔹 *${prefix}mute* [@usuario/num] [minutos] - Silencia al usuario en el bot (Owner). Ej: \`${prefix}mute @user 10\`
-│ 🔹 *${prefix}unmute* [@usuario/num] - Quita el silencio al usuario (Owner). Ej: \`${prefix}unmute @user\`
-│ 🔹 *${prefix}addowner* [número] - Otorga rango de Dueño y VIP permanente (Owner). Ej: `${prefix}addowner 18494509905`
-│ 🔹 *${prefix}bangroup* [motivo] - Suspende el uso del bot en el grupo (Owner). Ej: `${prefix}bangroup`
-│ 🔹 *${prefix}unbangroup* - Reactiva el uso del bot en el grupo suspendido (Owner). Ej: `${prefix}unbangroup`
-│ 🔹 *${prefix}backup* - Genera copia de seguridad en ZIP. Ej: \`${prefix}backup\`
-│ 🔹 *${prefix}broadcast* [texto] - Difusión global a grupos. Ej: \`${prefix}broadcast Aviso\`
-│ 🔹 *${prefix}nuke si* - Expulsa a todos en paralelo y renombra el grupo (Owner). Ej: \`${prefix}nuke si\`
-│ 🔹 *${prefix}reportar* [@user / número] [n] - Reportes de spam masivos con sub-bots (Owner). Ej: \`${prefix}reportar @usuario 10\`
-│ 🔹 *${prefix}reactch* [url] [texto] - Mensajes con letras estilizadas a canales (Owner). Ej: \`${prefix}reactch https://whatsapp.com/channel/... hola\`
+│ 🔹 *${prefix}neon* [texto] - Genera un logo con estilo Neón resplandeciente.
+│ 🔹 *${prefix}glitch* [texto] - Genera texto distorsionado con efecto Cyberpunk.
+│ 🔹 *${prefix}matrix* [texto] - Genera texto con código binario verde Matrix.
+│ 🔹 *${prefix}fire* [texto] - Genera texto con llamas y fuego ardiente.
+│ 🔹 *${prefix}blackpink* [texto] - Genera texto estilo K-Pop rosa y negro.
+│ 🔹 *${prefix}devil* [texto] - Genera texto con estilo gótico demoníaco rojo.
+│ 🔹 *${prefix}thunder* [texto] - Genera texto electrizante con relámpagos.
+│ 🔹 *${prefix}sand* [texto] - Genera texto grabado en arena dorada del desierto.
+│    *Ej:* \`${prefix}neon Tu Nombre\` | \`${prefix}glitch CyberBot\`
+╰────────────────────────────────────⬣
+
+🖼️ *6. CATEGORÍA: IMAGE EFFECTS (EDICIÓN DE FOTOS)*
+│
+│ 🔹 *${prefix}jail* [@usuario o foto] - Pone rejas de prisión y remaches de acero.
+│ 🔹 *${prefix}passed* [@usuario o foto] - Efecto GTA "Misión Pasada + Respeto".
+│ 🔹 *${prefix}triggered* [@usuario o foto] - Filtro rojo de furia con banner Triggered.
+│ 🔹 *${prefix}circle* [@usuario o foto] - Recorta la foto en un avatar circular perfecto.
+│ 🔹 *${prefix}glass* [@usuario o foto] - Filtro de cristal polarizado y reflejo.
+│ 🔹 *${prefix}gay* [@usuario o foto] - Filtro con los colores del arcoíris LGBT.
+│ 🔹 *${prefix}blur* [1-20] [foto] - Aplica desenfoque gaussiano regulable.
+│    *Nota:* Funciona citando una imagen o mencionando a alguien para usar su foto de perfil.
+╰────────────────────────────────────⬣
+
+🤖 *7. CATEGORÍA: INTELIGENCIA ARTIFICIAL (IA)*
+│
+│ 🔹 *${prefix}ia* [pregunta] (alias: ${prefix}gpt, ${prefix}gemini, ${prefix}ai)
+│    _Consulta analítica y directa a la IA avanzada (Groq Cloud / Llama 3.3)._
+│    *Ej:* \`${prefix}ia Explica la física cuántica de forma simple\`
+│
+│ 🔹 *${prefix}genimg* [prompt] (alias: ${prefix}imagine, ${prefix}flux)
+│    _Genera imágenes creativas a partir de texto mediante IA._
+│    *Ej:* \`${prefix}genimg cybernetic neon dragon 4k\`
+│
+│ 🔹 *${prefix}wiki* [tema]
+│    _Consultas enciclopédicas rigurosas y explicaciones estructuradas._
+│    *Ej:* \`${prefix}wiki El número Pi\`
+╰────────────────────────────────────⬣
+
+🛠️ *8. CATEGORÍA: HERRAMIENTAS Y MULTIMEDIA*
+│
+│ 🔹 *${prefix}s* / *${prefix}sticker* - Convierte imagen o video corto a sticker WebP.
+│ 🔹 *${prefix}togif* - Convierte video corto a GIF de WhatsApp.
+│ 🔹 *${prefix}toimg* / *${prefix}tovideo* - Convierte stickers a imagen o video.
+│ 🔹 *${prefix}tovn* - Convierte audio a nota de voz de WhatsApp (PTT).
+│ 🔹 *${prefix}tomp3* - Extrae audio en MP3 estándar limpio.
+│ 🔹 *${prefix}tourl* / *${prefix}imglink* - Sube archivos a la nube y genera enlace directo.
+│ 🔹 *${prefix}screenshot* [url] (alias: ${prefix}ssweb) - Captura de pantalla de cualquier web.
+│ 🔹 *${prefix}trad* [idioma] [texto] (alias: ${prefix}trt) - Traduce texto a cualquier idioma.
+│ 🔹 *${prefix}info* [@mención / número] - Consulta perfil y estado del usuario.
+│ 🔹 *${prefix}lyrics* [canción] - Obtiene la letra de una canción.
+│ 🔹 *${prefix}clima* [ciudad] - Clima y temperatura en tiempo real.
+│ 🔹 *${prefix}calc* [operación] - Calculadora matemática.
+│ 🔹 *${prefix}crypto* [moneda] - Precio en tiempo real de criptomonedas.
+│ 🔹 *${prefix}qr* [texto] / *${prefix}readqr* - Genera o lee códigos QR.
+╰────────────────────────────────────⬣
+
+⚙️ *9. CATEGORÍA: SISTEMA & CONTROL (OWNER)*
+│
+│ 🔹 *${prefix}ping* - Comprueba la latencia del bot en milisegundos.
+│ 🔹 *${prefix}status* (alias: ${prefix}alive) - Estado del sistema, consumo de RAM y uptime.
+│ 🔹 *${prefix}prefix* [nuevo] - Cambia el prefijo global del bot.
+│ 🔹 *${prefix}mode* [public/private] - Alterna acceso al bot para todos o solo dueños.
+│ 🔹 *${prefix}reiniciar* (alias: ${prefix}restart) - Reinicia el proceso del bot.
+│ 🔹 *${prefix}ban* / *${prefix}unban* [@user] - Banea o desbanea a un usuario del bot.
+│ 🔹 *${prefix}mute* / *${prefix}unmute* [@user] - Silencia temporalmente a un usuario.
+│ 🔹 *${prefix}addowner* [número] - Otorga rango de Dueño y VIP permanente.
+│ 🔹 *${prefix}bangroup* / *${prefix}unbangroup* - Suspende o reactiva el bot en un grupo.
+│ 🔹 *${prefix}backup* - Genera copia de seguridad del bot en archivo ZIP.
+│ 🔹 *${prefix}broadcast* [texto] - Envía un comunicado a todos los grupos.
 ╰────────────────────────────────────⬣`;
 
         const imgPath = path.join(config.assetsDir, 'comandos.jpg');
@@ -362,7 +267,7 @@ module.exports = {
                     `┃ 👑 *Creador:* ${config.ownerName}\n` +
                     `┃ 🔤 *Prefijo:* [ *${prefix}* ]\n` +
                     `╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n` +
-                    `📖 *Desplegando el manual completo de comandos con ejemplos:*`;
+                    `📖 *Desplegando el manual completo de comandos con explicaciones:*`;
 
                 await sock.sendMessage(m.chat, {
                     image: imgBuffer,
@@ -378,9 +283,8 @@ module.exports = {
             await sock.sendMessage(m.chat, {
                 text: guide
             }, mediaSent ? {} : { quoted: m });
-        } else {
+        } else if (typeof m.reply === 'function') {
             await m.reply(guide);
         }
     }
 };
-

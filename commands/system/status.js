@@ -20,7 +20,7 @@ const formatUptime = (seconds) => {
 
 module.exports = {
     name: 'status',
-    alias: ['host', 'info', 'ram'],
+    alias: ['host', 'info', 'ram', 'alive', 'estado'],
     category: 'sistema',
     desc: 'Muestra información del sistema, consumo de RAM, CPU y estado del bot',
     usage: '.status',

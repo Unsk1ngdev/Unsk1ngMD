@@ -1,6 +1,6 @@
 module.exports = {
     name: 'tagall',
-    alias: ['todos', 'invocar'],
+    alias: ['todos', 'invocar', 'tag'],
     category: 'grupo',
     desc: 'Menciona a todos los miembros del grupo con un motivo opcional',
     usage: '.tagall [motivo]',
