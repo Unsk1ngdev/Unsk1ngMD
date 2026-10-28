@@ -632,7 +632,7 @@ async function queryDomain(rawDomain) {
 
 module.exports = {
     name: 'osint',
-    alias: ['recon', 'osintlookup', 'whois'],
+    alias: ['recon', 'osintlookup', 'whois', 'phoneinfoga'],
     category: 'premium',
     desc: 'Inteligencia de fuentes abiertas (OSINT): número, email, IP, usuario y dominio (Premium)',
     usage: '.osint num <número|@tag> | .osint email <correo> | .osint ip <ip> | .osint user <usuario> | .osint domain <dominio>',
@@ -659,7 +659,7 @@ module.exports = {
         const contextSender = m.message?.extendedTextMessage?.contextInfo?.participant || null;
         const targetMsgSender = mentioned || quotedSender || contextSender;
 
-        const PHONE_ALIASES = ['num', 'phone', 'numero', 'tel', 'telefono', 'wa', 'whatsapp'];
+        const PHONE_ALIASES = ['num', 'phone', 'numero', 'tel', 'telefono', 'wa', 'whatsapp', 'phoneinfoga'];
         const IP_ALIASES = ['ip', 'geo', 'geoloc', 'geoip'];
         const EMAIL_ALIASES = ['email', 'mail', 'correo'];
         const USER_ALIASES = ['user', 'username', 'usuario', 'nick', 'social'];
@@ -714,8 +714,8 @@ module.exports = {
                     '┃ 📌 *Comandos Disponibles:*',
                     '┃',
                     '┃ • *.osint num <número | @tag>*',
-                    '┃   Operadora, país, huso horario, hora local,',
-                    '┃   registro en WhatsApp, bio y privacidad.',
+                    '┃   Operadora comercial, CNAM, VOIP, Spam score,',
+                    '┃   Dorks manuales, hora local y huella WhatsApp.',
                     '┃',
                     '┃ • *.osint email <correo>*',
                     '┃   Proveedor, MX, SPF, DMARC, detección de',
@@ -751,7 +751,7 @@ module.exports = {
             m.react('🔍').catch(() => {});
         }
 
-        // ── 1. SUBCOMANDO: PHONE INTELLIGENCE ──────────────────────────────────
+        // ── 1. SUBCOMANDO: PHONE INTELLIGENCE (PHONEINFOGA LEVEL) ──────────────
         if (subCmd === 'num') {
             let targetRaw = query || targetMsgSender;
             if (!targetRaw) {
@@ -774,21 +774,163 @@ module.exports = {
                 }, { quoted: m });
             }
 
-            let carrierFinal = info.carrier || 'No especificada';
+            // ── Enriquecimiento paralelo (APIs públicas / gratuitas) ──
             const numverifyKey = (process.env.NUMVERIFY_KEY || '').trim();
-            if (numverifyKey) {
-                try {
-                    const nvRes = await axios.get(
-                        `http://apilayer.net/api/validate?access_key=${numverifyKey}&number=${info.cleanDigits}&format=1`,
-                        { timeout: 4000 }
-                    );
-                    if (nvRes.data && nvRes.data.carrier) {
-                        carrierFinal = nvRes.data.carrier;
-                    }
-                } catch (_) {}
+            const numlookupKey = (process.env.NUMLOOKUP_KEY || '').trim();
+            const abstractKey  = (process.env.ABSTRACTAPI_KEY || '').trim();
+
+            let carrierFinal  = info.carrier || 'No especificada';
+            let lineTypeFinal = info.lineType || 'Móvil / Celular';
+            let locationFinal = info.region || null;
+            let callerName    = null; // CNAM / Titular
+            let voipFlag      = false;
+            let voipProvider  = null;
+
+            const VOIP_KEYWORDS = [
+                'twilio', 'vonage', 'bandwidth', 'google voice', 'textnow',
+                'skype', 'magicjack', 'voip', 'lingo', 'nettalk', 'ringcentral',
+                'grasshopper', 'ooma', 'nextiva', 'dialpad', 'google fi',
+                'telnyx', 'plivo', 'sinch', 'virtual', 'onoff'
+            ];
+
+            const enrichJobs = [];
+
+            // Motor 1: NumLookupAPI (CNAM + Operadora Comercial + Tipo de Línea)
+            if (numlookupKey) {
+                const targetNumber = encodeURIComponent(info.e164 || `+${cleanDigits}`);
+                enrichJobs.push(
+                    axios.get(`https://api.numlookupapi.com/v1/validate/${targetNumber}?apikey=${numlookupKey}`, {
+                        timeout: 4500,
+                        validateStatus: s => s < 500
+                    }).then(async (r) => {
+                        let data = (r.status === 200 && r.data) ? r.data : null;
+                        if (!data && r.status === 404) {
+                            try {
+                                const fb = await axios.get(`https://api.numlookupapi.com/v1/info/${targetNumber}?apikey=${numlookupKey}`, {
+                                    timeout: 3500,
+                                    validateStatus: s => s === 200
+                                });
+                                data = fb.data;
+                            } catch (_) {}
+                        }
+                        if (data) {
+                            if (data.carrier) carrierFinal = data.carrier;
+                            if (data.line_type_intelligence?.type || data.line_type) {
+                                lineTypeFinal = data.line_type_intelligence?.type || data.line_type;
+                            }
+                            const cnam = data.caller_name?.caller_name || data.caller_name || data.carrier_name;
+                            if (cnam && typeof cnam === 'string' && cnam.trim() && !/^(unknown|n\/a|none)$/i.test(cnam.trim())) {
+                                callerName = cnam.trim();
+                            }
+                            if (data.location) locationFinal = data.location;
+                        }
+                    }).catch(() => {})
+                );
             }
 
-            // Verificación en vivo sobre la infraestructura de WhatsApp
+            // Motor 2: NumVerify (Operadora real-time + Tipo de línea + Ubicación)
+            if (numverifyKey) {
+                enrichJobs.push(
+                    axios.get(`http://apilayer.net/api/validate?access_key=${numverifyKey}&number=${info.cleanDigits}&format=1`, {
+                        timeout: 4500,
+                        validateStatus: s => s < 500
+                    }).then((r) => {
+                        if (r.status === 200 && r.data) {
+                            if (r.data.carrier && (!carrierFinal || carrierFinal === 'No especificada' || carrierFinal.includes('no especificado'))) {
+                                carrierFinal = r.data.carrier;
+                            }
+                            if (r.data.line_type) {
+                                lineTypeFinal = r.data.line_type;
+                            }
+                            if (r.data.location && !locationFinal) {
+                                locationFinal = r.data.location;
+                            }
+                        }
+                    }).catch(() => {})
+                );
+            }
+
+            // Motor 3: AbstractAPI Phone Intelligence (Gratuito)
+            if (abstractKey) {
+                enrichJobs.push(
+                    axios.get(`https://phonevalidation.abstractapi.com/v1/?api_key=${abstractKey}&phone=${info.cleanDigits}`, {
+                        timeout: 4500,
+                        validateStatus: s => s < 500
+                    }).then((r) => {
+                        if (r.status === 200 && r.data) {
+                            if (r.data.carrier && (!carrierFinal || carrierFinal === 'No especificada' || carrierFinal.includes('no especificado'))) {
+                                carrierFinal = r.data.carrier;
+                            }
+                            if (r.data.type && (!lineTypeFinal || lineTypeFinal === 'Móvil / Celular')) {
+                                lineTypeFinal = r.data.type;
+                            }
+                            if (r.data.location && !locationFinal) {
+                                locationFinal = r.data.location;
+                            }
+                        }
+                    }).catch(() => {})
+                );
+            }
+
+            if (enrichJobs.length > 0) {
+                await Promise.all(enrichJobs);
+            }
+
+            // ── Traducción y formato del Tipo de Línea ──
+            const formatLineType = (rawType) => {
+                if (!rawType) return 'Móvil / Celular';
+                const lower = rawType.toLowerCase();
+                if (lower.includes('voip') || lower.includes('virtual')) return 'Voz sobre IP (VoIP / Virtual)';
+                if (lower.includes('toll')) return 'Línea Gratuita (Toll-Free)';
+                if (lower.includes('fixed') || lower.includes('landline') || lower.includes('fija')) return 'Línea Fija (Residencial/Comercial)';
+                if (lower.includes('prepaid') || lower.includes('prepago')) return 'Móvil (Prepago)';
+                if (lower.includes('postpaid') || lower.includes('pospago')) return 'Móvil (Pospago)';
+                if (lower.includes('mobile') || lower.includes('celular') || lower.includes('móvil')) return 'Móvil / Celular';
+                return rawType.charAt(0).toUpperCase() + rawType.slice(1);
+            };
+
+            // ── Detección VOIP heurística ──
+            const carrierLower = (carrierFinal || '').toLowerCase();
+            const lineLower = (lineTypeFinal || '').toLowerCase();
+            if (VOIP_KEYWORDS.some(k => carrierLower.includes(k)) || lineLower.includes('voip') || lineLower.includes('virtual')) {
+                voipFlag = true;
+                voipProvider = carrierFinal;
+            }
+
+            // ── Cálculo de dígitos nacionales (sin código de país) ──
+            const countryCallingCodeNoPlus = (info.countryCallingCode || '').replace(/\D/g, '');
+            let nationalDigits = '';
+            if (countryCallingCodeNoPlus && info.cleanDigits.startsWith(countryCallingCodeNoPlus)) {
+                nationalDigits = info.cleanDigits.slice(countryCallingCodeNoPlus.length);
+            } else {
+                nationalDigits = (info.nationalFormatted || '').replace(/\D/g, '') || info.cleanDigits;
+            }
+
+            // ── Spam score heurístico ──
+            let spamScore = '🟢 Bajo';
+            let spamNote = 'Línea regular sin factores de riesgo detectados.';
+            if (voipFlag) {
+                spamScore = '🔴 Alto (VOIP / Virtual)';
+                spamNote = 'Número virtual o VOIP — comúnmente asociado a spam, bots y números temporales.';
+            } else if (lineLower.includes('prepaid') || lineLower.includes('prepago')) {
+                spamScore = '🟡 Moderado (Prepago)';
+                spamNote = 'Línea prepago — mayor tasa estadística en llamadas no solicitadas.';
+            } else if (nationalDigits.length < 6 || nationalDigits.length > 12) {
+                spamScore = '🟡 Moderado (Longitud inusual)';
+                spamNote = 'Longitud numérica fuera del rango estándar nacional.';
+            }
+
+            // ── Enlaces Google Dorks (Investigación manual estilo PhoneInfoga) ──
+            const numE164 = info.e164 || `+${cleanDigits}`;
+            const numEncoded = encodeURIComponent(numE164);
+            const dorkLinks = [
+                `🔎 *Google:* https://www.google.com/search?q=%22${numEncoded}%22`,
+                `📋 *TrueCaller:* https://www.truecaller.com/search/${countryCallingCodeNoPlus}/${nationalDigits}`,
+                `📖 *WhitePages:* https://www.whitepages.com/phone/${nationalDigits}`,
+                `🕵️ *Spokeo:* https://www.spokeo.com/phone-search/results?q=${numEncoded}`
+            ];
+
+            // ── Verificación en vivo sobre la infraestructura de WhatsApp ──
             const targetJid = `${info.cleanDigits}@s.whatsapp.net`;
             let waStatus = {
                 registered: false,
@@ -840,12 +982,19 @@ module.exports = {
                 `┃ 📞 *Número:* \`${info.internationalFormatted || `+${cleanDigits}`}\``,
                 `┃ 🌍 *País:* ${info.flag || '🌐'} ${info.countryName} (${info.countryCallingCode})`,
                 `┃ 🏢 *Operadora:* ${carrierFinal}`,
-                `┃ 📱 *Tipo de línea:* ${info.lineType || 'Móvil / Celular'}`,
-                `┃ 📍 *Región / Zona:* ${info.region || 'N/A'}`,
+                `┃ 📱 *Tipo de línea:* ${voipFlag ? '⚠️ VOIP / Virtual (Desechable)' : formatLineType(lineTypeFinal)}`,
+                callerName ? `┃ 👤 *Titular (CNAM):* \`${callerName}\`` : '┃ 👤 *Titular (CNAM):* _No disponible en registro abierto_',
+                `┃ 📍 *Región / Zona:* ${locationFinal || info.region || 'N/A'}`,
                 `┃ 📐 *Formato Nacional:* \`${info.nationalFormatted || 'N/A'}\``,
-                `┃ 🌐 *Formato E.164:* \`${info.e164 || `+${cleanDigits}`}\``,
+                `┃ 🔢 *Sin código país:* \`${nationalDigits}\``,
+                `┃ 🌐 *Formato E.164:* \`${numE164}\``,
                 `┃ 🕐 *Huso Horario:* ${info.timeZone || 'N/A'}`,
                 `┃ ⏰ *Hora Local:* ${info.localTimeInfo?.fullString || info.localTimeInfo?.timeStr || 'N/A'}`,
+                '┃',
+                '┃ 🛡️ ═〔 *ANÁLISIS DE RIESGO Y TIPO* 〕═',
+                `┃ 🚨 *Riesgo / Spam:* ${spamScore}`,
+                `┃ ℹ️ *Diagnóstico:* _${spamNote}_`,
+                voipFlag ? `┃ ⚠️ *Alerta VOIP:* Operador virtual detectado (${voipProvider || carrierFinal})` : null,
                 '┃',
                 '┃ 💬 ═〔 *HUELLA EN WHATSAPP* 〕═',
                 waStatus.registered
@@ -857,6 +1006,9 @@ module.exports = {
                       (waStatus.bioDate ? `┃ 📅 *Actualizada el:* ${waStatus.bioDate}\n` : '') +
                       `┃ 🖼️ *Foto de Perfil:* ${waStatus.hasProfilePic ? '✅ Pública / Visible' : '🔒 Privada / Oculta'}`
                     : `┃ ⚠️ *Registro:* No registrado en WhatsApp\n┃    _Línea convencional / SMS / Llamadas voz_`,
+                '┃',
+                '┃ 🔎 ═〔 *INVESTIGACIÓN MANUAL (DORKS)* 〕═',
+                ...dorkLinks.map(link => `┃ ${link}`),
                 '┃',
                 '╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣',
                 '',
