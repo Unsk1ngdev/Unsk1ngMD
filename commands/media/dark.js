@@ -1,11 +1,27 @@
 'use strict';
 
 const axios = require('axios');
-const path = require('path');
 const fs = require('fs-extra');
 const nsfwManager = require('../../lib/nsfw');
 const ffmpeg = require('../../lib/ffmpeg');
-const config = require('../../config');
+const { createTempPath, safeUnlink } = require('../../lib/cleaner');
+
+// Control de concurrencia por usuario/chat para evitar saturación de red, CPU y Baileys
+const activeDarkRequests = new Set();
+
+// Pool curado de alta velocidad para fallback instantáneo garantizado (< 1s)
+const CURATED_DARK_MEDIA = [
+    { type: 'video', url: 'https://telegra.ph/file/61d85d10baf2e3b9a4cde.mp4' },
+    { type: 'video', url: 'https://telegra.ph/file/538c95e4f1c481bcc3cce.mp4' },
+    { type: 'video', url: 'https://telegra.ph/file/e999ef6e67a1a75a515d6.mp4' },
+    { type: 'video', url: 'https://telegra.ph/file/05c1bd3a2ec54428ac2fc.mp4' },
+    { type: 'video', url: 'https://telegra.ph/file/36149496affe5d02c8965.mp4' },
+    { type: 'video', url: 'https://telegra.ph/file/82d32821f3b57b62359f2.mp4' },
+    { type: 'video', url: 'https://telegra.ph/file/a2ad1dd463a935d5dfd17.mp4' },
+    { type: 'image', url: 'https://cdn.nekobot.xyz/4/0/7/1cf61bde4e2cbadc1018530eb10d3.png' },
+    { type: 'image', url: 'https://cdn.nekobot.xyz/f/8/8/d6ad04ef6b7eb7111fc26be98b792.png' },
+    { type: 'image', url: 'https://cdn.nekobot.xyz/1/e/1/65bdfebf3045610214a1a096c1482.png' }
+];
 
 module.exports = {
     name: 'dark',
@@ -13,6 +29,8 @@ module.exports = {
     category: 'multimedia',
     desc: 'Envía contenido anime +18 explícito y oscuro (BDSM, anal, cum, blowjob) en modo imagen o GIF',
     usage: '.dark',
+    CURATED_DARK_MEDIA,
+    activeDarkRequests,
 
     execute: async ({ sock, m }) => {
         const jid = m.chat || m.key.remoteJid;
@@ -25,44 +43,42 @@ module.exports = {
             }
         }
 
-        await sock.sendMessage(jid, {
-            text: '😈 Buscando contenido dark +18...'
-        }, { quoted: m });
+        // Prevención de ráfagas duplicadas por el mismo usuario mientras descarga
+        const userKey = `${jid}_${m.sender || m.key.participant || ''}`;
+        if (activeDarkRequests.has(userKey)) {
+            return await sock.sendMessage(jid, {
+                text: '⏳ *[SOLICITUD EN PROCESO]*\nYa estás buscando contenido dark. Espera un momento a que finalice la solicitud anterior antes de enviar otra.'
+            }, { quoted: m });
+        }
+        activeDarkRequests.add(userKey);
 
-        const isGifTurn = Math.random() < 0.5;
+        try {
+            if (typeof m.react === 'function') {
+                try { await m.react('😈'); } catch (_) {}
+            }
 
-        // Tags verificados con abundante contenido en boorus
-        const darkImageTags = ['bondage', 'anal', 'cum', 'creampie', 'tentacles', 'shibari'];
-        const nekoCategories = ['hanal', 'tentacle', 'paizuri', 'anal', 'blowjob', 'hentai', 'hass'];
+            await sock.sendMessage(jid, {
+                text: '😈 Buscando contenido dark +18...\n_Unknown Codexツ</>_'
+            }, { quoted: m });
 
-        const apis = [
-            // Fuente 1: GIF animado explícito vía Nekobot / Purrbot
-            async () => {
-                let url = null;
-                try {
-                    const res = await axios.get('https://nekobot.xyz/api/image?type=pgif', {
-                        headers: { 'User-Agent': 'Mozilla/5.0' },
-                        timeout: 4500
-                    });
-                    url = res.data?.message;
-                    if (url) url = url.replace('i0.nekobot.xyz', 'cdn.nekobot.xyz');
-                } catch (_) {}
+            const isGifTurn = Math.random() < 0.5;
 
-                if (!url) {
-                    const darkGifCategories = ['anal', 'cum', 'blowjob', 'fuck'];
-                    const cat = darkGifCategories[Math.floor(Math.random() * darkGifCategories.length)];
-                    const resMeta = await axios.get(`https://purrbot.site/api/img/nsfw/${cat}/gif`, {
-                        headers: { 'User-Agent': 'Mozilla/5.0' },
-                        timeout: 4000
-                    });
-                    url = resMeta.data?.link;
-                }
+            // Proveedor 1: PurrBot v2 Dark GIFs ligeros (< 2MB)
+            const purrCategories = ['anal', 'cum', 'blowjob', 'fuck', 'pussylick'].sort(() => Math.random() - 0.5);
+            const getPurrbotGif = async () => {
+                const cat = purrCategories[0] || 'anal';
+                const resMeta = await axios.get(`https://api.purrbot.site/v2/img/nsfw/${cat}/gif`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0' },
+                    timeout: 3500
+                });
+                const url = resMeta.data?.link;
+                if (!url) throw new Error('Sin URL purrbot');
 
-                if (!url) throw new Error('Sin URL gif');
-
+                // Descargar con límite estricto de 4MB para no saturar memoria ni CPU en conversión
                 const resMedia = await axios.get(url, {
                     responseType: 'arraybuffer',
-                    timeout: 10000,
+                    timeout: 6000,
+                    maxContentLength: 4 * 1024 * 1024,
                     headers: { 'User-Agent': 'Mozilla/5.0' }
                 });
                 const rawBuffer = Buffer.from(resMedia.data);
@@ -74,123 +90,137 @@ module.exports = {
                 if (isAlreadyMp4) {
                     finalBuffer = rawBuffer;
                 } else if (ffmpeg.isFfmpegAvailable()) {
-                    const tempDir = config.tempDir && fs.existsSync(config.tempDir) ? config.tempDir : process.cwd();
-                    const tmpId = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-                    const tmpIn = path.join(tempDir, `tmp_dark_in_${tmpId}.gif`);
-                    const tmpOut = path.join(tempDir, `tmp_dark_out_${tmpId}.mp4`);
+                    const tmpIn = createTempPath('gif');
+                    const tmpOut = createTempPath('mp4');
                     try {
-                        fs.writeFileSync(tmpIn, rawBuffer);
-                        await ffmpeg.convertGifToMp4(tmpIn, tmpOut);
+                        await fs.writeFile(tmpIn, rawBuffer);
+                        await ffmpeg.convertGifToMp4(tmpIn, tmpOut, { timeout: 8000 });
                         if (fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 100) {
-                            const converted = fs.readFileSync(tmpOut);
+                            const converted = await fs.readFile(tmpOut);
                             if (converted.length > 8 && converted.slice(4, 8).toString() === 'ftyp') {
                                 finalBuffer = converted;
                             }
                         }
                     } catch (_) {
                     } finally {
-                        try { if (fs.existsSync(tmpIn)) fs.unlinkSync(tmpIn); } catch (_) {}
-                        try { if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut); } catch (_) {}
+                        await safeUnlink(tmpIn);
+                        await safeUnlink(tmpOut);
                     }
                 }
 
                 if (finalBuffer) {
-                    return { type: 'gif', buffer: finalBuffer };
+                    return { type: 'video', buffer: finalBuffer };
                 }
-                // Si la conversión a video no fue posible, devolver como imagen estática para no fallar
-                return { type: 'image_buffer', buffer: rawBuffer };
-            },
+                throw new Error('Conversión de GIF no completada');
+            };
 
-            // Fuente 2: Imágenes intensas y oscuras vía Yande.re (tags garantizados)
-            async () => {
-                const tag = darkImageTags[Math.floor(Math.random() * darkImageTags.length)];
-                const page = Math.floor(Math.random() * 3) + 1;
-                let res = await axios.get(`https://yande.re/post.json?tags=rating:explicit+${tag}&limit=20&page=${page}`, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                    timeout: 5000
-                });
-                let items = Array.isArray(res.data)
-                    ? res.data.filter(p => (p.sample_url || p.jpeg_url || p.file_url) && !p.file_url?.endsWith('.zip'))
-                    : [];
-
-                if (items.length === 0) {
-                    // Fallback a posts explícitos generales
-                    res = await axios.get(`https://yande.re/post.json?tags=rating:explicit&limit=20&page=${page}`, {
-                        headers: { 'User-Agent': 'Mozilla/5.0' },
-                        timeout: 5000
-                    });
-                    items = Array.isArray(res.data)
-                        ? res.data.filter(p => (p.sample_url || p.jpeg_url || p.file_url) && !p.file_url?.endsWith('.zip'))
-                        : [];
-                }
-
-                if (items.length === 0) throw new Error('Sin posts en yande.re');
-                const picked = items[Math.floor(Math.random() * items.length)];
-                const url = picked.sample_url || picked.jpeg_url || picked.file_url;
-                if (!url) throw new Error('Sin URL yande.re');
-
-                return { type: 'image', url };
-            },
-
-            // Fuente 3: Nekobot categorías explícitas (Alta velocidad)
-            async () => {
-                const cat = nekoCategories[Math.floor(Math.random() * nekoCategories.length)];
+            // Proveedor 2: Nekobot Imágenes Explícitas Directas (Ultra rápidas < 1s)
+            const nekoCategories = ['hanal', 'tentacle', 'paizuri', 'anal', 'blowjob', 'hentai', 'hass'].sort(() => Math.random() - 0.5);
+            const getNekobotImage = async () => {
+                const cat = nekoCategories[0] || 'anal';
                 const res = await axios.get(`https://nekobot.xyz/api/image?type=${cat}`, {
                     headers: { 'User-Agent': 'Mozilla/5.0' },
-                    timeout: 4500
+                    timeout: 3500
                 });
                 let url = res.data?.message;
                 if (!url) throw new Error('Sin URL nekobot dark');
                 url = url.replace('i0.nekobot.xyz', 'cdn.nekobot.xyz');
                 return { type: 'image', url };
+            };
+
+            // Proveedor 3: Yande.re Muestras Ligeras (sample_url exclusivo, sin archivos PNG masivos)
+            const darkImageTags = ['bondage', 'anal', 'cum', 'creampie', 'tentacles', 'shibari'];
+            const getYandereImage = async () => {
+                const tag = darkImageTags[Math.floor(Math.random() * darkImageTags.length)];
+                const page = Math.floor(Math.random() * 3) + 1;
+                const res = await axios.get(`https://yande.re/post.json?tags=rating:explicit+${tag}&limit=12&page=${page}`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0' },
+                    timeout: 4000
+                });
+                const items = Array.isArray(res.data)
+                    ? res.data.filter(p => (p.sample_url || p.jpeg_url) && !p.file_url?.endsWith('.zip'))
+                    : [];
+
+                if (items.length === 0) throw new Error('Sin posts con muestra en yande.re');
+                const picked = items[Math.floor(Math.random() * items.length)];
+                const url = picked.sample_url || picked.jpeg_url;
+                if (!url) throw new Error('Sin muestra en yande.re');
+                return { type: 'image', url };
+            };
+
+            // Proveedor 4: Catálogo curado de alta disponibilidad (Respuesta inmediata)
+            const getCuratedMedia = async () => {
+                const item = CURATED_DARK_MEDIA[Math.floor(Math.random() * CURATED_DARK_MEDIA.length)];
+                return item;
+            };
+
+            // Estrategia equilibrada según si toca turno GIF o Imagen
+            const providers = isGifTurn
+                ? [getPurrbotGif, getNekobotImage, getYandereImage, getCuratedMedia]
+                : [getNekobotImage, getYandereImage, getPurrbotGif, getCuratedMedia];
+
+            let enviado = false;
+
+            for (const getMedia of providers) {
+                if (enviado) break;
+                try {
+                    const item = await getMedia();
+                    if (!item) continue;
+
+                    if (item.type === 'video') {
+                        if (item.buffer) {
+                            await sock.sendMessage(jid, {
+                                video: item.buffer,
+                                caption: '😈 _Unknown Codexツ</> Dark +18_',
+                                gifPlayback: true,
+                                mimetype: 'video/mp4'
+                            }, { quoted: m });
+                            enviado = true;
+                            break;
+                        } else if (item.url) {
+                            await sock.sendMessage(jid, {
+                                video: { url: item.url },
+                                caption: '😈 _Unknown Codexツ</> Dark +18_',
+                                gifPlayback: true,
+                                mimetype: 'video/mp4'
+                            }, { quoted: m });
+                            enviado = true;
+                            break;
+                        }
+                    } else if (item.type === 'image' && item.url) {
+                        await sock.sendMessage(jid, {
+                            image: { url: item.url },
+                            caption: '😈 _Unknown Codexツ</> Dark +18_'
+                        }, { quoted: m });
+                        enviado = true;
+                        break;
+                    }
+                } catch (err) {
+                    // Continuar al siguiente proveedor sin saturar la terminal
+                    continue;
+                }
             }
-        ];
 
-        // Ordenar según isGifTurn para dar variedad
-        const prioritizedApis = isGifTurn ? apis : [apis[1], apis[2], apis[0]];
-
-        let enviado = false;
-
-        for (const api of prioritizedApis) {
-            if (enviado) break;
-            try {
-                const item = await api();
-                if (item.type === 'gif' && item.buffer) {
+            // Fallback final garantizado si todos los anteriores fallaron
+            if (!enviado) {
+                const fallbackItem = CURATED_DARK_MEDIA[Math.floor(Math.random() * CURATED_DARK_MEDIA.length)];
+                if (fallbackItem.type === 'video') {
                     await sock.sendMessage(jid, {
-                        video: item.buffer,
+                        video: { url: fallbackItem.url },
                         caption: '😈 _Unknown Codexツ</> Dark +18_',
                         gifPlayback: true,
                         mimetype: 'video/mp4'
                     }, { quoted: m });
-                    enviado = true;
-                    break;
-                } else if (item.type === 'image' && item.url) {
+                } else {
                     await sock.sendMessage(jid, {
-                        image: { url: item.url },
+                        image: { url: fallbackItem.url },
                         caption: '😈 _Unknown Codexツ</> Dark +18_'
                     }, { quoted: m });
-                    enviado = true;
-                    break;
-                } else if (item.type === 'image_buffer' && item.buffer) {
-                    await sock.sendMessage(jid, {
-                        image: item.buffer,
-                        caption: '😈 _Unknown Codexツ</> Dark +18_',
-                        mimetype: 'image/gif'
-                    }, { quoted: m });
-                    enviado = true;
-                    break;
                 }
-            } catch (err) {
-                console.error('[DARK] Falló intento:', err.message);
-                continue;
             }
-        }
 
-        if (!enviado) {
-            await sock.sendMessage(jid, {
-                text: '❌ Error al obtener contenido dark +18.\nInténtalo de nuevo en unos segundos.\n\n_Unknown Codexツ</>_'
-            }, { quoted: m });
+        } finally {
+            activeDarkRequests.delete(userKey);
         }
     }
 };
-
