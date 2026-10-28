@@ -154,14 +154,16 @@ const startBot = async () => {
     if (fs.existsSync(credsFile)) {
         try {
             const rawCreds = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
-            isSessionRegistered = Boolean(rawCreds.registered);
+            // Una sesión está registrada si completó el emparejamiento por código (registered: true)
+            // o por código QR (contiene me y account generados tras pair-success)
+            isSessionRegistered = Boolean(rawCreds.registered || (rawCreds.me && rawCreds.account));
         } catch (_) {
             isSessionRegistered = false;
         }
     }
 
     // Si existen archivos de sesión pero NO está registrada (intento previo fallido, interrumpido o cancelado),
-    // limpiar la carpeta para evitar que WhatsApp rechace nuevos códigos por claves previas corruptas o desfasadas.
+    // limpiar la carpeta para evitar que WhatsApp rechace nuevos intentos por claves previas corruptas o desfasadas.
     if (!isSessionRegistered && fs.existsSync(config.sessionDir)) {
         try {
             fs.emptyDirSync(config.sessionDir);
@@ -169,7 +171,11 @@ const startBot = async () => {
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(config.sessionDir);
-    const isSessionActive = Boolean(isSessionRegistered || state?.creds?.registered);
+    const isSessionActive = Boolean(
+        isSessionRegistered ||
+        state?.creds?.registered ||
+        (state?.creds?.me && state?.creds?.account)
+    );
 
     let authMethod = global.authMethod || '1'; // 1 = QR, 2 = Pairing Code
     let pairingNumber = global.pairingNumber || '';

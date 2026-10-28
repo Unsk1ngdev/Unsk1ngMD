@@ -110,3 +110,4 @@ const createMockContext = () => {
     console.error('❌ Error en pruebas de .dark:', err);
     process.exit(1);
 });
+
