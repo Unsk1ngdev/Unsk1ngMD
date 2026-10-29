@@ -234,8 +234,8 @@ const startBot = async () => {
         generateHighQualityLinkPreview: false,
         markOnlineOnConnect: true,
         connectTimeoutMs: 60000,
-        keepAliveIntervalMs: 25000,
-        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 15000,
+        defaultQueryTimeoutMs: 30000,
         // Recuperación de mensajes reales o undefined para evitar tormentas de reintentos
         getMessage: async (key) => recentMessagesManager.getMessage(key)
     });
@@ -373,7 +373,19 @@ const startBot = async () => {
             }
 
             if (chatUpdate.type !== 'notify') return;
+            const nowSec = Math.floor(Date.now() / 1000);
+
             for (const rawMsg of chatUpdate.messages) {
+                // Descartar mensajes históricos acumulados mientras el bot estuvo offline (> 60 segundos de antigüedad)
+                // para evitar ráfagas de comandos obsoletos y falsas alarmas de antispam al reconectar
+                const msgSec = typeof rawMsg.messageTimestamp === 'number'
+                    ? rawMsg.messageTimestamp
+                    : (rawMsg.messageTimestamp?.low || Number(rawMsg.messageTimestamp) || 0);
+
+                if (msgSec > 0 && (nowSec - msgSec) > 60) {
+                    continue;
+                }
+
                 // Middleware Anti-Spam: Filtro de ráfagas con advertencia, borrado y modo expulsión opcional (.antispam / .antispamkick)
                 const isSpam = await antispamMiddleware(sock, rawMsg);
                 if (isSpam) continue;
@@ -511,13 +523,15 @@ const logResilientError = (label, err) => {
     logger.error(`${label}:`, err?.stack || msg);
 };
 
-process.on('uncaughtException', (err) => {
-    logResilientError('💥 [UNCAUGHT EXCEPTION]', err);
-});
+if (!global.__preflightHandlersSet) {
+    process.on('uncaughtException', (err) => {
+        logResilientError('💥 [UNCAUGHT EXCEPTION]', err);
+    });
 
-process.on('unhandledRejection', (reason) => {
-    logResilientError('⚠️ [UNHANDLED REJECTION]', reason);
-});
+    process.on('unhandledRejection', (reason) => {
+        logResilientError('⚠️ [UNHANDLED REJECTION]', reason);
+    });
+}
 
 process.on('SIGINT', () => {
     logger.warn('Recibida señal SIGINT. Cerrando bot de forma segura...');

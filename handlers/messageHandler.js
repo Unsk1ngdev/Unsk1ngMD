@@ -22,7 +22,7 @@ const recentMessagesManager = require('../lib/recentMessages');
 const userNames = require('../lib/userNames');
 const { isLikelyLid } = require('../lib/phoneInfo');
 
-// Cache simple de metadatos de grupos con TTL de 30 segundos
+// Cache simple de metadatos de grupos con TTL de 30 segundos y fallback ultra-rápido
 const groupCache = new Map();
 const getCachedGroupMetadata = async (sock, jid) => {
     const cached = groupCache.get(jid);
@@ -31,12 +31,19 @@ const getCachedGroupMetadata = async (sock, jid) => {
         return cached.data;
     }
     try {
-        const metadata = await sock.groupMetadata(jid);
-        groupCache.set(jid, { data: metadata, timestamp: now });
-        return metadata;
-    } catch (e) {
-        return null;
+        const metadata = await Promise.race([
+            sock.groupMetadata(jid),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('groupMetadata timeout')), 3500))
+        ]);
+        if (metadata) {
+            groupCache.set(jid, { data: metadata, timestamp: now });
+            return metadata;
+        }
+    } catch (_) {
+        // En caso de latencia de red o fallo temporal, usar datos previos en caché para evitar que el bot se congele
+        if (cached?.data) return cached.data;
     }
+    return cached?.data || null;
 };
 
 

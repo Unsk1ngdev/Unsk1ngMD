@@ -153,7 +153,9 @@ module.exports = {
                 playerO: targetJid,
                 playerOName: targetName,
                 onTimeout: async () => {
-                    await sock.sendMessage(chatId, { text: '⏰ Partida de Tres en Raya cancelada por inactividad.' });
+                    try {
+                        await sock.sendMessage(chatId, { text: '⏰ Partida de Tres en Raya cancelada por inactividad.' });
+                    } catch (_) {}
                 }
             });
 
@@ -176,7 +178,9 @@ module.exports = {
                 playerO: null,
                 playerOName: null,
                 onTimeout: async () => {
-                    await sock.sendMessage(chatId, { text: '⏰ Partida de Tres en Raya cancelada por falta de rival.' });
+                    try {
+                        await sock.sendMessage(chatId, { text: '⏰ Partida de Tres en Raya cancelada por falta de rival.' });
+                    } catch (_) {}
                 }
             });
 

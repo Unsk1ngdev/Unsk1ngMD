@@ -64,7 +64,7 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
             syncFullHistory: false,
             markOnlineOnConnect: true,
             connectTimeoutMs: 60000,
-            defaultQueryTimeoutMs: 0,
+            defaultQueryTimeoutMs: 30000,
             keepAliveIntervalMs: 15000,
             // Recuperación de mensajes reales o undefined para evitar tormentas de reintentos
             getMessage: async (key) => recentMessagesManager.getMessage(key)
@@ -90,7 +90,7 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
                 logger.success(`[SUB-BOT +${cleanNumber}] ✅ ¡Sub-bot vinculado y conectado exitosamente!`);
 
                 const notifySock = global.mainSock || sock;
-                if (notifySock && chatJid) {
+                if (notifySock && chatJid && !isReconnect) {
                     try {
                         await notifySock.sendMessage(chatJid, {
                             text: `✅ *¡Sub-bot vinculado y conectado exitosamente!*\n\n` +
@@ -186,6 +186,15 @@ const createSubBotSocket = async ({ cleanNumber, sock, chatJid, isReconnect = fa
             try {
                 if (chatUpdate.type !== 'notify') return;
                 for (const rawMsg of chatUpdate.messages) {
+                    // Descartar mensajes antiguos o de historial acumulado (>60s) para evitar ráfagas en la terminal al reconectar
+                    const msgTimestamp = Number(rawMsg.messageTimestamp || 0);
+                    if (msgTimestamp > 0) {
+                        const nowSec = Math.floor(Date.now() / 1000);
+                        if (nowSec - msgTimestamp > 60) {
+                            continue;
+                        }
+                    }
+
                     handleMessage(subSock, rawMsg).catch(err => {
                         logger.error(`[SUB-BOT +${cleanNumber}] Error procesando mensaje:`, err.message);
                     });

@@ -8,7 +8,7 @@ const logger = require('../lib/logger');
 // Inicialización en memoria del tracker de spam global
 global.spamTracker = global.spamTracker || new Map();
 
-// Caché ligera de metadatos de grupo (30 segundos) para no saturar peticiones
+// Caché ligera de metadatos de grupo (30 segundos) con fallback ultra-rápido
 const groupMetadataCache = new Map();
 
 const getCachedGroupMetadata = async (sock, jid) => {
@@ -18,12 +18,18 @@ const getCachedGroupMetadata = async (sock, jid) => {
         return cached.data;
     }
     try {
-        const metadata = await sock.groupMetadata(jid);
-        groupMetadataCache.set(jid, { data: metadata, timestamp: now });
-        return metadata;
+        const metadata = await Promise.race([
+            sock.groupMetadata(jid),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('groupMetadata timeout')), 3500))
+        ]);
+        if (metadata) {
+            groupMetadataCache.set(jid, { data: metadata, timestamp: now });
+            return metadata;
+        }
     } catch (_) {
-        return null;
+        if (cached?.data) return cached.data;
     }
+    return cached?.data || null;
 };
 
 const cleanDigits = (id) => (id ? String(id).replace(/:.*@/, '@').split('@')[0].replace(/[^0-9]/g, '') : '');

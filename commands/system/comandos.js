@@ -237,6 +237,10 @@ module.exports = {
 │ 🔹 *${prefix}calc* [operación] - Calculadora matemática.
 │ 🔹 *${prefix}crypto* [moneda] - Precio en tiempo real de criptomonedas.
 │ 🔹 *${prefix}qr* [texto] / *${prefix}readqr* - Genera o lee códigos QR.
+│ 🔹 *${prefix}email* [correo] - Auditoría de email, servidores MX, seguridad DNS y brechas.
+│ 🔹 *${prefix}usuario* [username] - Rastrea un usuario en más de 15 plataformas (estilo Sherlock).
+│ 🔹 *${prefix}ip* [ip o web] - Consulta geográfica, ISP, DNS y seguridad de una IP o dominio.
+│ 🔹 *${prefix}pais* [país] - Datos geográficos, población, moneda y prefijo de un país.
 ╰────────────────────────────────────⬣
 
 ⚙️ *9. CATEGORÍA: SISTEMA & CONTROL (OWNER)*
