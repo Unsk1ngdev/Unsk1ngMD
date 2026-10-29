@@ -6,7 +6,7 @@ const logger = require('../../lib/logger');
 
 module.exports = {
     name: 'wm',
-    alias: ['take', 'robar', 'watermark', 'marcadeagua', 'sautor'],
+    alias: ['take', 'watermark', 'stickerwm', 'marcadeagua', 'sautor'],
     category: 'multimedia',
     desc: 'Cambia o crea la marca de agua de un sticker con tu nombre de usuario y frase personalizada',
     usage: '.wm [frase] o .wm [pack | autor] (respondiendo a sticker, imagen o video corto)',

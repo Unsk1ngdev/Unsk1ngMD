@@ -11,8 +11,9 @@ console.log('🧪 [TEST] Iniciando pruebas de comando .wm (Sticker Watermark)...
     assert.strictEqual(wmCmd.name, 'wm', 'El nombre principal debe ser wm');
     assert(Array.isArray(wmCmd.alias), 'alias debe ser un array');
     assert(wmCmd.alias.includes('take'), 'debe incluir alias take');
-    assert(wmCmd.alias.includes('robar'), 'debe incluir alias robar');
+    assert(!wmCmd.alias.includes('robar'), 'NO debe incluir alias robar para evitar conflicto con economia');
     assert(wmCmd.alias.includes('watermark'), 'debe incluir alias watermark');
+    assert(wmCmd.alias.includes('stickerwm'), 'debe incluir alias stickerwm');
     assert(wmCmd.alias.includes('sautor'), 'debe incluir alias sautor');
     assert.strictEqual(wmCmd.category, 'multimedia', 'la categoría debe ser multimedia');
     console.log('  ✅ Prueba 1 superada: Metadata y aliases de .wm verificados correctamente.');
