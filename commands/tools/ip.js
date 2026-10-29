@@ -105,6 +105,30 @@ function normalizeGeoData(source, raw, target) {
             isHosting: false,
             isMobile: false
         };
+    } else if (source === 'abstract') {
+        const flag = raw.flag?.emoji || (raw.country_code
+            ? String.fromCodePoint(...[...raw.country_code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65))
+            : '🌐');
+        return {
+            query: raw.ip_address || target,
+            country: raw.country || 'N/A',
+            countryCode: raw.country_code || '',
+            flag,
+            region: raw.region || 'N/A',
+            city: raw.city || 'N/A',
+            district: '',
+            zip: raw.postal_code || 'N/A',
+            lat: raw.latitude,
+            lon: raw.longitude,
+            timezone: raw.timezone?.name || 'N/A',
+            isp: raw.connection?.isp_name || raw.connection?.autonomous_system_organization || 'N/A',
+            org: raw.connection?.organization_name || raw.connection?.autonomous_system_organization || 'N/A',
+            asn: raw.connection?.autonomous_system_number ? `AS${raw.connection.autonomous_system_number}` : 'N/A',
+            reverse: '',
+            isProxy: raw.security?.is_vpn === true,
+            isHosting: false,
+            isMobile: raw.connection?.connection_type === 'Cellular'
+        };
     }
     return null;
 }
@@ -113,6 +137,22 @@ function normalizeGeoData(source, raw, target) {
  * Consulta la información de red y geolocalización con cadena de respaldo resiliente
  */
 async function fetchGeoData(target, fallbackIp) {
+    const ipToQuery = fallbackIp || target;
+    const abstractIpKey = (process.env.ABSTRACTAPI_IP_KEY || process.env.ABSTRACTAPI_IP || '').trim();
+
+    // 0. AbstractAPI IP Geolocation (Inteligencia premium si está configurada)
+    if (abstractIpKey && net.isIP(ipToQuery)) {
+        try {
+            const res = await axios.get(
+                `https://ipgeolocation.abstractapi.com/v1/?api_key=${abstractIpKey}&ip_address=${encodeURIComponent(ipToQuery)}`,
+                { timeout: 4500, headers: { 'User-Agent': 'Unsk1ngMD-Bot' } }
+            );
+            if (res.data && res.data.ip_address && !res.data.error) {
+                return normalizeGeoData('abstract', res.data, target);
+            }
+        } catch (_) {}
+    }
+
     // 1. ip-api.com (admite tanto dominios como direcciones IP)
     try {
         const res = await axios.get(

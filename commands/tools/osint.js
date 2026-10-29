@@ -428,6 +428,35 @@ async function queryHIBP(email) {
 }
 
 /**
+ * Consulta de validación y reputación de correo vía AbstractAPI Email Validation
+ */
+async function queryAbstractEmail(email) {
+    const key = (process.env.ABSTRACTAPI_EMAIL_KEY || process.env.ABSTRACTAPI_EMAIL || '').trim();
+    if (!key) return null;
+
+    try {
+        const res = await axios.get(
+            `https://emailvalidation.abstractapi.com/v1/?api_key=${key}&email=${encodeURIComponent(email)}`,
+            {
+                timeout: 5000,
+                validateStatus: s => s === 200
+            }
+        );
+        if (res.data && res.data.deliverability) {
+            return {
+                deliverability: res.data.deliverability,
+                qualityScore: res.data.quality_score ? `${Math.round(Number(res.data.quality_score) * 100)}%` : null,
+                isSmtpValid: res.data.is_smtp_valid?.value,
+                isFreeEmail: res.data.is_free_email?.value,
+                isDisposable: res.data.is_disposable_email?.value,
+                isCatchall: res.data.is_catchall_email?.value
+            };
+        }
+    } catch (_) {}
+    return null;
+}
+
+/**
  * Consulta geolocalización y seguridad de IP con arquitectura multi-motor resiliente
  */
 async function queryIP(ip) {
@@ -440,6 +469,38 @@ async function queryIP(ip) {
             type: priv.type,
             message: `Esta dirección pertenece a un ${priv.type} y no es enrutable en la Internet pública.`
         };
+    }
+
+    // Motor 0: AbstractAPI IP Geolocation (Inteligencia premium si está configurada)
+    const abstractIpKey = (process.env.ABSTRACTAPI_IP_KEY || process.env.ABSTRACTAPI_IP || '').trim();
+    if (abstractIpKey) {
+        try {
+            const res = await axios.get(
+                `https://ipgeolocation.abstractapi.com/v1/?api_key=${abstractIpKey}&ip_address=${encodeURIComponent(clean)}`,
+                { timeout: 4500, headers: { 'User-Agent': 'Unsk1ngMD-Bot' } }
+            );
+            if (res.data && res.data.ip_address && !res.data.error) {
+                const d = res.data;
+                return {
+                    status: 'success',
+                    ip: d.ip_address,
+                    country: d.country || 'Desconocido',
+                    countryCode: d.country_code || '',
+                    region: d.region || '',
+                    city: d.city || '',
+                    zip: d.postal_code || '',
+                    lat: d.latitude,
+                    lon: d.longitude,
+                    timezone: d.timezone?.name || '',
+                    isp: d.connection?.isp_name || d.connection?.autonomous_system_organization || '',
+                    org: d.connection?.organization_name || d.connection?.autonomous_system_organization || '',
+                    asn: d.connection?.autonomous_system_number ? `AS${d.connection.autonomous_system_number} ${d.connection.autonomous_system_organization || ''}` : '',
+                    proxy: !!d.security?.is_vpn,
+                    hosting: false,
+                    mobile: d.connection?.connection_type === 'Cellular'
+                };
+            }
+        } catch (_) {}
     }
 
     // Motor 1: ip-api.com
@@ -1043,17 +1104,40 @@ module.exports = {
 
             await sock.sendMessage(jid, { text: `🔍 Investigando email *${cleanEmail}*...` }, { quoted: m });
 
-            const [mxRecords, txtRecords, dmarcResult, hibpResult] = await Promise.all([
+            const [mxRecords, txtRecords, dmarcResult, hibpResult, abstractData] = await Promise.all([
                 queryMXRecords(domain),
                 queryTxtRecords(domain),
                 queryDmarc(domain),
-                queryHIBP(cleanEmail)
+                queryHIBP(cleanEmail),
+                queryAbstractEmail(cleanEmail)
             ]);
 
             const hasMailServers = mxRecords.length > 0;
             const provider = detectEmailProvider(domain, mxRecords);
-            const isDisposable = isDisposableEmail(domain);
+            const isDisposable = isDisposableEmail(domain) || abstractData?.isDisposable === true;
             const spfResult = extractSpfInfo(txtRecords);
+
+            let deliverabilitySection = '';
+            if (abstractData) {
+                const delivMap = {
+                    DELIVERABLE: '✅ Entregable (Buzón activo)',
+                    UNDELIVERABLE: '❌ No entregable (Inexistente)',
+                    RISKY: '⚠️ Riesgoso (Baja reputación)',
+                    UNKNOWN: '❓ Desconocido'
+                };
+                const delivStr = delivMap[abstractData.deliverability] || abstractData.deliverability;
+                const extraLines = [];
+                if (abstractData.qualityScore) extraLines.push(`┃ 🎯 *Calidad / Score:* ${abstractData.qualityScore}`);
+                if (typeof abstractData.isSmtpValid === 'boolean') {
+                    extraLines.push(`┃ 📬 *Verificación SMTP:* ${abstractData.isSmtpValid ? '✅ Buzón existe en vivo' : '❌ Buzón rechazado'}`);
+                }
+                deliverabilitySection = [
+                    '┃',
+                    '┃ ⚡ ═〔 *VALIDACIÓN EN VIVO (ABSTRACT API)* 〕═',
+                    `┃ 📊 *Estado de Entrega:* ${delivStr}`,
+                    ...extraLines
+                ].join('\n');
+            }
 
             let breachSection = '';
             if (hibpResult.pwned) {
@@ -1081,6 +1165,7 @@ module.exports = {
                     `┃ 🌐 *Dominio:* \`${domain}\``,
                     `┃ ${provider.icon} *Proveedor:* ${provider.name}`,
                     `┃ 📦 *Categoría:* ${isDisposable ? '⚠️ Correo Desechable / Temporal (Alto Riesgo)' : '✅ Proveedor Legítimo / Persistente'}`,
+                    deliverabilitySection,
                     '┃',
                     '┃ 📬 ═〔 *AUDITORÍA DNS Y ENTREGABILIDAD* 〕═',
                     `┃ 📨 *Servidores MX:* ${hasMailServers ? `Sí (${mxRecords.length} detectados)` : '❌ Sin servidores MX (No recibe correos)'}`,

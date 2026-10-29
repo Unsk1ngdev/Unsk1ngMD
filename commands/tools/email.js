@@ -141,6 +141,32 @@ async function checkBreaches(email) {
     }
 }
 
+async function checkAbstractEmail(email) {
+    const key = (process.env.ABSTRACTAPI_EMAIL_KEY || process.env.ABSTRACTAPI_EMAIL || '').trim();
+    if (!key) return null;
+
+    try {
+        const res = await axios.get(
+            `https://emailvalidation.abstractapi.com/v1/?api_key=${key}&email=${encodeURIComponent(email)}`,
+            {
+                timeout: 5000,
+                validateStatus: s => s === 200
+            }
+        );
+        if (res.data && res.data.deliverability) {
+            return {
+                deliverability: res.data.deliverability,
+                qualityScore: res.data.quality_score ? `${Math.round(Number(res.data.quality_score) * 100)}%` : null,
+                isSmtpValid: res.data.is_smtp_valid?.value,
+                isFreeEmail: res.data.is_free_email?.value,
+                isDisposable: res.data.is_disposable_email?.value,
+                isCatchall: res.data.is_catchall_email?.value
+            };
+        }
+    } catch (_) {}
+    return null;
+}
+
 module.exports = {
     name: 'email',
     alias: ['mail', 'checkmail', 'pwned', 'breach'],
@@ -163,16 +189,17 @@ module.exports = {
 
         const [localPart, domain] = query.split('@');
 
-        const [mxList, txtRecords, dmarcRecords, breachData] = await Promise.all([
+        const [mxList, txtRecords, dmarcRecords, breachData, abstractData] = await Promise.all([
             queryMX(domain),
             queryTxt(domain),
             queryTxt(`_dmarc.${domain}`),
-            checkBreaches(query)
+            checkBreaches(query),
+            checkAbstractEmail(query)
         ]);
 
         const hasMX = mxList.length > 0;
         const provider = detectProvider(domain, mxList);
-        const isDisposable = checkDisposable(domain);
+        const isDisposable = checkDisposable(domain) || abstractData?.isDisposable === true;
 
         const spfTxt = txtRecords.find(t => t.toLowerCase().startsWith('v=spf1'));
         const dmarcTxt = dmarcRecords.find(t => t.toLowerCase().startsWith('v=dmarc1'));
@@ -191,6 +218,29 @@ module.exports = {
                 `🛡️ No figura en bases de datos de brechas conocidas (${breachData.source}).`;
         }
 
+        let deliverabilitySection = '';
+        if (abstractData) {
+            const delivMap = {
+                DELIVERABLE: '✅ Entregable (Buzón activo)',
+                UNDELIVERABLE: '❌ No entregable (Inexistente)',
+                RISKY: '⚠️ Riesgoso (Baja reputación)',
+                UNKNOWN: '❓ Desconocido'
+            };
+            const delivStr = delivMap[abstractData.deliverability] || abstractData.deliverability;
+            const extraLines = [];
+            if (abstractData.qualityScore) extraLines.push(`┃ 🎯 *Score de Calidad:* ${abstractData.qualityScore}`);
+            if (typeof abstractData.isSmtpValid === 'boolean') {
+                extraLines.push(`┃ 📬 *Verificación SMTP:* ${abstractData.isSmtpValid ? '✅ Buzón responde en vivo' : '❌ Buzón no responde'}`);
+            }
+            if (typeof abstractData.isCatchall === 'boolean') {
+                extraLines.push(`┃ 📥 *Catch-all:* ${abstractData.isCatchall ? '⚠️ Sí (Atrapa todo el dominio)' : 'No'}`);
+            }
+            deliverabilitySection = [
+                `┃ 📊 *Estado de Entrega:* ${delivStr}`,
+                ...extraLines
+            ].join('\n');
+        }
+
         const report = [
             '╭━━━━〔 📧 *EMAIL AUDIT & OSINT* 〕━━━━⬣',
             '┃',
@@ -199,6 +249,9 @@ module.exports = {
             `┃ 🌐 *Dominio:* \`${domain}\``,
             `┃ ${provider.icon} *Proveedor:* ${provider.name}`,
             `┃ 📦 *Tipo:* ${isDisposable ? '⚠️ Desechable / Temporal (Alto Riesgo)' : '✅ Legítimo / Persistente'}`,
+            deliverabilitySection ? '┃' : '',
+            deliverabilitySection ? '┃ ⚡ ═〔 *VALIDACIÓN EN VIVO (ABSTRACT API)* 〕═' : '',
+            deliverabilitySection,
             '┃',
             '┃ 📨 ═〔 *ENTREGABILIDAD Y SERVIDORES* 〕═',
             `┃ 📬 *Servidores MX:* ${hasMX ? `Sí (${mxList.length} activos)` : '❌ Sin MX (No recibe correos)'}`,
