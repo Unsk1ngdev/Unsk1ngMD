@@ -1,5 +1,6 @@
 const { imageToSticker, videoToSticker } = require('../../lib/media');
 const config = require('../../config');
+const logger = require('../../lib/logger');
 
 module.exports = {
     name: 'sticker',
@@ -13,12 +14,13 @@ module.exports = {
 
         // Verificar si se citó un mensaje con multimedia
         if (m.quoted) {
-            if (m.quoted.type === 'imageMessage') {
+            const qType = m.quoted.type;
+            if (qType === 'imageMessage') {
                 mediaBuffer = await m.quoted.download();
-            } else if (m.quoted.type === 'videoMessage') {
-                const duration = m.quoted.message?.videoMessage?.seconds || 0;
-                if (duration > 10) {
-                    return await m.reply('❌ El video es demasiado largo (máximo 10 segundos para stickers).');
+            } else if (qType === 'videoMessage' || qType === 'ptvMessage') {
+                const duration = m.quoted.message?.videoMessage?.seconds || m.quoted.message?.ptvMessage?.seconds || 0;
+                if (duration > 15) {
+                    return await m.reply('❌ El video es demasiado largo (máximo 10 a 15 segundos para stickers).');
                 }
                 mediaBuffer = await m.quoted.download();
                 isVideo = true;
@@ -27,15 +29,15 @@ module.exports = {
             }
         } else if (m.type === 'imageMessage') {
             mediaBuffer = await m.download();
-        } else if (m.type === 'videoMessage') {
-            const duration = m.message?.videoMessage?.seconds || 0;
-            if (duration > 10) {
-                return await m.reply('❌ El video supera los 10 segundos permitidos.');
+        } else if (m.type === 'videoMessage' || m.type === 'ptvMessage') {
+            const duration = m.message?.videoMessage?.seconds || m.message?.ptvMessage?.seconds || 0;
+            if (duration > 15) {
+                return await m.reply('❌ El video supera los 15 segundos permitidos.');
             }
             mediaBuffer = await m.download();
             isVideo = true;
         } else {
-            return await m.reply('❌ Envía o cita una imagen con el comando *.s* o *.sticker*');
+            return await m.reply('❌ Envía o cita una imagen o video corto con el comando *.s* o *.sticker*');
         }
 
         if (!mediaBuffer) {
@@ -45,8 +47,8 @@ module.exports = {
         await m.react('⏳');
 
         // Metadatos por defecto: "Unsk1ngMD" y "Dev"
-        let packname = config.packName;
-        let author = config.authorName;
+        let packname = config.packName || 'Unsk1ngMD';
+        let author = config.authorName || 'Dev';
         if (text && text.includes('|')) {
             const parts = text.split('|').map(s => s.trim());
             if (parts[0]) packname = parts[0];
@@ -68,7 +70,10 @@ module.exports = {
             await m.react('✅');
         } catch (err) {
             await m.react('❌');
-            throw new Error(`Fallo al generar el sticker: ${err.message}`);
+            logger.error(`[STICKER] Fallo al generar el sticker: ${err.message}`);
+            return await sock.sendMessage(m.chat, {
+                text: `❌ Fallo al generar el sticker: ${err.message || 'Error procesando multimedia'}`
+            }, { quoted: m });
         }
     }
 };

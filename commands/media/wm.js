@@ -26,15 +26,15 @@ module.exports = {
                 isSticker = true;
             } else if (quoted.type === 'imageMessage') {
                 isImage = true;
-            } else if (quoted.type === 'videoMessage') {
+            } else if (quoted.type === 'videoMessage' || quoted.type === 'ptvMessage') {
                 isVideo = true;
-                targetDuration = quoted.message?.videoMessage?.seconds || 0;
+                targetDuration = quoted.message?.videoMessage?.seconds || quoted.message?.ptvMessage?.seconds || 0;
             }
         } else if (m.type === 'imageMessage') {
             isImage = true;
-        } else if (m.type === 'videoMessage') {
+        } else if (m.type === 'videoMessage' || m.type === 'ptvMessage') {
             isVideo = true;
-            targetDuration = m.message?.videoMessage?.seconds || 0;
+            targetDuration = m.message?.videoMessage?.seconds || m.message?.ptvMessage?.seconds || 0;
         }
 
         if (!isSticker && !isImage && !isVideo) {
