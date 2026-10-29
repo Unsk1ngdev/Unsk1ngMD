@@ -186,7 +186,8 @@ module.exports = {
                     'readqr',
                     'screenshot',
                     'meme',
-                    'cmeme'
+                    'cmeme',
+                    'wm'
                 ]
             },
             {

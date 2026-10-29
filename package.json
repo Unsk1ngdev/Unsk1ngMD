@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "node test/connectionManager.test.js && node test/backupZip.test.js && node test/despedida.test.js && node test/osint_tools.test.js && node test/reportar_and_resilience.test.js && node test/addowner_bangroup.test.js && node test/ghost_mode.test.js && node test/mute_unmute.test.js && node test/discord_lookup.test.js && node test/enviarlink.test.js && node test/gifnsfw.test.js && node test/dark.test.js"
+    "test": "node test/connectionManager.test.js && node test/backupZip.test.js && node test/despedida.test.js && node test/osint_tools.test.js && node test/reportar_and_resilience.test.js && node test/addowner_bangroup.test.js && node test/ghost_mode.test.js && node test/mute_unmute.test.js && node test/discord_lookup.test.js && node test/enviarlink.test.js && node test/gifnsfw.test.js && node test/dark.test.js && node test/wm.test.js"
   },
   "keywords": [
     "whatsapp",

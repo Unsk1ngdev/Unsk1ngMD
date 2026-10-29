@@ -224,6 +224,7 @@ module.exports = {
 🛠️ *8. CATEGORÍA: HERRAMIENTAS Y MULTIMEDIA*
 │
 │ 🔹 *${prefix}s* / *${prefix}sticker* - Convierte imagen o video corto a sticker WebP.
+│ 🔹 *${prefix}wm* [frase / pack | autor] (alias: ${prefix}take) - Cambia o crea sticker con tu nombre y texto.
 │ 🔹 *${prefix}togif* - Convierte video corto a GIF de WhatsApp.
 │ 🔹 *${prefix}toimg* / *${prefix}tovideo* - Convierte stickers a imagen o video.
 │ 🔹 *${prefix}tovn* - Convierte audio a nota de voz de WhatsApp (PTT).
