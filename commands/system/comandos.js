@@ -165,6 +165,26 @@ module.exports = {
 │ 🔹 *${prefix}debatir* [tema]
 │    _Inicia un debate de 5 rondas contra la IA con análisis y puntuación._
 │    *Ej:* \`${prefix}debatir la tecnología\`
+│
+│ 🔹 *${prefix}apostar* [cantidad | all] (alias: ${prefix}bet, ${prefix}apuesta)
+│    _Apuesta monedas contra la casa con dados animados y probabilidad real._
+│    *Ej:* \`${prefix}apostar 500\` | \`${prefix}apostar all\`
+│
+│ 🔹 *${prefix}cofre* (alias: ${prefix}chest, ${prefix}misterio)
+│    _Abre un cofre misterioso cada 3 horas para ganar monedas y experiencia._
+│    *Ej:* \`${prefix}cofre\`
+│
+│ 🔹 *${prefix}mision* [reclamar] (alias: ${prefix}misiones, ${prefix}quest)
+│    _Tablero de misiones diarias con recompensas en monedas y experiencia._
+│    *Ej:* \`${prefix}mision\` | \`${prefix}mision reclamar all\`
+│
+│ 🔹 *${prefix}mentira* [categoría opcional] (alias: ${prefix}excusa, ${prefix}labia)
+│    _Genera una mentira o coartada ingeniosa y viral para cualquier ocasión._
+│    *Ej:* \`${prefix}mentira trabajo\` | \`${prefix}mentira pareja\`
+│
+│ 🔹 *${prefix}roast* [@usuario] (alias: ${prefix}quemar, ${prefix}humillar)
+│    _Genera un insulto cómico, callejero e ingenioso (roast) al usuario._
+│    *Ej:* \`${prefix}roast @usuario\`
 ╰────────────────────────────────────⬣
 
 🎌 *4. CATEGORÍA: REACCIONES ANIME GIF*
@@ -219,6 +239,10 @@ module.exports = {
 │ 🔹 *${prefix}wiki* [tema]
 │    _Consultas enciclopédicas rigurosas y explicaciones estructuradas._
 │    *Ej:* \`${prefix}wiki El número Pi\`
+│
+│ 🔹 *${prefix}resumir* [texto o citando] (alias: ${prefix}resumen, ${prefix}tldr)
+│    _Resume textos largos o artículos extrayendo puntos clave y conclusión ejecutiva._
+│    *Ej:* \`${prefix}resumir [pega un artículo o cita un mensaje]\`
 ╰────────────────────────────────────⬣
 
 🛠️ *8. CATEGORÍA: HERRAMIENTAS Y MULTIMEDIA*
@@ -258,6 +282,21 @@ module.exports = {
 │ 🔹 *${prefix}bangroup* / *${prefix}unbangroup* - Suspende o reactiva el bot en un grupo.
 │ 🔹 *${prefix}backup* - Genera copia de seguridad del bot en archivo ZIP.
 │ 🔹 *${prefix}broadcast* [texto] - Envía un comunicado a todos los grupos.
+╰────────────────────────────────────⬣
+
+🔞 *10. CATEGORÍA: CONTENIDO ADULTO (+18 / NSFW)*
+│
+│ 🔹 *${prefix}nsfw* [on / off]
+│    _Activa o desactiva la disponibilidad de comandos para adultos en el grupo._
+│    *Ej:* \`${prefix}nsfw on\`
+│
+│ 🔹 *${prefix}shipnsfw* [@user1] [@user2] (alias: ${prefix}shiphot, ${prefix}parejahot)
+│    _[+18] Versión adulta del ship con compatibilidad íntima y descripción picante._
+│    *Ej:* \`${prefix}shipnsfw @persona1 @persona2\`
+│
+│ 🔹 *${prefix}gifnsfw* / *${prefix}dark*
+│    _Envía animaciones o contenido explícito aleatorio en grupos con NSFW activo._
+│    *Ej:* \`${prefix}gifnsfw\`
 ╰────────────────────────────────────⬣`;
 
         const imgPath = path.join(config.assetsDir, 'comandos.jpg');

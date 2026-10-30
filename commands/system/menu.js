@@ -76,7 +76,9 @@ module.exports = {
                     'inactivos',
                     'torneo',
                     'amigorandom',
-                    'formarpareja'
+                    'formarpareja',
+                    'sorteo',
+                    'contador'
                 ]
             },
             {
@@ -89,7 +91,8 @@ module.exports = {
                     'genimg',
                     'flux',
                     'wiki',
-                    'debatir'
+                    'debatir',
+                    'resumir'
                 ]
             },
             {
@@ -123,7 +126,8 @@ module.exports = {
                     'blackpink [texto]',
                     'devil [texto]',
                     'thunder [texto]',
-                    'sand [texto]'
+                    'sand [texto]',
+                    'ascii [texto]'
                 ]
             },
             {
@@ -152,7 +156,12 @@ module.exports = {
                     'akinator',
                     'slots',
                     'ruleta',
-                    'personalidad'
+                    'personalidad',
+                    'apostar',
+                    'cofre',
+                    'mision',
+                    'mentira',
+                    'roast'
                 ]
             },
             {
@@ -183,7 +192,9 @@ module.exports = {
                     'tourl',
                     'imglink',
                     'qr',
+                    'generarqr',
                     'readqr',
+                    'emojimix',
                     'screenshot',
                     'meme',
                     'cmeme',
@@ -206,6 +217,8 @@ module.exports = {
                     'pelicula',
                     'videojuego',
                     'monedaflip',
+                    'motivar',
+                    'sitestatus',
                     'banco',
                     'diario',
                     'trabajar',
@@ -290,7 +303,8 @@ module.exports = {
                     'penetrar',
                     'grabboobs',
                     'chaqueta',
-                    'paja'
+                    'paja',
+                    'shipnsfw'
                 ]
             }
         ];
