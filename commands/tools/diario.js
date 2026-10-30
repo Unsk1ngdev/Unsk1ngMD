@@ -1,6 +1,7 @@
 'use strict';
 
 const economy = require('../../lib/economy');
+const missions = require('../../lib/missions');
 
 module.exports = {
     name: 'diario',
@@ -30,6 +31,11 @@ module.exports = {
             }, { quoted: m });
         }
 
+        // Registrar progreso de misión diaria
+        try {
+            missions.recordProgress(sender, 'diario', 1);
+        } catch (_) {}
+
         const levelUpMsg = res.leveledUp
             ? `\n🎉 *¡SUBISTE DE NIVEL! Ahora eres Nivel ${res.nuevoNivel}* (+5 ATQ, +3 DEF)\n`
             : '';
@@ -51,4 +57,3 @@ module.exports = {
         }, { quoted: m });
     }
 };
-

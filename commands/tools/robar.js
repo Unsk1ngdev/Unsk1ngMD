@@ -1,6 +1,7 @@
 'use strict';
 
 const economy = require('../../lib/economy');
+const missions = require('../../lib/missions');
 const userNames = require('../../lib/userNames');
 
 const ROB_COOLDOWN_MS = 20 * 60 * 1000; // 20 minutos de enfriamiento
@@ -84,6 +85,11 @@ module.exports = {
 
         ladron.lastRob = ahora;
 
+        // Registrar progreso de misión diaria por intento de robo
+        try {
+            missions.recordProgress(sender, 'robar', 1);
+        } catch (_) {}
+
         // 4. Cálculo de probabilidad basado en Ataque vs Defensa
         const ataqueladron = ladron.ataque || 15;
         const defensavictima = victima.defensa || 10;
@@ -134,4 +140,3 @@ module.exports = {
         }
     }
 };
-

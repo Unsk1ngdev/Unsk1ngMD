@@ -220,6 +220,7 @@ module.exports = {
                     'rank',
                     'ping',
                     'owner',
+                    'msp',
                     'comandos'
                 ]
             },

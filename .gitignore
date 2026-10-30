@@ -35,6 +35,7 @@ database/groups.json
 database/settings.json
 database/recentMessages.json
 database/economy.json
+database/missions.json
 database/userNames.json
 database/backups/
 data/settings.json

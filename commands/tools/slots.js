@@ -1,14 +1,23 @@
 'use strict';
 
+const missions = require('../../lib/missions');
+
 module.exports = {
     name: 'slots',
-    alias: ['slot', 'tragamonedas', 'apuesta'],
+    alias: ['slot', 'tragamonedas'],
     category: 'juegos',
     desc: 'Juega a la máquina tragamonedas (slots) con premios y combinaciones',
     usage: '.slots',
 
     execute: async ({ sock, m }) => {
         const jid = m.chat || m.key.remoteJid;
+        const sender = m.sender || m.key.participant || jid;
+
+        // Registrar progreso de misión si aplica
+        try {
+            missions.recordProgress(sender, 'apostar', 1);
+        } catch (_) {}
+
         const simbolos = ['🍒', '🍋', '🍊', '🍇', '⭐', '7️⃣', '💎', '🎰', '🔔', '🍀'];
 
         const s1 = simbolos[Math.floor(Math.random() * simbolos.length)];
@@ -67,4 +76,3 @@ module.exports = {
         }
     }
 };
-

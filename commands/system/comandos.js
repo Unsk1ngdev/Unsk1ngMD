@@ -242,6 +242,7 @@ module.exports = {
 │ 🔹 *${prefix}usuario* [username] - Rastrea un usuario en más de 15 plataformas (estilo Sherlock).
 │ 🔹 *${prefix}ip* [ip o web] - Consulta geográfica, ISP, DNS y seguridad de una IP o dominio.
 │ 🔹 *${prefix}pais* [país] - Datos geográficos, población, moneda y prefijo de un país.
+│ 🔹 *${prefix}msp* [nombre] (alias: ${prefix}clinica, ${prefix}hospital) - Verifica centros de salud, clínicas y hospitales habilitados por el Ministerio de Salud Pública de RD (MISPAS/DHSES).
 ╰────────────────────────────────────⬣
 
 ⚙️ *9. CATEGORÍA: SISTEMA & CONTROL (OWNER)*
