@@ -81,16 +81,28 @@ const renderBanner = (socketStatus = 'Iniciando conexión...') => {
     console.log(border('└', '┘') + '\n');
 };
 
-// Función auxiliar para entradas interactivas por consola
-const askQuestion = (query) => {
+// Función auxiliar para entradas interactivas por consola con protección ante entornos no-TTY (PM2/Docker) y timeout
+const askQuestion = (query, timeoutMs = 45000, defaultAns = '1') => {
+    if (!process.stdin.isTTY) {
+        return Promise.resolve(defaultAns);
+    }
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
     return new Promise((resolve) => {
+        let timer = null;
+        if (timeoutMs > 0) {
+            timer = setTimeout(() => {
+                rl.close();
+                console.log(chalk.yellow(`\n⚠️ Tiempo de espera agotado. Seleccionando opción automática: [${defaultAns}]`));
+                resolve(defaultAns);
+            }, timeoutMs);
+        }
         rl.question(query, (ans) => {
+            if (timer) clearTimeout(timer);
             rl.close();
-            resolve(ans.trim());
+            resolve(ans ? ans.trim() : defaultAns);
         });
     });
 };
@@ -177,26 +189,37 @@ const startBot = async () => {
         (state?.creds?.me && state?.creds?.account)
     );
 
-    let authMethod = global.authMethod || '1'; // 1 = QR, 2 = Pairing Code
-    let pairingNumber = global.pairingNumber || '';
+    let authMethod = global.authMethod || process.env.AUTH_METHOD || '';
+    let pairingNumber = global.pairingNumber || process.env.PAIRING_NUMBER || '';
 
     // Autenticación dual interactiva si no hay credenciales existentes
     if (!isSessionActive) {
-        console.log(chalk.cyan.bold('\n📱 [AUTENTICACIÓN REQUERIDA] No se encontró una sesión activa previa.'));
-        console.log(chalk.yellow('Selecciona el método de vinculación:'));
-        console.log(chalk.white(' [1] Código QR en terminal'));
-        console.log(chalk.white(' [2] Código de emparejamiento de 8 dígitos (Pairing Code)\n'));
+        // En entornos no interactivos (PM2, Docker, scripts de fondo), seleccionar automáticamente
+        if (!process.stdin.isTTY && !authMethod) {
+            authMethod = pairingNumber ? '2' : '1';
+            logger.info(`[AUTENTICACIÓN] Modo no interactivo (PM2/Servicio) detectado. Opción asignada automáticamente: [${authMethod === '2' ? 'Pairing Code' : 'Código QR'}]`);
+        }
 
-        authMethod = await askQuestion(chalk.green.bold('Elige una opción (1 o 2): '));
+        if (!authMethod) {
+            console.log(chalk.cyan.bold('\n📱 [AUTENTICACIÓN REQUERIDA] No se encontró una sesión activa previa.'));
+            console.log(chalk.yellow('Selecciona el método de vinculación:'));
+            console.log(chalk.white(' [1] Código QR en terminal'));
+            console.log(chalk.white(' [2] Código de emparejamiento de 8 dígitos (Pairing Code)\n'));
+
+            authMethod = await askQuestion(chalk.green.bold('Elige una opción (1 o 2) [Default: 1]: '), 30000, '1');
+        }
         global.authMethod = authMethod;
 
         if (authMethod === '2') {
-            pairingNumber = await askQuestion(chalk.green.bold('Ingresa tu número de teléfono con código de país (ej: 18494509905): '));
-            pairingNumber = pairingNumber.replace(/[^0-9]/g, '').replace(/^0+/, '');
+            if (!pairingNumber && process.stdin.isTTY) {
+                pairingNumber = await askQuestion(chalk.green.bold('Ingresa tu número de teléfono con código de país (ej: 18494509905): '), 45000, '');
+            }
+            pairingNumber = String(pairingNumber || '').replace(/[^0-9]/g, '').replace(/^0+/, '');
             global.pairingNumber = pairingNumber;
 
             if (!pairingNumber || pairingNumber.length < 8 || pairingNumber.length > 16) {
-                logger.error('Número de teléfono inválido. Debe contener entre 8 y 16 dígitos numéricos sin símbolos ni ceros iniciales.');
+                logger.error('Número de teléfono inválido para Pairing Code. Debe contener entre 8 y 16 dígitos numéricos sin símbolos ni ceros iniciales.');
+                logger.info('💡 TIP: Si ejecutas con PM2, puedes definir PAIRING_NUMBER=18494509905 AUTH_METHOD=2 en tu .env');
                 process.exit(1);
             }
         } else {
