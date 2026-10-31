@@ -256,6 +256,26 @@ const handleMessage = async (sock, rawMsg) => {
         if (m.isGroup) {
             rankManager.increment(m.chat, m.sender);
 
+            const prefix = database.getPrefix();
+            const isCmd = Boolean(m.body && prefix && m.body.startsWith(prefix));
+            const isAntilinkActive = Boolean(groupSettings.isAntilinkEnabled(m.chat) || antilinkManager.isEnabled(m.chat));
+            const isAntibadwordActive = Boolean(groupSettings.getGroup(m.chat)?.antibadword);
+            const isGameActive = Boolean(
+                (global.vdrEsperando && global.vdrEsperando[m.chat]) ||
+                (global.personalidadTest && global.personalidadTest[m.sender]) ||
+                (global.debates && global.debates[m.sender]) ||
+                (global.roleplaySessions && global.roleplaySessions[m.sender]) ||
+                acertijoManager.has(m.chat) ||
+                triviaManager.has(m.chat) ||
+                akinatorManager.has(m.sender)
+            );
+
+            // Si es conversación habitual de grupo (no es comando, ni enlace prohibido, ni mala palabra, ni juego interactivo),
+            // terminar inmediatamente para evitar saturar la CPU y el socket calculando permisos y metadatos de cientos de miembros.
+            if (!isCmd && !isAntilinkActive && !isAntibadwordActive && !isGameActive) {
+                return;
+            }
+
             const cachedMeta = await getCachedGroupMetadata(sock, m.chat);
             const perms = await checkGroupPermissions(sock, m.chat, m.sender, cachedMeta, m);
             groupMetadata = perms.groupMetadata;
@@ -312,7 +332,6 @@ const handleMessage = async (sock, rawMsg) => {
             isAdmin = perms.isSenderAdmin || isOwner;
 
             // --- 1. FILTRO ANTIENLACES (SOLO BORRADO DE MENSAJES, SIN EXPULSIÓN) ---
-            const isAntilinkActive = groupSettings.isAntilinkEnabled(m.chat) || antilinkManager.isEnabled(m.chat);
             if (isAntilinkActive && !isAdmin && !isOwner) {
                 const linkRegex = /(?:chat\.whatsapp\.com\/(?:invite\/)?[0-9A-Za-z]{20,24}|wa\.me\/[0-9]+|(?:https?:\/\/|www\.)[^\s]+)/i;
                 if (linkRegex.test(m.body)) {
@@ -332,7 +351,6 @@ const handleMessage = async (sock, rawMsg) => {
             }
 
             // --- 2. FILTRO ANTIBADWORD (INSULTOS / PALABRAS OFENSIVAS) ---
-            const isAntibadwordActive = groupSettings.getGroup(m.chat)?.antibadword;
             if (isAntibadwordActive && !isAdmin && !isOwner && m.body) {
                 const badWordsRegex = /\b(?:hdp|hijo\s*de\s*puta|malparido|gonorrea|maricon|mierda|estupido|idiota|imbecil|puta|prostituta|zorra|maldito|coño|coño\s*de\s*tu\s*madre|pendejo)\b/i;
                 if (badWordsRegex.test(m.body)) {

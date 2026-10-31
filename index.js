@@ -29,6 +29,9 @@ const connectionManager = require('./lib/connectionManager');
 const recentMessagesManager = require('./lib/recentMessages');
 const userNames = require('./lib/userNames');
 
+// Marca de tiempo de arranque del proceso del bot (en segundos)
+const botStartTime = Math.floor(Date.now() / 1000);
+
 /**
  * Renderiza el banner cyberpunk con cfonts y la caja de información neón
  */
@@ -397,13 +400,23 @@ const startBot = async () => {
             const nowSec = Math.floor(Date.now() / 1000);
 
             for (const rawMsg of chatUpdate.messages) {
-                // Descartar mensajes históricos acumulados mientras el bot estuvo offline (> 60 segundos de antigüedad)
-                // para evitar ráfagas de comandos obsoletos y falsas alarmas de antispam al reconectar
-                const msgSec = typeof rawMsg.messageTimestamp === 'number'
-                    ? rawMsg.messageTimestamp
-                    : (rawMsg.messageTimestamp?.low || Number(rawMsg.messageTimestamp) || 0);
+                // Obtener timestamp numérico en segundos de forma segura (soporta Long, number, string, ms)
+                let rawTs = rawMsg.messageTimestamp;
+                let tsNum = 0;
+                if (typeof rawTs === 'number') {
+                    tsNum = rawTs;
+                } else if (rawTs && typeof rawTs.toNumber === 'function') {
+                    tsNum = rawTs.toNumber();
+                } else if (rawTs && typeof rawTs.low === 'number' && typeof rawTs.high === 'number') {
+                    tsNum = (rawTs.high * 4294967296) + (rawTs.low >>> 0);
+                } else if (rawTs) {
+                    tsNum = Number(rawTs.toString()) || 0;
+                }
+                const msgSec = tsNum > 10000000000 ? Math.floor(tsNum / 1000) : tsNum;
 
-                if (msgSec > 0 && (nowSec - msgSec) > 60) {
+                // Descartar mensajes acumulados mientras el bot estuvo offline o anteriores al arranque
+                // para evitar ráfagas de comandos obsoletos, saturación de la terminal y bloqueos al reconectar
+                if (msgSec > 0 && (msgSec < (botStartTime - 5) || (nowSec - msgSec) > 60)) {
                     continue;
                 }
 

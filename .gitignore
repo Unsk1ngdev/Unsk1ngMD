@@ -101,3 +101,7 @@ Desktop.ini
 *.sublime-project
 *.swp
 *~
+
+# 8. Archivos privados de sistema local
+commands/system/crash.js
+

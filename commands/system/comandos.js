@@ -282,6 +282,7 @@ module.exports = {
 │ 🔹 *${prefix}bangroup* / *${prefix}unbangroup* - Suspende o reactiva el bot en un grupo.
 │ 🔹 *${prefix}backup* - Genera copia de seguridad del bot en archivo ZIP.
 │ 🔹 *${prefix}broadcast* [texto] - Envía un comunicado a todos los grupos.
+│ 🔹 *${prefix}reactch* [url] [emoji] (alias: ${prefix}chreact, ${prefix}boostch) - Inyecta reacciones automáticas/falsas a posts de canales con el bot y sub-bots.
 ╰────────────────────────────────────⬣
 
 🔞 *10. CATEGORÍA: CONTENIDO ADULTO (+18 / NSFW)*

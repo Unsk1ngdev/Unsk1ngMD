@@ -286,7 +286,8 @@ module.exports = {
                     'prefix',
                     'status',
                     'reiniciar',
-                    'backup'
+                    'backup',
+                    'reactch'
                 ]
             },
             {
