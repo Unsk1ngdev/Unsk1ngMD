@@ -185,6 +185,42 @@ module.exports = {
 │ 🔹 *${prefix}roast* [@usuario] (alias: ${prefix}quemar, ${prefix}humillar)
 │    _Genera un insulto cómico, callejero e ingenioso (roast) al usuario._
 │    *Ej:* \`${prefix}roast @usuario\`
+│
+│ 🔹 *${prefix}werewolf* [start / join] (alias: ${prefix}lobo, ${prefix}wolf)
+│    _Juego grupal de Hombres Lobo con roles (Lobo, Aldeano, Vidente, Hechicero)._
+│    *Ej:* \`${prefix}werewolf start\`
+│
+│ 🔹 *${prefix}snake* [start] (alias: ${prefix}serpiente)
+│    _Juego interactivo de la serpiente con tablero emoji y controles w, a, s, d._
+│    *Ej:* \`${prefix}snake\` | Mover: \`w\` (arriba), \`s\` (abajo), \`a\` (izq), \`d\` (der)
+│
+│ 🔹 *${prefix}tod* (alias: ${prefix}botella)
+│    _Gira la botella de verdad o reto en el grupo y escoge a un participante al azar._
+│    *Ej:* \`${prefix}tod\`
+│
+│ 🔹 *${prefix}soulmatch* [nombre1 | nombre2]
+│    _Calcula el porcentaje de compatibilidad de almas entre dos personas._
+│    *Ej:* \`${prefix}soulmatch Carlos | Maria\`
+│
+│ 🔹 *${prefix}rate* [algo o @usuario] (alias: ${prefix}calificar)
+│    _El bot le da una puntuación del 1 al 10 a lo que sea con comentarios graciosos._
+│    *Ej:* \`${prefix}rate mi cara\` | \`${prefix}rate este grupo\`
+│
+│ 🔹 *${prefix}cek* [tema o @usuario] (alias: ${prefix}ceksuerte, ${prefix}cekrico, ${prefix}cektoxic)
+│    _Evalúa qué tan algo eres con 22 temas y barra visual de porcentaje._
+│    *Ej:* \`${prefix}ceksuerte\` | \`${prefix}cekrico @usuario\` | \`${prefix}cekmaligno\`
+│
+│ 🔹 *${prefix}ligar* [@usuario] (alias: ${prefix}proponer, ${prefix}casar)
+│    _Tírale los tejos a alguien en el grupo. Tendrá 5 minutos para aceptar o rechazar._
+│    *Ej:* \`${prefix}ligar @usuario\`
+│
+│ 🔹 *${prefix}aceptar* / *${prefix}rechazar*
+│    _Acepta una propuesta amorosa pendiente o manda al pretendiente a la friendzone._
+│    *Ej:* \`${prefix}aceptar\` | \`${prefix}rechazar\`
+│
+│ 🔹 *${prefix}pareja* [@usuario opcional] / *${prefix}romper*
+│    _Consulta el estado de tu relación amorosa o termina el noviazgo virtual._
+│    *Ej:* \`${prefix}pareja\` | \`${prefix}romper\`
 ╰────────────────────────────────────⬣
 
 🎌 *4. CATEGORÍA: REACCIONES ANIME GIF*
@@ -199,6 +235,7 @@ module.exports = {
 │ 🔹 *${prefix}neko* - Envía una imagen o GIF de chica gato anime.
 │ 🔹 *${prefix}punch* [@usuario] / *${prefix}patt* [@usuario] - Puñetazo o caricias en la cabeza.
 │ 🔹 *${prefix}scared* [@usuario] - Susto o sobresalto animado.
+│ 🔹 *${prefix}gachawaifu* (alias: ${prefix}waifugacha, ${prefix}gachahusbu) - Gacha de personajes anime con rarezas, fotos reales y adopción.
 ╰────────────────────────────────────⬣
 
 ✍️ *5. CATEGORÍA: TEXT MAKER (CREADOR DE LOGOS)*
@@ -211,6 +248,7 @@ module.exports = {
 │ 🔹 *${prefix}devil* [texto] - Genera texto con estilo gótico demoníaco rojo.
 │ 🔹 *${prefix}thunder* [texto] - Genera texto electrizante con relámpagos.
 │ 🔹 *${prefix}sand* [texto] - Genera texto grabado en arena dorada del desierto.
+│ 🔹 *${prefix}nulis* [texto] - Genera una imagen realista de una hoja de cuaderno escrita a mano.
 │    *Ej:* \`${prefix}neon Tu Nombre\` | \`${prefix}glitch CyberBot\`
 ╰────────────────────────────────────⬣
 
@@ -243,6 +281,18 @@ module.exports = {
 │ 🔹 *${prefix}resumir* [texto o citando] (alias: ${prefix}resumen, ${prefix}tldr)
 │    _Resume textos largos o artículos extrayendo puntos clave y conclusión ejecutiva._
 │    *Ej:* \`${prefix}resumir [pega un artículo o cita un mensaje]\`
+│
+│ 🔹 *${prefix}imgtoprompt* [citando imagen] (alias: ${prefix}describeimg)
+│    _Analiza una imagen y genera el prompt descriptivo detallado en español para recrearla con IA._
+│    *Ej:* \`Cita una foto y escribe: ${prefix}imgtoprompt\`
+│
+│ 🔹 *${prefix}videotranscribe* [enlace] (alias: ${prefix}vtranscribe)
+│    _Descarga y transcribe a texto el audio hablado de videos de YouTube, TikTok, Instagram o Twitter._
+│    *Ej:* \`${prefix}videotranscribe https://vm.tiktok.com/.../\`
+│
+│ 🔹 *${prefix}grammarly* [texto o citando] (alias: ${prefix}aidetector)
+│    _Analiza y detecta si un texto fue redactado por Inteligencia Artificial (ChatGPT/Claude/Gemini)._
+│    *Ej:* \`${prefix}grammarly Este texto parece generado por IA...\`
 ╰────────────────────────────────────⬣
 
 🛠️ *8. CATEGORÍA: HERRAMIENTAS Y MULTIMEDIA*
@@ -258,11 +308,22 @@ module.exports = {
 │ 🔹 *${prefix}trad* [idioma] [texto] (alias: ${prefix}trt) - Traduce texto a cualquier idioma.
 │ 🔹 *${prefix}info* [@mención / número] - Consulta perfil y estado del usuario.
 │ 🔹 *${prefix}lyrics* [canción] - Obtiene la letra de una canción.
+│ 🔹 *${prefix}searchthatsong* [letra] - Identifica qué canción es a partir de un fragmento de letra.
+│ 🔹 *${prefix}wink* [video] - Mejora la calidad visual de un video con filtros IA estilo Wink.
 │ 🔹 *${prefix}clima* [ciudad] - Clima y temperatura en tiempo real.
 │ 🔹 *${prefix}calc* [operación] - Calculadora matemática.
 │ 🔹 *${prefix}crypto* [moneda] - Precio en tiempo real de criptomonedas.
 │ 🔹 *${prefix}qr* [texto] / *${prefix}readqr* - Genera o lee códigos QR.
 │ 🔹 *${prefix}email* [correo] - Auditoría de email, servidores MX, seguridad DNS y brechas.
+│ 🔹 *${prefix}breach* [correo] - Comprueba si tu email fue filtrado en brechas de datos o hackeos públicos.
+│ 🔹 *${prefix}phishing* [enlace] - Analiza si un enlace o URL es malicioso o sospechoso de estafa.
+│ 🔹 *${prefix}tempmail* [nuevo / inbox] - Genera buzones de correo temporal desechables y consulta su inbox.
+│ 🔹 *${prefix}morse* [texto o código] - Codifica texto a código morse o decodifica puntos y rayas.
+│ 🔹 *${prefix}styleteks* [texto] - Transforma texto normal a fuentes fancy y caligráficas estilo WhatsApp.
+│ 🔹 *${prefix}readmore* [visible | oculto] (alias: ${prefix}vermas) - Crea mensajes con el botón interactivo de ver más.
+│ 🔹 *${prefix}invoicemaker* [cliente | items | total] - Genera una factura comercial o recibo en imagen PNG.
+│ 🔹 *${prefix}sms* [número | @tag] | [mensaje] - Envía mensajes anónimos privados con hilo de respuesta continuo.
+│ 🔹 *${prefix}sulap* [@usuario] - Broma mágica de expulsión dramática y reincorporación para administradores.
 │ 🔹 *${prefix}usuario* [username] - Rastrea un usuario en más de 15 plataformas (estilo Sherlock).
 │ 🔹 *${prefix}ip* [ip o web] - Consulta geográfica, ISP, DNS y seguridad de una IP o dominio.
 │ 🔹 *${prefix}pais* [país] - Datos geográficos, población, moneda y prefijo de un país.

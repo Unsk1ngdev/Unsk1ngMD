@@ -37,6 +37,8 @@ database/recentMessages.json
 database/economy.json
 database/missions.json
 database/userNames.json
+database/couples.json
+database/sms_anon.json
 database/backups/
 data/settings.json
 data/antilink.json

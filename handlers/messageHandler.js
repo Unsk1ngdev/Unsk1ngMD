@@ -7,6 +7,9 @@ const acertijoManager = require('../lib/acertijo');
 const triviaManager = require('../lib/trivia');
 const akinatorManager = require('../lib/akinator');
 const antilinkManager = require('../lib/antilink');
+const snakeManager = require('../lib/snake');
+const werewolfManager = require('../lib/werewolf');
+const smsManager = require('../lib/smsAnon');
 const logger = require('../lib/logger');
 const config = require('../config');
 const chalk = require('chalk');
@@ -267,7 +270,9 @@ const handleMessage = async (sock, rawMsg) => {
                 (global.roleplaySessions && global.roleplaySessions[m.sender]) ||
                 Boolean(acertijoManager?.hasActiveGame?.(m.chat)) ||
                 Boolean(triviaManager?.hasActiveGame?.(m.chat)) ||
-                Boolean(akinatorManager?.hasActiveGame?.(m.chat) || akinatorManager?.hasActiveGame?.(m.sender))
+                Boolean(akinatorManager?.hasActiveGame?.(m.chat) || akinatorManager?.hasActiveGame?.(m.sender)) ||
+                Boolean(snakeManager?.hasActiveGame?.(m.chat, m.sender)) ||
+                Boolean(werewolfManager?.hasActiveGame?.(m.chat))
             );
 
             // Si es conversación habitual de grupo (no es comando, ni enlace prohibido, ni mala palabra, ni juego interactivo),
@@ -573,6 +578,36 @@ const handleMessage = async (sock, rawMsg) => {
             // 3. Comprobar si hay un acertijo activo en el chat
             if (acertijoManager.hasActiveGame(m.chat)) {
                 await acertijoManager.checkAnswer(sock, m);
+                return;
+            }
+
+            // 4. Comprobar si hay una partida de Snake activa para este jugador
+            if (snakeManager.hasActiveGame(m.chat, m.sender)) {
+                const bodyText = (m.body || '').trim().toLowerCase();
+                const dir = snakeManager.parseDirection(bodyText);
+                if (dir && bodyText.length <= 4) {
+                    const res = snakeManager.makeMove(m.chat, m.sender, dir);
+                    if (res && !res.error) {
+                        if (res.finished) {
+                            const g = res.game;
+                            const finishMsg = res.won
+                                ? `🏆 *¡VICTORIA EN SNAKE!*\n\n${res.boardText}\n\n🍎 *Manzanas:* ${g.apples} | ⭐ *Puntos:* ${g.score}\n_Unknown Codexツ</>_`
+                                : `💥 *GAME OVER*\n${res.message}\n\n${res.boardText}\n\n🍎 *Manzanas:* ${g.apples} | ⭐ *Puntos:* ${g.score}\n_Unknown Codexツ</>_`;
+                            await sock.sendMessage(m.chat, { text: finishMsg }, { quoted: m });
+                        } else {
+                            const g = res.game;
+                            const stepMsg = `🐍 *SNAKE*\n\n${res.boardText}\n\n🍎 *Puntos:* ${g.score} | 📏 *Largo:* ${g.snake.length}\n_Envía w, a, s, d para moverte_`;
+                            await sock.sendMessage(m.chat, { text: stepMsg });
+                        }
+                        return;
+                    }
+                }
+            }
+
+            // 5. Comprobar si es una respuesta a un SMS anónimo
+            if (m.quoted && (m.quoted?.key?.id || m.quoted?.id)) {
+                const handledSms = await smsManager.handleReply(sock, m);
+                if (handledSms) return;
             }
             return;
         }

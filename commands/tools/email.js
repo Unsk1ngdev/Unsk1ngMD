@@ -169,7 +169,7 @@ async function checkAbstractEmail(email) {
 
 module.exports = {
     name: 'email',
-    alias: ['mail', 'checkmail', 'pwned', 'breach'],
+    alias: ['mail', 'checkmail', 'verifymail', 'emailcheck'],
     category: 'tools',
     desc: 'Verifica la validez, proveedor, seguridad DNS y filtraciones públicas de un correo electrónico',
     usage: '.email <correo@ejemplo.com>',

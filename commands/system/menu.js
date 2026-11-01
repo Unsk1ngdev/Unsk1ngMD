@@ -92,7 +92,10 @@ module.exports = {
                     'flux',
                     'wiki',
                     'debatir',
-                    'resumir'
+                    'resumir',
+                    'imgtoprompt',
+                    'videotranscribe',
+                    'grammarly'
                 ]
             },
             {
@@ -112,7 +115,8 @@ module.exports = {
                     'scared',
                     'roleplay',
                     'duelo',
-                    'anime'
+                    'anime',
+                    'gachawaifu'
                 ]
             },
             {
@@ -127,7 +131,8 @@ module.exports = {
                     'devil [texto]',
                     'thunder [texto]',
                     'sand [texto]',
-                    'ascii [texto]'
+                    'ascii [texto]',
+                    'nulis [texto]'
                 ]
             },
             {
@@ -153,7 +158,10 @@ module.exports = {
                     'trivia',
                     'acertijo',
                     'verdadoreto',
+                    'tod',
                     'akinator',
+                    'werewolf',
+                    'snake',
                     'slots',
                     'ruleta',
                     'personalidad',
@@ -161,7 +169,14 @@ module.exports = {
                     'cofre',
                     'mision',
                     'mentira',
-                    'roast'
+                    'roast',
+                    'soulmatch',
+                    'rate',
+                    'cek',
+                    'ceksuerte',
+                    'cekrico',
+                    'cekmaligno',
+                    'cekinteligente'
                 ]
             },
             {
@@ -196,6 +211,9 @@ module.exports = {
                     'readqr',
                     'emojimix',
                     'screenshot',
+                    'ssweb',
+                    'searchthatsong',
+                    'wink',
                     'meme',
                     'cmeme',
                     'wm'
@@ -234,6 +252,20 @@ module.exports = {
                     'ping',
                     'owner',
                     'msp',
+                    'breach',
+                    'phishing',
+                    'morse',
+                    'styleteks',
+                    'readmore',
+                    'tempmail',
+                    'invoicemaker',
+                    'sms',
+                    'sulap',
+                    'ligar',
+                    'aceptar',
+                    'rechazar',
+                    'pareja',
+                    'romper',
                     'comandos'
                 ]
             },
