@@ -359,6 +359,52 @@ module.exports = {
 │ 🔹 *${prefix}gifnsfw* / *${prefix}dark*
 │    _Envía animaciones o contenido explícito aleatorio en grupos con NSFW activo._
 │    *Ej:* \`${prefix}gifnsfw\`
+╰────────────────────────────────────⬣
+
+⚔️ *11. CATEGORÍA: RPG, RECURSOS Y ARTESANÍA*
+│
+│ 🔹 *${prefix}fishing* (alias: ${prefix}pescar) - Pesca peces, pulpos o ballenas legendarias con recompensas de monedas y EXP.
+│ 🔹 *${prefix}mining* (alias: ${prefix}minar) - Extrae rocas, hierro, oro, diamantes y esmeraldas.
+│ 🔹 *${prefix}woodcut* (alias: ${prefix}talar) - Corta madera común, roble, bambú y ébano ancestral.
+│ 🔹 *${prefix}hunting* (alias: ${prefix}cazar) - Caza conejos, ciervos, osos y bestias míticas en el bosque.
+│ 🔹 *${prefix}garden* (alias: ${prefix}huerto) - Siembra y cosecha trigo, tomates, zanahorias y manzanas doradas en tiempo real.
+│ 🔹 *${prefix}craft* [ítem] - Fabrica herramientas y objetos combinando materiales de tu inventario.
+│ 🔹 *${prefix}cook* [receta] - Prepara pan, sopas y banquetes para alimentar a tus mascotas.
+│ 🔹 *${prefix}alchemy* [poción] - Destila pociones de curación mayor, maná, suerte y EXP.
+│ 🔹 *${prefix}blacksmith* [equipo] - Forja espadas y armaduras legendarias aumentando tu ATQ y DEF permanentemente.
+│ 🔹 *${prefix}pet* [status|feed|train] - Cuida, alimenta y entrena a tu mascota para subirla de nivel.
+│ 🔹 *${prefix}petshop* - Tienda oficial de adopción de mascotas mágicas (perro, gato, zorro, lobo, dragón, fénix).
+│ 🔹 *${prefix}breeding* [@user] - Cruza tu mascota con la de otro usuario para engendrar una nueva cría.
+│ 🔹 *${prefix}dungeon* - Adéntrate en mazmorras por turnos con combates contra monstruos y jefes supremos.
+│ 🔹 *${prefix}suitpvp* [@user] - Duelo de Piedra, Papel o Tijera PvP con 30 segundos límite y apuestas.
+│ 🔹 *${prefix}expedition* - Envía a tu personaje a expediciones pasivas de 1h, 3h o 6h y regresa a reclamar botín.
+│ 🔹 *${prefix}lottery* - Lotería grupal con pozo acumulado en tiempo real.
+│ 🔹 *${prefix}tebakbendera* - Adivina la bandera del país en 45 segundos por monedas y EXP.
+│ 🔹 *${prefix}tebaklirik* - Adivina el título de la canción por un fragmento de su letra.
+│ 🔹 *${prefix}tts* [texto] - Convierte cualquier texto a nota de voz oficial de WhatsApp (PTT).
+│ 🔹 *${prefix}transkrip* - Cita una nota de voz para transcribir su contenido a texto editable con IA.
+│ 🔹 *${prefix}musikapaini* (alias: ${prefix}shazam) - Identifica qué canción está sonando en un audio o video.
+│ 🔹 *${prefix}ocr* - Digitaliza y extrae texto editable de fotos o capturas de pantalla.
+│ 🔹 *${prefix}marry* [@user] / *${prefix}divorce* - Petición formal de matrimonio con anillo o divorcio.
+│ 🔹 *${prefix}gift* [ítem] [cant] [@user] - Regala materiales o monedas directamente a otro usuario.
+│ 🔹 *${prefix}hourly* / *${prefix}weekly* - Reclama tus bonos económicos cada hora y cada 7 días.
+╰────────────────────────────────────⬣
+
+🛠️ *12. CATEGORÍA: HERRAMIENTAS Y MULTIMEDIA AVANZADA*
+│
+│ 🔹 *${prefix}anticolong* - Protege stickers para que no se puedan guardar ni reenviar fácilmente.
+│ 🔹 *${prefix}binary* [texto|binario] - Convierte texto a binario de 8-bit y viceversa automáticamente.
+│ 🔹 *${prefix}carbon* [código] - Genera imagen estilizada de código estilo carbon.now.sh con tema oscuro.
+│ 🔹 *${prefix}bypass* [url] - Salta acortadores y publicidad (linkvertise, bitly, etc.) dando el enlace directo.
+│ 🔹 *${prefix}fakevhs* - Aplica efecto estético de cámara VHS retro de los 90s (scanlines, fecha, OSD) a una foto.
+│ 🔹 *${prefix}cinematic* - Aplica barras cinematográficas anamórficas 2.39:1 y ajuste de película a una foto.
+│ 🔹 *${prefix}hdvid* - Remasteriza y mejora la nitidez y contraste de un video mediante FFmpeg local.
+│ 🔹 *${prefix}wink* - Remasterización Ultra HD avanzada de video.
+│ 🔹 *${prefix}sendngl* [url|msg] - Envía mensajes y preguntas completamente anónimas a perfiles de NGL.
+│ 🔹 *${prefix}converter* [formato] - Convierte archivos entre formatos (mp3, wav, ogg, mp4, gif, jpg, png, webp, pdf).
+│ 🔹 *${prefix}colongsw* - Descarga y extrae el estado/story de WhatsApp de la persona que te mencionó.
+│ 🔹 *${prefix}faketweet* [usuario|texto] - Genera captura de tweet falso de X en tema oscuro con métricas y verificado.
+│ 🔹 *${prefix}fagsocial* [usuario|caption] - Coloca cualquier foto con la interfaz completa de Instagram Reels o TikTok FYP.
 ╰────────────────────────────────────⬣`;
 
         const imgPath = path.join(config.assetsDir, 'comandos.jpg');

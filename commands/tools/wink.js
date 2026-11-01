@@ -11,7 +11,7 @@ fs.ensureDirSync(tmpDir);
 
 module.exports = {
     name: 'wink',
-    alias: ['hdvideo', 'videohd', 'mejorarvideo', 'winkai', 'enhancevideo'],
+    alias: ['hdvideo', 'hdvid', 'videohd', 'mejorarvideo', 'winkai', 'enhancevideo'],
     category: 'multimedia',
     desc: 'Remasteriza y mejora la nitidez, resolución, contraste y calidad de un video a Ultra HD (Wink Engine)',
     usage: '.wink (respondiendo a un video o enviando un video)',

@@ -145,7 +145,9 @@ module.exports = {
                     'circle',
                     'glass',
                     'gay',
-                    'blur'
+                    'blur',
+                    'fakevhs',
+                    'cinematic'
                 ]
             },
             {
@@ -172,11 +174,35 @@ module.exports = {
                     'roast',
                     'soulmatch',
                     'rate',
+                    'tebakbendera',
+                    'tebaklirik',
                     'cek',
                     'ceksuerte',
                     'cekrico',
                     'cekmaligno',
                     'cekinteligente'
+                ]
+            },
+            {
+                key: 'rpg',
+                title: 'RPG & CRAFTING MENU',
+                cmds: [
+                    'fishing',
+                    'mining',
+                    'woodcut',
+                    'hunting',
+                    'garden',
+                    'craft',
+                    'cook',
+                    'alchemy',
+                    'blacksmith',
+                    'pet',
+                    'petshop',
+                    'breeding',
+                    'expedition',
+                    'dungeon',
+                    'suitpvp',
+                    'lottery'
                 ]
             },
             {
@@ -198,6 +224,7 @@ module.exports = {
                 title: 'STICKER & MEDIA MENU',
                 cmds: [
                     'sticker',
+                    'anticolong',
                     'gif',
                     'togif',
                     'toimg',
@@ -213,7 +240,12 @@ module.exports = {
                     'screenshot',
                     'ssweb',
                     'searchthatsong',
+                    'musikapaini',
+                    'transkrip',
+                    'tts',
+                    'ocr',
                     'wink',
+                    'hdvid',
                     'meme',
                     'cmeme',
                     'wm'
@@ -231,6 +263,14 @@ module.exports = {
                     'trad',
                     'lyrics',
                     'acortar',
+                    'bypass',
+                    'binary',
+                    'carbon',
+                    'faketweet',
+                    'fagsocial',
+                    'sendngl',
+                    'converter',
+                    'colongsw',
                     'pdf2txt',
                     'pelicula',
                     'videojuego',
@@ -239,6 +279,8 @@ module.exports = {
                     'sitestatus',
                     'banco',
                     'diario',
+                    'hourly',
+                    'weekly',
                     'trabajar',
                     'transferir',
                     'robar',
@@ -262,10 +304,13 @@ module.exports = {
                     'sms',
                     'sulap',
                     'ligar',
+                    'marry',
                     'aceptar',
                     'rechazar',
                     'pareja',
                     'romper',
+                    'divorce',
+                    'gift',
                     'comandos'
                 ]
             },

@@ -1,15 +1,19 @@
 'use strict';
 
 /**
- * Separador dual infalible para WhatsApp (Android, iOS y WhatsApp Web/Desktop):
- * 1. 4200 caracteres LRM (Unicode 8206 / \u200E): activa el truncado por longitud de caracteres (Web/Desktop).
- * 2. 18 líneas con Hangul Filler (\u3164): clasificado por Unicode como letra pero visualmente 100% invisible,
- *    generando la altura necesaria (18+ líneas) para forzar el colapso inmediato del mensaje
- *    y mostrar el botón nativo "... Leer más" en cualquier pantalla móvil (Android/iOS) sin importar la resolución.
+ * Comando: .readmore <texto visible> | <texto oculto>
+ * 
+ * Genera el colapso nativo "... Leer más" de WhatsApp (Android, iOS y WhatsApp Web).
+ * Combina:
+ * 1. 4001 caracteres LRM (Unicode 8206 / \u200E, Left-to-Right Mark): activa el truncado en WhatsApp Web y Desktop.
+ * 2. 4001 caracteres ZWSP (Unicode 8203 / \u200B, Zero-Width Space): proporciona puntos de quiebre invisibles
+ *    que activan el colapso nativo de texto en clientes móviles (Android e iOS) sin dejar huecos en blanco.
+ * 3. Delimitación limpia con espacio y salto de línea: garantiza que el botón "... Leer más" aparezca
+ *    justo al final del texto visible, revelando el contenido oculto limpiamente al pulsarlo.
  */
 const LRM = String.fromCharCode(8206);
-const HANGUL_FILLER = '\u3164';
-const READ_MORE_SEPARATOR = LRM.repeat(4200) + '\n' + (HANGUL_FILLER + '\n').repeat(18);
+const ZWSP = String.fromCharCode(8203);
+const READ_MORE_SEPARATOR = LRM.repeat(4001) + ZWSP.repeat(4001);
 
 module.exports = {
     name: 'readmore',
@@ -20,7 +24,17 @@ module.exports = {
 
     execute: async ({ sock, m, args, text }) => {
         const jid = m.chat || m.key.remoteJid;
-        const rawText = (args && args.length > 0 ? args.join(' ') : (text || '')).trim();
+
+        // Extraer texto crudo preservando saltos de línea originales desde m.body si está disponible
+        let bodyText = '';
+        if (m?.body) {
+            const match = m.body.match(/^\S+\s*([\s\S]*)$/);
+            if (match && match[1]) {
+                bodyText = match[1].trim();
+            }
+        }
+
+        const rawText = (bodyText || (args && args.length > 0 ? args.join(' ') : (text || ''))).trim();
         const quotedText = (m.quoted?.body || m.quoted?.text || '').trim();
 
         // Si no hay texto ni mensaje citado, mostrar guía interactiva de uso
@@ -50,7 +64,7 @@ module.exports = {
         let visibleText = '';
         let hiddenText = '';
 
-        // Prioridad 1: Separador explícito '|' (con o sin espacios)
+        // Prioridad 1: Separador explícito barra vertical '|'
         if (rawText.includes('|')) {
             const parts = rawText.split('|');
             visibleText = parts[0].trim();
@@ -70,23 +84,22 @@ module.exports = {
             visibleText = parts[0].trim();
             hiddenText = parts.slice(1).join('---').trim();
         }
-        // Prioridad 4: Separado por doble barra '//' o barra '/'
+        // Prioridad 4: Separado por doble barra '//'
         else if (rawText.includes('//')) {
             const parts = rawText.split('//');
             visibleText = parts[0].trim();
             hiddenText = parts.slice(1).join('//').trim();
         }
-        // Prioridad 5: Separado por salto de línea
+        // Prioridad 5: Separado por salto de línea explícito
         else if (rawText.includes('\n')) {
             const nlIdx = rawText.indexOf('\n');
             visibleText = rawText.substring(0, nlIdx).trim();
             hiddenText = rawText.substring(nlIdx + 1).trim();
         }
-        // Prioridad 6: Si escribió varias palabras sin separador
+        // Prioridad 6: Si escribió varias palabras sin delimitador
         else {
             const words = rawText.split(/\s+/);
             if (words.length >= 2) {
-                // Primera mitad como texto visible, segunda mitad oculta
                 const mid = Math.ceil(words.length / 2);
                 visibleText = words.slice(0, mid).join(' ');
                 hiddenText = words.slice(mid).join(' ');
@@ -99,8 +112,11 @@ module.exports = {
         if (!visibleText) visibleText = 'Ver más';
         if (!hiddenText) hiddenText = '¡Contenido oculto!';
 
-        // Construir mensaje final sin citar m para evitar spoilear el texto en la previsualización de cita
-        const finalMessage = `${visibleText}${READ_MORE_SEPARATOR}${hiddenText}`;
+        // Construir mensaje final infalible para WhatsApp:
+        // [visible] + [espacio] + [separador dual invisible] + [\n] + [oculto]
+        const cleanVisible = visibleText.trim();
+        const cleanHidden = hiddenText.trim();
+        const finalMessage = `${cleanVisible} ${READ_MORE_SEPARATOR}\n${cleanHidden}`;
 
         try {
             await m.react?.('👁️');

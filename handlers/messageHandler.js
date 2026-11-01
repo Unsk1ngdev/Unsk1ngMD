@@ -10,6 +10,7 @@ const antilinkManager = require('../lib/antilink');
 const snakeManager = require('../lib/snake');
 const werewolfManager = require('../lib/werewolf');
 const smsManager = require('../lib/smsAnon');
+const guessGameManager = require('../lib/guessGameManager');
 const logger = require('../lib/logger');
 const config = require('../config');
 const chalk = require('chalk');
@@ -272,7 +273,8 @@ const handleMessage = async (sock, rawMsg) => {
                 Boolean(triviaManager?.hasActiveGame?.(m.chat)) ||
                 Boolean(akinatorManager?.hasActiveGame?.(m.chat) || akinatorManager?.hasActiveGame?.(m.sender)) ||
                 Boolean(snakeManager?.hasActiveGame?.(m.chat, m.sender)) ||
-                Boolean(werewolfManager?.hasActiveGame?.(m.chat))
+                Boolean(werewolfManager?.hasActiveGame?.(m.chat)) ||
+                Boolean(guessGameManager?.hasActiveGame?.(m.chat))
             );
 
             // Si es conversación habitual de grupo (no es comando, ni enlace prohibido, ni mala palabra, ni juego interactivo),
@@ -608,6 +610,12 @@ const handleMessage = async (sock, rawMsg) => {
             if (m.quoted && (m.quoted?.key?.id || m.quoted?.id)) {
                 const handledSms = await smsManager.handleReply(sock, m);
                 if (handledSms) return;
+            }
+
+            // 6. Comprobar si hay juegos de adivinanzas o duelos (Tebakbendera, Tebaklirik, Suit PVP)
+            if (guessGameManager.hasActiveGame(m.chat)) {
+                const handledGuess = await guessGameManager.checkAnswer(sock, m);
+                if (handledGuess) return;
             }
             return;
         }

@@ -9,32 +9,203 @@ const userHarems = new Map();
 // Tirada pendiente de confirmación por usuario: userJid -> Character
 const pendingRolls = new Map();
 
-// Base de datos curada de personajes de anime
+// Base de datos curada de personajes de anime con fotografías oficiales y etiquetas verificadas
 const ANIME_CHARACTERS = [
     // Míticos (1%)
-    { name: 'Makima', anime: 'Chainsaw Man', gender: 'waifu', rarity: '👑 Mítico', stars: '⭐⭐⭐⭐⭐', quote: 'El control lo es todo.' },
-    { name: 'Satoru Gojo', anime: 'Jujutsu Kaisen', gender: 'husbu', rarity: '👑 Mítico', stars: '⭐⭐⭐⭐⭐', quote: 'En todo el cielo y la tierra, solo yo soy el honorable.' },
-    { name: 'Zero Two', anime: 'Darling in the Franxx', gender: 'waifu', rarity: '👑 Mítico', stars: '⭐⭐⭐⭐⭐', quote: '¿Serás mi cariño?' },
+    {
+        name: 'Makima',
+        anime: 'Chainsaw Man',
+        gender: 'waifu',
+        rarity: '👑 Mítico',
+        stars: '⭐⭐⭐⭐⭐',
+        quote: 'El control lo es todo.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b137080-UHcynYNjb5ZU.png',
+        tag: 'makima_(chainsaw_man)'
+    },
+    {
+        name: 'Satoru Gojo',
+        anime: 'Jujutsu Kaisen',
+        gender: 'husbu',
+        rarity: '👑 Mítico',
+        stars: '⭐⭐⭐⭐⭐',
+        quote: 'En todo el cielo y la tierra, solo yo soy el honorable.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b127691-9zqh1xpIubn7.png',
+        tag: 'gojou_satoru'
+    },
+    {
+        name: 'Zero Two',
+        anime: 'Darling in the Franxx',
+        gender: 'waifu',
+        rarity: '👑 Mítico',
+        stars: '⭐⭐⭐⭐⭐',
+        quote: '¿Serás mi cariño?',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b124381-2gAVq76HPfL2.png',
+        tag: 'zero_two_(darling_in_the_franxx)'
+    },
     // Legendarios (4%)
-    { name: 'Yor Forger', anime: 'Spy x Family', gender: 'waifu', rarity: '🌟 Legendario', stars: '⭐⭐⭐⭐', quote: '¿Puedo quitarle la vida a este objetivo?' },
-    { name: 'Levi Ackerman', anime: 'Attack on Titan', gender: 'husbu', rarity: '🌟 Legendario', stars: '⭐⭐⭐⭐', quote: 'Si no peleas, no puedes ganar.' },
-    { name: 'Rem', anime: 'Re:Zero', gender: 'waifu', rarity: '🌟 Legendario', stars: '⭐⭐⭐⭐', quote: 'Empezar desde cero no es rendirse.' },
-    { name: 'Rengoku Kyojuro', anime: 'Demon Slayer', gender: 'husbu', rarity: '🌟 Legendario', stars: '⭐⭐⭐⭐', quote: '¡Enciende tu corazón!' },
+    {
+        name: 'Yor Forger',
+        anime: 'Spy x Family',
+        gender: 'waifu',
+        rarity: '🌟 Legendario',
+        stars: '⭐⭐⭐⭐',
+        quote: '¿Puedo quitarle la vida a este objetivo?',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b138102-ZOAu9jI2d5ke.png',
+        tag: 'yor_briar'
+    },
+    {
+        name: 'Levi Ackerman',
+        anime: 'Attack on Titan',
+        gender: 'husbu',
+        rarity: '🌟 Legendario',
+        stars: '⭐⭐⭐⭐',
+        quote: 'Si no peleas, no puedes ganar.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b45627-CR68RyZmddGG.png',
+        tag: 'levi_(shingeki_no_kyojin)'
+    },
+    {
+        name: 'Rem',
+        anime: 'Re:Zero',
+        gender: 'waifu',
+        rarity: '🌟 Legendario',
+        stars: '⭐⭐⭐⭐',
+        quote: 'Empezar desde cero no es rendirse.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b88575-Ayu8UPDA8NS6.png',
+        tag: 'rem_(re:zero)'
+    },
+    {
+        name: 'Rengoku Kyojuro',
+        anime: 'Demon Slayer',
+        gender: 'husbu',
+        rarity: '🌟 Legendario',
+        stars: '⭐⭐⭐⭐',
+        quote: '¡Enciende tu corazón!',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b129133-VlTPowwt68rJ.png',
+        tag: 'rengoku_kyoujurou'
+    },
     // Super Raros (10%)
-    { name: 'Marin Kitagawa', anime: 'My Dress-Up Darling', gender: 'waifu', rarity: '⭐⭐⭐ Super Raro', stars: '⭐⭐⭐', quote: '¡Cosplayear es pura pasión!' },
-    { name: 'Mikasa Ackerman', anime: 'Attack on Titan', gender: 'waifu', rarity: '⭐⭐⭐ Super Raro', stars: '⭐⭐⭐', quote: 'El mundo es cruel pero hermoso.' },
-    { name: 'Dazai Osamu', anime: 'Bungou Stray Dogs', gender: 'husbu', rarity: '⭐⭐⭐ Super Raro', stars: '⭐⭐⭐', quote: 'Tener una muerte agradable es un arte.' },
-    { name: 'Megumi Fushiguro', anime: 'Jujutsu Kaisen', gender: 'husbu', rarity: '⭐⭐⭐ Super Raro', stars: '⭐⭐⭐', quote: 'Salvaré a la gente de forma justa.' },
+    {
+        name: 'Marin Kitagawa',
+        anime: 'My Dress-Up Darling',
+        gender: 'waifu',
+        rarity: '⭐⭐⭐ Super Raro',
+        stars: '⭐⭐⭐',
+        quote: '¡Cosplayear es pura pasión!',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b133676-kV2czE3C8Qls.png',
+        tag: 'kitagawa_marin'
+    },
+    {
+        name: 'Mikasa Ackerman',
+        anime: 'Attack on Titan',
+        gender: 'waifu',
+        rarity: '⭐⭐⭐ Super Raro',
+        stars: '⭐⭐⭐',
+        quote: 'El mundo es cruel pero hermoso.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b40881-F3gr1PkreDvj.png',
+        tag: 'mikasa_ackerman'
+    },
+    {
+        name: 'Dazai Osamu',
+        anime: 'Bungou Stray Dogs',
+        gender: 'husbu',
+        rarity: '⭐⭐⭐ Super Raro',
+        stars: '⭐⭐⭐',
+        quote: 'Tener una muerte agradable es un arte.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b89198-qKmRTw4Y3PRC.png',
+        tag: 'dazai_osamu_(bungou_stray_dogs)'
+    },
+    {
+        name: 'Megumi Fushiguro',
+        anime: 'Jujutsu Kaisen',
+        gender: 'husbu',
+        rarity: '⭐⭐⭐ Super Raro',
+        stars: '⭐⭐⭐',
+        quote: 'Salvaré a la gente de forma justa.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b126635-L0y3I92JSUkN.png',
+        tag: 'fushiguro_megumi'
+    },
     // Raros (25%)
-    { name: 'Hinata Hyuga', anime: 'Naruto', gender: 'waifu', rarity: '⭐⭐ Raro', stars: '⭐⭐', quote: 'Nunca retrocederé a mi palabra.' },
-    { name: 'Todoroki Shoto', anime: 'My Hero Academia', gender: 'husbu', rarity: '⭐⭐ Raro', stars: '⭐⭐', quote: 'Este poder también es mío.' },
-    { name: 'Nezuko Kamado', anime: 'Demon Slayer', gender: 'waifu', rarity: '⭐⭐ Raro', stars: '⭐⭐', quote: 'Mmh mmh!' },
-    { name: 'Killua Zoldyck', anime: 'Hunter x Hunter', gender: 'husbu', rarity: '⭐⭐ Raro', stars: '⭐⭐', quote: 'Gon, tú eres mi luz.' },
+    {
+        name: 'Hinata Hyuga',
+        anime: 'Naruto',
+        gender: 'waifu',
+        rarity: '⭐⭐ Raro',
+        stars: '⭐⭐',
+        quote: 'Nunca retrocederé a mi palabra.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b1555-Q41GLTV3FvYF.png',
+        tag: 'hyuuga_hinata'
+    },
+    {
+        name: 'Todoroki Shoto',
+        anime: 'My Hero Academia',
+        gender: 'husbu',
+        rarity: '⭐⭐ Raro',
+        stars: '⭐⭐',
+        quote: 'Este poder también es mío.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b89220-KNBwaVFAR8FD.png',
+        tag: 'todoroki_shouto'
+    },
+    {
+        name: 'Nezuko Kamado',
+        anime: 'Demon Slayer',
+        gender: 'waifu',
+        rarity: '⭐⭐ Raro',
+        stars: '⭐⭐',
+        quote: 'Mmh mmh!',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b127518-NRlq1CQ1v1ro.png',
+        tag: 'kamado_nezuko'
+    },
+    {
+        name: 'Killua Zoldyck',
+        anime: 'Hunter x Hunter',
+        gender: 'husbu',
+        rarity: '⭐⭐ Raro',
+        stars: '⭐⭐',
+        quote: 'Gon, tú eres mi luz.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b27-Z5O02kQUydpT.jpg',
+        tag: 'killua_zoldyck'
+    },
     // Comunes (60%)
-    { name: 'Asuka Langley', anime: 'Evangelion', gender: 'waifu', rarity: '⭐ Común', stars: '⭐', quote: '¡¿Acaso eres idiota?!' },
-    { name: 'Tanjiro Kamado', anime: 'Demon Slayer', gender: 'husbu', rarity: '⭐ Común', stars: '⭐', quote: 'Protege a los demás con bondad.' },
-    { name: 'Uraraka Ochaco', anime: 'My Hero Academia', gender: 'waifu', rarity: '⭐ Común', stars: '⭐', quote: '¡Seré la mejor heroína!' },
-    { name: 'Zoro Roronoa', anime: 'One Piece', gender: 'husbu', rarity: '⭐ Común', stars: '⭐', quote: 'Seré el mejor espadachín del mundo.' }
+    {
+        name: 'Asuka Langley',
+        anime: 'Evangelion',
+        gender: 'waifu',
+        rarity: '⭐ Común',
+        stars: '⭐',
+        quote: '¡¿Acaso eres idiota?!',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b94-d631a3Z2KPvd.png',
+        tag: 'souryuu_asuka_langley'
+    },
+    {
+        name: 'Tanjiro Kamado',
+        anime: 'Demon Slayer',
+        gender: 'husbu',
+        rarity: '⭐ Común',
+        stars: '⭐',
+        quote: 'Protege a los demás con bondad.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b126071-BTNEc1nRIv68.png',
+        tag: 'kamado_tanjirou'
+    },
+    {
+        name: 'Uraraka Ochaco',
+        anime: 'My Hero Academia',
+        gender: 'waifu',
+        rarity: '⭐ Común',
+        stars: '⭐',
+        quote: '¡Seré la mejor heroína!',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b89221-gSF2a4gPbG4m.png',
+        tag: 'uraraka_ochako'
+    },
+    {
+        name: 'Zoro Roronoa',
+        anime: 'One Piece',
+        gender: 'husbu',
+        rarity: '⭐ Común',
+        stars: '⭐',
+        quote: 'Seré el mejor espadachín del mundo.',
+        imageUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b62-S7oAeA9WInjV.png',
+        tag: 'roronoa_zoro'
+    }
 ];
 
 function rollCharacter(preferredGender = null) {
@@ -78,43 +249,64 @@ async function generateCardBuffer(characterName, rarity, isHusbu) {
 }
 
 /**
- * Obtiene la imagen de la waifu/husbando en tiempo real
- * Descarga y optimiza el buffer para garantizar envío inmediato sin demoras
+ * Obtiene la fotografía del personaje exacto de la tirada.
+ * 1. Prioriza la imagen oficial de ese personaje específico.
+ * 2. Si falla, consulta Safebooru con el tag exacto de ese personaje.
+ * 3. Fallback infalible: Tarjeta coleccionable SVG de alta resolución con Sharp.
  */
-async function fetchWaifuImageBuffer(characterName, rarity, isHusbu) {
-    // 1. Intentar API Safebooru (Acceso directo CDN, sin bloqueo 403, ultra-rápida y variada)
-    try {
-        const page = Math.floor(Math.random() * 50) + 1;
-        const tag = isHusbu ? '1boy+rating:general+score:%3E5' : '1girl+rating:general+score:%3E10';
-        const url = `https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit=5&pid=${page}&tags=${tag}`;
-        
-        const res = await axios.get(url, { timeout: 4000 });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-            const post = res.data[Math.floor(Math.random() * res.data.length)];
-            const imgUrl = `https://safebooru.org/images/${post.directory}/${post.image}`;
-            
-            const imgRes = await axios.get(imgUrl, {
+async function fetchWaifuImageBuffer(character) {
+    const isHusbu = character.gender === 'husbu';
+
+    // 1. Descarga directa de la foto oficial verificada del personaje
+    if (character.imageUrl) {
+        try {
+            const imgRes = await axios.get(character.imageUrl, {
                 responseType: 'arraybuffer',
                 timeout: 5000,
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
             });
 
-            if (imgRes.data && imgRes.data.length > 1000) {
+            if (imgRes.data && imgRes.data.length > 500) {
                 return await sharp(imgRes.data)
                     .resize({ width: 720, withoutEnlargement: true })
-                    .jpeg({ quality: 80 })
+                    .jpeg({ quality: 85 })
                     .toBuffer();
             }
-        }
-    } catch (_) {}
+        } catch (_) {}
+    }
 
-    // 2. Fallback garantizado en local (Tarjeta coleccionable generada al instante con Sharp)
-    return await generateCardBuffer(characterName, rarity, isHusbu);
+    // 2. Safebooru específico con el tag del personaje (para variedad si falla la foto directa)
+    if (character.tag) {
+        try {
+            const url = `https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit=5&tags=${encodeURIComponent(character.tag)}+rating:general`;
+            const res = await axios.get(url, { timeout: 4000 });
+            if (Array.isArray(res.data) && res.data.length > 0) {
+                const post = res.data[Math.floor(Math.random() * res.data.length)];
+                const imgUrl = `https://safebooru.org/images/${post.directory}/${post.image}`;
+                const imgRes = await axios.get(imgUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 5000,
+                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                });
+                if (imgRes.data && imgRes.data.length > 500) {
+                    return await sharp(imgRes.data)
+                        .resize({ width: 720, withoutEnlargement: true })
+                        .jpeg({ quality: 80 })
+                        .toBuffer();
+                }
+            }
+        } catch (_) {}
+    }
+
+    // 3. Tarjeta local generada al instante con Sharp (fallback infalible)
+    return await generateCardBuffer(character.name, character.rarity, isHusbu);
 }
 
 module.exports = {
     name: 'gachawaifu',
-    alias: ['gacha', 'waifu', 'gachahusbu', 'husbu', 'adoptarwaifu', 'harem'],
+    alias: ['gacha', 'gachahusbu', 'husbu', 'adoptarwaifu', 'harem'],
     category: 'anime',
     desc: 'Haces una tirada de gacha para obtener un personaje anime con fotografía y adoptarlo como tu pareja virtual',
     usage: '.gachawaifu [tirada] | .gacha claim [adoptar] | .gacha pass [dejar ir] | .gacha harem [ver colección]',
@@ -239,8 +431,8 @@ module.exports = {
         ].join('\n');
 
         try {
-            // Obtener fotografía en buffer optimizado
-            const imageBuffer = await fetchWaifuImageBuffer(character.name, character.rarity, isHusbu);
+            // Obtener fotografía específica del personaje
+            const imageBuffer = await fetchWaifuImageBuffer(character);
 
             await sock.sendMessage(jid, {
                 image: imageBuffer,
@@ -249,7 +441,7 @@ module.exports = {
 
         } catch (err) {
             logger.error('[GACHA ERROR]:', err.message);
-            // Si el envío con imagen falla, reintentar con la tarjeta local garantizada
+            // Fallback con la tarjeta local garantizada
             try {
                 const fallbackBuffer = await generateCardBuffer(character.name, character.rarity, isHusbu);
                 await sock.sendMessage(jid, { image: fallbackBuffer, caption }, { quoted: m });
