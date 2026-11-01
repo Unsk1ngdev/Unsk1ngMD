@@ -62,16 +62,20 @@ module.exports = {
         }
 
         // 2. Determinar Packname (Arriba) y Author (Abajo)
-        const userName = (m.pushName || '').trim() || 'Usuario';
+        const userNames = require('../../lib/userNames');
+        const rawUser = (m.pushName || '').trim() || userNames.get(m.sender) || userNames.get(m.key?.participant) || '';
+        const fallbackNum = (m.sender || m.key?.participant || '').split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+        const userName = rawUser || (fallbackNum ? `+${fallbackNum}` : 'Usuario');
+
         let packname = userName;
-        let author = config.authorName || 'Unknown Codexツ</>';
+        let author = ''; // A secas: autor vacío para que WhatsApp solo muestre el nombre de usuario y nada más
 
         if (text && text.trim()) {
             const rawText = text.trim();
             if (rawText.includes('|')) {
                 const parts = rawText.split('|').map(s => s.trim());
                 packname = parts[0] || userName;
-                author = parts.slice(1).join('|').trim() || (config.authorName || 'Unknown Codexツ</>');
+                author = parts.slice(1).join('|').trim() || userName;
             } else {
                 // Si el usuario escribe una frase (ej: .wm hola),
                 // arriba va su nombre de usuario y abajo la frase que escribió

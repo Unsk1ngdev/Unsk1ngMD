@@ -1,14 +1,14 @@
 'use strict';
 
+require('dotenv').config();
 const axios = require('axios');
-const sharp = require('sharp');
 const premium = require('../../lib/premium');
 const database = require('../../lib/database');
 const config = require('../../config');
 const logger = require('../../lib/logger');
 
 /**
- * Tabla de oficialías y municipios de emisión según los primeros 3 dígitos de la cédula dominicana (JCE)
+ * Tabla de oficialías y municipios de emisión según los primeros 3 dígitos de la cédula dominicana
  */
 const MUNICIPIOS_RD = {
     '001': 'Distrito Nacional (Santo Domingo)',
@@ -108,10 +108,10 @@ const MUNICIPIOS_RD = {
 };
 
 /**
- * Valida matemáticamente el algoritmo oficial (Luhn / Módulo 10) de la cédula dominicana de la JCE
+ * Valida matemáticamente el algoritmo oficial (Luhn / Módulo 10) de la cédula dominicana
  */
 function validarLuhnRD(cedula) {
-    const clean = String(cedula || '').replace(/\D/g, '');
+    const clean = cedula.replace(/\D/g, '');
     if (clean.length !== 11) return false;
     let suma = 0;
     const multiplicadores = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
@@ -151,7 +151,7 @@ function obtenerZodiaco(fechaStr) {
     const d = new Date(fechaStr);
     if (isNaN(d.getTime())) return null;
     const dia = d.getUTCDate();
-    const mes = d.getUTCMonth() + 1;
+    const mes = d.getUTCMonth() + 1; // 1 - 12
 
     if ((mes === 3 && dia >= 21) || (mes === 4 && dia <= 19)) return '♈ Aries';
     if ((mes === 4 && dia >= 20) || (mes === 5 && dia <= 20)) return '♉ Tauro';
@@ -182,247 +182,12 @@ function traducirEstadoCivil(codigo) {
     return codigo;
 }
 
-/**
- * Comprueba si un buffer de imagen es válido y no es una respuesta de error HTML o texto
- */
-function esBufferImagenValido(buffer) {
-    if (!buffer || !Buffer.isBuffer(buffer) || buffer.length < 100) return false;
-    // Comprobar firmas mágicas de imagen: JPEG (FF D8), PNG (89 50 4E 47), WEBP (RIFF)
-    if (buffer[0] === 0xFF && buffer[1] === 0xD8) return true;
-    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return true;
-    if (buffer.length > 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return true;
-    return false;
-}
-
-/**
- * Genera una tarjeta visual tipo "ficha oficial" con todos los datos.
- * Si se provee photoBuffer (foto real de la persona), la incrusta como avatar circular.
- * Devuelve un Buffer PNG listo para enviar por WhatsApp.
- *
- * @param {Object} datos - Objeto con los campos de la cédula
- * @param {Buffer|null} fotoPersona - Buffer con la foto real de la persona (opcional)
- * @returns {Promise<Buffer>} PNG de la tarjeta
- */
-async function generarTarjetaVisual(datos, fotoPersona = null) {
-    const W = 900;
-    const H = 560;
-
-    // ── Colores y tema ─────────────────────────────────────────────────────────
-    const BG_TOP    = '#0a1628';   // Azul marino oscuro (encabezado)
-    const BG_BODY   = '#0e1e38';   // Azul marino menos oscuro (cuerpo)
-    const BG_CARD   = '#111d33';   // Fondo de tarjeta de datos
-    const ACCENT    = '#3d85ff';   // Azul brillante
-    const GOLD      = '#f5c842';   // Dorado para el escudo/título
-    const TEXT_PRI  = '#ffffff';   // Blanco principal
-    const TEXT_SEC  = '#8baad8';   // Azul claro secundario
-    const GREEN_OK  = '#22c55e';   // Verde validado
-    const RED_ERR   = '#ef4444';   // Rojo inválido
-    const BORDER    = '#1e3a5f';   // Borde de separación
-
-    // ── Campos de datos ────────────────────────────────────────────────────────
-    const nombre      = (datos.nombre      || 'CIUDADANO(A) DOMINICANO(A)').toUpperCase();
-    const cedula      = datos.cedula       || '000-0000000-0';
-    const nacimiento  = datos.nacimiento   || 'Protegida (Ley 172-13)';
-    const edad        = datos.edad         || '';
-    const zodiaco     = datos.zodiaco      || '';
-    const genero      = datos.genero       || '';
-    const estadoCivil = datos.estadoCivil  || '';
-    const origen      = datos.origen       || '';
-    const serie       = datos.serie        || '';
-    const municipio   = datos.municipio    || '';
-    const luhn        = datos.luhnValido   ? '✓ MÓDULO 10 VÁLIDO' : '✗ INVÁLIDO';
-    const luhnColor   = datos.luhnValido   ? GREEN_OK : RED_ERR;
-    const jceOk       = datos.jceValido    ? '✓ CONFIRMADO EN PADRÓN JCE' : '◉ VALIDACIÓN MATEMÁTICA';
-    const jceColor    = datos.jceValido    ? GREEN_OK : ACCENT;
-
-    // ── Función auxiliar: escapar texto para SVG ──────────────────────────────
-    function esc(s) {
-        return String(s || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
-
-    // ── Construcción del SVG ──────────────────────────────────────────────────
-
-    // Avatar: si hay foto real, la procesamos a círculo base64
-    let avatarSVG = '';
-    let fotoBase64 = '';
-    if (fotoPersona && Buffer.isBuffer(fotoPersona)) {
-        try {
-            const fotoCircular = await sharp(fotoPersona)
-                .resize(140, 140, { fit: 'cover', position: 'centre' })
-                .png()
-                .toBuffer();
-            fotoBase64 = fotoCircular.toString('base64');
-        } catch (_) { fotoBase64 = ''; }
-    }
-
-    const AVATAR_X  = 60;
-    const AVATAR_Y  = 95;
-    const AVATAR_R  = 70;
-    const AVATAR_CX = AVATAR_X + AVATAR_R;
-    const AVATAR_CY = AVATAR_Y + AVATAR_R;
-
-    if (fotoBase64) {
-        // Foto real circular
-        avatarSVG = `
-  <defs>
-    <clipPath id="avatarClip">
-      <circle cx="${AVATAR_CX}" cy="${AVATAR_CY}" r="${AVATAR_R}" />
-    </clipPath>
-    <filter id="avatarShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
-    </filter>
-  </defs>
-  <circle cx="${AVATAR_CX}" cy="${AVATAR_CY}" r="${AVATAR_R + 4}" fill="${ACCENT}" filter="url(#avatarShadow)" />
-  <image href="data:image/png;base64,${fotoBase64}"
-         x="${AVATAR_X}" y="${AVATAR_Y}" width="${AVATAR_R * 2}" height="${AVATAR_R * 2}"
-         clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
-  <circle cx="${AVATAR_CX}" cy="${AVATAR_CY}" r="${AVATAR_R}" fill="none" stroke="${ACCENT}" stroke-width="3"/>
-  <circle cx="${AVATAR_CX + AVATAR_R - 12}" cy="${AVATAR_CY + AVATAR_R - 12}" r="14" fill="${GREEN_OK}"/>
-  <text x="${AVATAR_CX + AVATAR_R - 12}" y="${AVATAR_CY + AVATAR_R - 7}" text-anchor="middle" font-size="16" fill="white">✓</text>`;
-    } else {
-        // Avatar placeholder con iniciales
-        const iniciales = nombre.split(' ').slice(0, 2).map(p => p.charAt(0)).join('');
-        avatarSVG = `
-  <defs>
-    <radialGradient id="avatarGrad" cx="50%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#2a4a8a"/>
-      <stop offset="100%" stop-color="#0d1f3c"/>
-    </radialGradient>
-    <filter id="avatarShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
-    </filter>
-  </defs>
-  <circle cx="${AVATAR_CX}" cy="${AVATAR_CY}" r="${AVATAR_R + 4}" fill="${ACCENT}" filter="url(#avatarShadow)" />
-  <circle cx="${AVATAR_CX}" cy="${AVATAR_CY}" r="${AVATAR_R}" fill="url(#avatarGrad)" />
-  <circle cx="${AVATAR_CX}" cy="${AVATAR_CY}" r="${AVATAR_R}" fill="none" stroke="${ACCENT}" stroke-width="3"/>
-  <text x="${AVATAR_CX}" y="${AVATAR_CY + 16}" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="${TEXT_PRI}">${esc(iniciales)}</text>`;
-    }
-
-    // Filas de datos dinámicas
-    const filas = [];
-    if (nacimiento) filas.push({ label: '🎂 Nacimiento', value: nacimiento + (edad ? ` · ${edad}` : '') });
-    if (zodiaco)    filas.push({ label: '♈ Signo', value: zodiaco });
-    if (genero)     filas.push({ label: '⚧ Género', value: genero });
-    if (estadoCivil)filas.push({ label: '💍 Estado Civil', value: estadoCivil });
-    if (origen)     filas.push({ label: '📍 Origen', value: origen });
-    if (serie)      filas.push({ label: '🏛 Serie', value: `${serie} — ${municipio}` });
-
-    const MAX_FILAS = 6;
-    const filasRender = filas.slice(0, MAX_FILAS);
-
-    // Posición de grilla de datos
-    const GRID_X   = 60;
-    const GRID_Y   = 290;
-    const GRID_W   = W - 120;
-    const FILA_H   = 44;
-    const COL_W    = GRID_W / 2;
-
-    let grilasSVG = '';
-    filasRender.forEach((f, i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const x   = GRID_X + col * COL_W;
-        const y   = GRID_Y + row * FILA_H;
-        const isOdd = (row % 2 === 1);
-        const bg = isOdd ? '#0d1b2e' : 'none';
-
-        grilasSVG += `
-  <rect x="${x}" y="${y - 6}" width="${COL_W - 8}" height="${FILA_H - 4}" rx="6" fill="${bg}" opacity="0.6"/>
-  <text x="${x + 10}" y="${y + 10}" font-family="Arial, sans-serif" font-size="11" fill="${TEXT_SEC}">${esc(f.label)}</text>
-  <text x="${x + 10}" y="${y + 28}" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="${TEXT_PRI}">${esc(f.value.substring(0, 36))}${f.value.length > 36 ? '…' : ''}</text>`;
-    });
-
-    const svgSource = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <!-- Fondo -->
-  <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${BG_TOP}"/>
-      <stop offset="100%" stop-color="${BG_BODY}"/>
-    </linearGradient>
-    <linearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#0d2352"/>
-      <stop offset="100%" stop-color="#1a3a78"/>
-    </linearGradient>
-    <linearGradient id="accentLine" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="${ACCENT}"/>
-      <stop offset="60%" stop-color="#6aa0ff"/>
-      <stop offset="100%" stop-color="transparent"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Fondo principal -->
-  <rect width="${W}" height="${H}" fill="url(#bgGrad)"/>
-
-  <!-- Encabezado -->
-  <rect x="0" y="0" width="${W}" height="75" fill="url(#headerGrad)"/>
-  <rect x="0" y="72" width="${W}" height="3" fill="url(#accentLine)"/>
-
-  <!-- Bandera dominicana (rayas) decorativas en esquina -->
-  <rect x="${W - 80}" y="0" width="20" height="75" fill="#002D62" opacity="0.7"/>
-  <rect x="${W - 60}" y="0" width="20" height="75" fill="#CF142B" opacity="0.7"/>
-  <rect x="${W - 40}" y="0" width="20" height="75" fill="#002D62" opacity="0.7"/>
-  <rect x="${W - 20}" y="0" width="20" height="75" fill="#CF142B" opacity="0.7"/>
-  <rect x="${W - 80}" y="0" width="80" height="75" fill="url(#headerGrad)" opacity="0.5"/>
-
-  <!-- Título institucional -->
-  <text x="20" y="28" font-family="Arial Black, Arial, sans-serif" font-size="12" font-weight="bold" fill="${TEXT_SEC}" letter-spacing="3">REPÚBLICA DOMINICANA</text>
-  <text x="20" y="52" font-family="Arial Black, Arial, sans-serif" font-size="17" font-weight="900" fill="${GOLD}" letter-spacing="1">JUNTA CENTRAL ELECTORAL — FICHA DE IDENTIDAD</text>
-
-  <!-- Avatar (foto o iniciales) -->
-  ${avatarSVG}
-
-  <!-- Nombre y cédula -->
-  <text x="220" y="130" font-family="Arial Black, Arial, sans-serif" font-size="22" font-weight="900" fill="${TEXT_PRI}">${esc(nombre.length > 32 ? nombre.substring(0, 32) + '…' : nombre)}</text>
-  <text x="220" y="158" font-family="Arial, sans-serif" font-size="13" fill="${TEXT_SEC}" letter-spacing="1">CÉDULA DE IDENTIDAD Y ELECTORAL</text>
-
-  <!-- Número de cédula grande -->
-  <rect x="220" y="168" width="360" height="50" rx="8" fill="${ACCENT}" opacity="0.12"/>
-  <rect x="220" y="168" width="360" height="50" rx="8" fill="none" stroke="${ACCENT}" stroke-width="1.5" opacity="0.5"/>
-  <text x="400" y="200" text-anchor="middle" font-family="Courier New, Courier, monospace" font-size="26" font-weight="bold" fill="${GOLD}" letter-spacing="3">${esc(cedula)}</text>
-
-  <!-- Separador de datos -->
-  <rect x="${GRID_X}" y="${GRID_Y - 20}" width="${GRID_W}" height="1" fill="${BORDER}"/>
-  <text x="${GRID_X}" y="${GRID_Y - 6}" font-family="Arial, sans-serif" font-size="10" fill="${TEXT_SEC}" letter-spacing="2">DATOS PERSONALES</text>
-
-  <!-- Grilla de datos dinámicos -->
-  ${grilasSVG}
-
-  <!-- Banda de estado inferior -->
-  <rect x="0" y="${H - 64}" width="${W}" height="64" fill="#07101f"/>
-  <rect x="0" y="${H - 64}" width="${W}" height="2" fill="url(#accentLine)"/>
-
-  <!-- Validaciones -->
-  <rect x="30" y="${H - 50}" width="300" height="34" rx="6" fill="${luhnColor}" opacity="0.12"/>
-  <rect x="30" y="${H - 50}" width="300" height="34" rx="6" fill="none" stroke="${luhnColor}" stroke-width="1.2"/>
-  <text x="180" y="${H - 28}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="${luhnColor}">${esc(luhn)}</text>
-
-  <rect x="345" y="${H - 50}" width="330" height="34" rx="6" fill="${jceColor}" opacity="0.12"/>
-  <rect x="345" y="${H - 50}" width="330" height="34" rx="6" fill="none" stroke="${jceColor}" stroke-width="1.2"/>
-  <text x="510" y="${H - 28}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="${jceColor}">${esc(jceOk)}</text>
-
-  <!-- Marca de agua / firma -->
-  <text x="${W - 20}" y="${H - 8}" text-anchor="end" font-family="Arial, sans-serif" font-size="10" fill="${TEXT_SEC}" opacity="0.6">Unknown Codexツ&lt;/&gt;</text>
-</svg>`;
-
-    // Convertir SVG a PNG con sharp
-    const svgBuffer = Buffer.from(svgSource, 'utf8');
-    const pngBuffer = await sharp(svgBuffer)
-        .png({ quality: 95, compressionLevel: 7 })
-        .toBuffer();
-
-    return pngBuffer;
-}
-
 module.exports = {
     name: 'cedula',
     alias: ['dni', 'consultacedula', 'consultadni', 'identidad', 'rnc'],
     category: 'premium',
-    desc: 'Consulta la mayor cantidad de información y fotografía oficial de cédulas y documentos (Premium)',
-    usage: '.cedula [NÚMERO] o .cedula [PAÍS]-[NÚMERO]',
+    desc: 'Consulta información pública de cédulas y DNI de países latinoamericanos (Premium)',
+    usage: '.cedula [PAÍS]-[NÚMERO] o .cedula [NÚMERO]',
     premiumOnly: true,
 
     execute: async ({ sock, m, args, isOwner }) => {
@@ -437,380 +202,384 @@ module.exports = {
             }, { quoted: m });
         }
 
-        const rawInput = (args && args.length > 0 ? args.join(' ').trim() : '');
+        const inputRaw = (args && args.length > 0 ? args.join('-').trim() : '');
 
-        // 2. Menú de ayuda si no se especifica parámetro
-        if (!rawInput) {
+        // 2. Menú de ayuda
+        if (!inputRaw) {
             return await sock.sendMessage(jid, {
-                text: [
-                    '╭━━━〔 🪪 CONSULTA DE CÉDULA / DNI / RNC 〕━━━⬣',
-                    '┃ 📋 *Uso general:* `.cedula [NÚMERO]` o `.cedula [PAÍS]-[NÚMERO]`',
-                    '┃',
-                    '┃ 🇩🇴 *República Dominicana:*',
-                    '┃ • `.cedula 402-1234567-8` (Cédula JCE con foto y datos)',
-                    '┃ • `.cedula 101001577` (RNC empresarial en DGII)',
-                    '┃ • `.cedula RD-001-1684343-4`',
-                    '┃',
-                    '┃ 🇨🇷 *Costa Rica:*',
-                    '┃ • `.cedula CR-117240417` (Hacienda Costa Rica)',
-                    '┃',
-                    '┃ 🇵🇪 *Perú:*',
-                    '┃ • `.cedula PE-12345678` (RENIEC Perú)',
-                    '╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣',
-                    '',
-                    '_Unknown Codexツ</>_'
-                ].join('\n')
+                text: `┏❐ 《 🪪 CONSULTA DE CÉDULA / DNI / RNC 》 ❐\n` +
+                      `┃\n` +
+                      `┃├◆ 📋 *Uso:* \`.cedula [PAÍS]-[NÚMERO]\` o \`.cedula [NÚMERO]\`\n` +
+                      `┃\n` +
+                      `┃├◆ 🌍 *Formatos disponibles:*\n` +
+                      `┃├◆ 🇩🇴 \`.cedula RD-402-1234567-8\` o \`.cedula 40212345678\`\n` +
+                      `┃├◆ 🏢 \`.cedula 101001577\` (RNC Dominicano)\n` +
+                      `┃├◆ 🇨🇷 \`.cedula CR-117240417\`\n` +
+                      `┃├◆ 🇵🇪 \`.cedula PE-12345678\`\n` +
+                      `┃\n` +
+                      `┗❐\n\n` +
+                      `_Unknown Codexツ</>_`
             }, { quoted: m });
         }
 
-        // 3. Normalización y autodetección inteligente de país y formato
-        let inputUpper = rawInput.toUpperCase().replace(/\s+/g, '');
-        let pais = null;
-        let numeroDoc = '';
+        const input = inputRaw.toUpperCase();
+        const digitsOnly = input.replace(/\D/g, '');
 
-        if (inputUpper.startsWith('RD-') || inputUpper.startsWith('DO-')) {
-            pais = 'RD';
-            numeroDoc = inputUpper.replace(/^(RD|DO)-/i, '').replace(/\D/g, '');
-        } else if (inputUpper.startsWith('CR-')) {
-            pais = 'CR';
-            numeroDoc = inputUpper.replace(/^CR-/i, '').replace(/\D/g, '');
-        } else if (inputUpper.startsWith('PE-')) {
-            pais = 'PE';
-            numeroDoc = inputUpper.replace(/^PE-/i, '').replace(/\D/g, '');
-        } else {
-            const soloDigitos = inputUpper.replace(/\D/g, '');
-            if (soloDigitos.length === 11) {
-                pais = 'RD';
-                numeroDoc = soloDigitos;
-            } else if (soloDigitos.length === 9) {
-                pais = 'RD_RNC';
-                numeroDoc = soloDigitos;
-            } else if (soloDigitos.length === 8) {
-                pais = 'PE';
-                numeroDoc = soloDigitos;
-            } else if (soloDigitos.length === 10) {
-                pais = 'CR';
-                numeroDoc = soloDigitos;
-            } else {
-                pais = 'RD';
-                numeroDoc = soloDigitos;
-            }
-        }
+        // ══════════════════════════════════════════
+        // 🏢 RNC DOMINICANO (9 DÍGITOS)
+        // ══════════════════════════════════════════
+        const isExplicitRNC = input.startsWith('RNC-') || (!input.includes('-') && digitsOnly.length === 9 && ['1', '4', '5'].includes(digitsOnly.charAt(0)));
+        if (isExplicitRNC) {
+            const rncNum = digitsOnly;
+            await sock.sendMessage(jid, { text: `🔍 Consultando RNC empresarial *${rncNum}* en DGII...` }, { quoted: m });
 
-        // ══════════════════════════════════════════════════════════════
-        // 🇩🇴 CASO 1: REPÚBLICA DOMINICANA (CÉDULA DE 11 DÍGITOS)
-        // ══════════════════════════════════════════════════════════════
-        if (pais === 'RD') {
-            if (numeroDoc.length !== 11) {
-                return await sock.sendMessage(jid, {
-                    text: '❌ Formato incorrecto para República Dominicana.\nLa cédula debe contener exactamente 11 dígitos.\nEjemplo: `.cedula 402-1234567-8` o `.cedula RD-001-1684343-4`\n\n_Unknown Codexツ</>_'
-                }, { quoted: m });
-            }
-
-            const cedulaFormateada = `${numeroDoc.slice(0, 3)}-${numeroDoc.slice(3, 10)}-${numeroDoc.slice(10)}`;
-            const serie = numeroDoc.slice(0, 3);
-            const municipioSerie = MUNICIPIOS_RD[serie] || 'Jurisdicción Nacional (Rep. Dominicana)';
-            const esLuhnValido = validarLuhnRD(numeroDoc);
-
-            await sock.sendMessage(jid, {
-                text: `🔍 Consultando información oficial y fotografía de la cédula *${cedulaFormateada}*...`
-            }, { quoted: m });
-
-            const apiKeyEnv = (process.env.CEDULA_API_KEY || process.env.OGTIC_API_KEY || process.env.JCE_API_KEY || '').trim();
-            const baseHeaders = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/json, image/*, */*'
-            };
-            if (apiKeyEnv) {
-                baseHeaders['X-Gravitee-Api-Key'] = apiKeyEnv;
-                baseHeaders['Authorization'] = `Bearer ${apiKeyEnv}`;
-            }
-
-            // Consultas concurrentes a fuentes oficiales y registros de respaldo
-            const [
-                resCedulaDirecta,
-                resPhotoDirecta,
-                resCitizenBasic,
-                resCitizenPhoto,
-                resValidateJCE,
-                resDirectorRNC,
-                resDomTechRNC
-            ] = await Promise.allSettled([
-                axios.get(`https://api.digital.gob.do/v3/cedulas/${numeroDoc}`, {
-                    timeout: 6000,
-                    headers: baseHeaders
-                }),
-                axios.get(`https://api.digital.gob.do/v3/cedulas/${numeroDoc}/photo`, {
-                    timeout: 6000,
-                    responseType: 'arraybuffer',
-                    headers: baseHeaders
-                }),
-                axios.get(`https://api.digital.gob.do/v3/citizens/${numeroDoc}/info/basic`, {
-                    timeout: 5000,
-                    headers: baseHeaders
-                }),
-                axios.get(`https://api.digital.gob.do/v3/citizens/${numeroDoc}/photo`, {
-                    timeout: 5000,
-                    responseType: 'arraybuffer',
-                    headers: baseHeaders
-                }),
-                axios.get(`https://api.digital.gob.do/v3/cedulas/${numeroDoc}/validate`, {
-                    timeout: 5000,
-                    headers: { 'Accept': 'application/json' }
-                }),
-                axios.get(`https://api.directoriornc.com/api/DGII/${numeroDoc}`, {
-                    timeout: 5000,
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
-                }),
-                axios.get(`https://api-dgii.dominicantechnology.com/api/rnc/${numeroDoc}`, {
-                    timeout: 5000,
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
-                })
-            ]);
-
-            // 1. Extraer fotografía real si está disponible
-            let photoBuffer = null;
-            if (resPhotoDirecta.status === 'fulfilled' && esBufferImagenValido(resPhotoDirecta.value.data)) {
-                photoBuffer = Buffer.from(resPhotoDirecta.value.data);
-            } else if (resCitizenPhoto.status === 'fulfilled' && esBufferImagenValido(resCitizenPhoto.value.data)) {
-                photoBuffer = Buffer.from(resCitizenPhoto.value.data);
-            }
-
-            // 2. Extraer datos biográficos de JCE
-            let datosBiograficos = null;
-            if (resCedulaDirecta.status === 'fulfilled' && resCedulaDirecta.value.data?.data) {
-                datosBiograficos = resCedulaDirecta.value.data.data;
-            } else if (resCitizenBasic.status === 'fulfilled' && resCitizenBasic.value.data?.payload) {
-                datosBiograficos = resCitizenBasic.value.data.payload;
-            }
-
-            // 3. Extraer datos de la DGII si el ciudadano tiene RNC o actividad tributaria
-            let datosDGII = null;
-            if (resDirectorRNC.status === 'fulfilled' && resDirectorRNC.value.data?.nombreCompleto) {
-                datosDGII = resDirectorRNC.value.data;
-            } else if (resDomTechRNC.status === 'fulfilled' && resDomTechRNC.value.data?.name) {
-                const dt = resDomTechRNC.value.data;
-                datosDGII = {
-                    nombreCompleto: dt.name,
-                    nombreComercial: dt.commercial_name,
-                    actividad: dt.activity,
-                    estado: dt.status,
-                    categoria: dt.payment_regime,
-                    fechaRegistro: dt.creation_date
-                };
-            }
-
-            // 4. Verificación en tiempo real ante la base de datos de la JCE
-            const validacionJCEExito = resValidateJCE.status === 'fulfilled' && resValidateJCE.value.data?.valid === true;
-
-            // Si la cédula es completamente inválida (falla Luhn y la JCE la rechaza)
-            if (!esLuhnValido && !validacionJCEExito && !datosBiograficos && !datosDGII) {
-                return await sock.sendMessage(jid, {
-                    text: `❌ Cédula dominicana *${cedulaFormateada}* no válida.\n_El número introducido no coincide con un algoritmo verificador oficial ni con registros del padrón._\n\n_Unknown Codexツ</>_`
-                }, { quoted: m });
-            }
-
-            // Consolidación de nombres y apellidos
-            let nombreCompleto = 'Ciudadano(a) Dominicano(a)';
-            if (datosBiograficos) {
-                const nombres = datosBiograficos.names || '';
-                const ap1 = datosBiograficos.firstSurname || '';
-                const ap2 = datosBiograficos.secondSurname || '';
-                const full = [nombres, ap1, ap2].filter(Boolean).join(' ');
-                if (full) nombreCompleto = full;
-            } else if (datosDGII?.nombreCompleto) {
-                nombreCompleto = datosDGII.nombreCompleto;
-            }
-
-            // Formateo de fecha de nacimiento, edad y signo zodiacal
-            const birthDateRaw = datosBiograficos?.birthDate || null;
-            let fechaNac = 'Protegida (Ley 172-13)';
-            let edadTexto = '';
-            let zodiaco = null;
-            if (birthDateRaw) {
-                fechaNac = new Date(birthDateRaw).toLocaleDateString('es-DO', { timeZone: 'UTC' });
-                const edad = calcularEdad(birthDateRaw);
-                if (edad !== null) edadTexto = ` (${edad} años)`;
-                zodiaco = obtenerZodiaco(birthDateRaw);
-            }
-
-            const genero = datosBiograficos?.gender === 'M' ? '♂️ Masculino' : (datosBiograficos?.gender === 'F' ? '♀️ Femenino' : null);
-            const estadoCivil = datosBiograficos?.civilStatus ? traducirEstadoCivil(datosBiograficos.civilStatus) : null;
-            const lugarOrigen = datosBiograficos?.birthPlace ? datosBiograficos.birthPlace.trim().replace(/\s+/g, ' ') : null;
-
-            // Estado de validación oficial
-            const validacionAlgoritmo = esLuhnValido ? '✅ Módulo 10 (Luhn) Válido' : '⚠️ Algoritmo no coincidente';
-            let verificacionJCETexto = '✅ Documento Oficial Registrado';
-            if (validacionJCEExito) {
-                verificacionJCETexto = '✅ Confirmado en Padrón Activo de la JCE';
-            } else if (esLuhnValido) {
-                verificacionJCETexto = '✅ Autenticidad Registral Validada (JCE)';
-            }
-
-            // Construcción del reporte completo con la máxima información
-            const lineas = [
-                '╭━━━〔 🇩🇴 FICHA DE IDENTIDAD DOMINICANA 〕━━━⬣',
-                `┃ 👤 *Nombre Completo:* ${nombreCompleto}`,
-                `┃ 🪪 *Cédula:* ${cedulaFormateada}`,
-                birthDateRaw ? `┃ 🎂 *Nacimiento:* ${fechaNac}${edadTexto}` : null,
-                zodiaco ? `┃ ♈ *Signo Zodiacal:* ${zodiaco}` : null,
-                genero ? `┃ ⚧️ *Género:* ${genero}` : null,
-                estadoCivil ? `┃ 💍 *Estado Civil:* ${estadoCivil}` : null,
-                lugarOrigen ? `┃ 📍 *Lugar de Origen:* ${lugarOrigen}` : null,
-                `┃ 🏛️ *Serie de Emisión:* Serie ${serie} (${municipioSerie})`,
-                `┃ 🛡️ *Verificación JCE:* ${verificacionJCETexto}`,
-                `┃ 🔢 *Dígito Verificador:* ${validacionAlgoritmo}`
-            ];
-
-            // Si posee registro tributario en DGII, adjuntar información fiscal enriquecida
-            if (datosDGII) {
-                lineas.push('┃ ─────────────────────────');
-                lineas.push('┃ 🏛️ *Registro Fiscal (DGII):*');
-                if (datosDGII.nombreComercial && datosDGII.nombreComercial !== datosDGII.nombreCompleto) {
-                    lineas.push(`┃ 🏢 *Nombre Comercial:* ${datosDGII.nombreComercial}`);
-                }
-                if (datosDGII.actividad) {
-                    lineas.push(`┃ 💼 *Actividad:* ${datosDGII.actividad}`);
-                }
-                lineas.push(`┃ 📋 *Estado Tributario:* ${datosDGII.estado || 'ACTIVO'}`);
-                if (datosDGII.categoria) {
-                    lineas.push(`┃ 📁 *Categoría / Régimen:* ${datosDGII.categoria}`);
-                }
-                if (datosDGII.fechaRegistro) {
-                    lineas.push(`┃ 📅 *Fecha de Registro:* ${datosDGII.fechaRegistro}`);
-                }
-            } else if (!datosBiograficos) {
-                lineas.push('┃ ─────────────────────────');
-                lineas.push('┃ ⚖️ *Privacidad Biográfica:* Protegida por Ley 172-13');
-                lineas.push('┃ ℹ️ *Estado:* Ciudadano(a) autenticado(a) sin actividad comercial');
-            }
-
-            lineas.push('╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣');
-            lineas.push('');
-            lineas.push('_Unknown Codexツ</>_');
-
-            const caption = lineas.filter(Boolean).join('\n');
-
-            // ── Generar tarjeta visual con todos los datos ─────────────────────────────
-            let tarjetaBuffer = null;
             try {
-                tarjetaBuffer = await generarTarjetaVisual({
-                    nombre:      nombreCompleto,
-                    cedula:      cedulaFormateada,
-                    nacimiento:  birthDateRaw ? fechaNac : null,
-                    edad:        edadTexto ? edadTexto.replace(/[()]/g, '').trim() : null,
-                    zodiaco:     zodiaco,
-                    genero:      genero,
-                    estadoCivil: estadoCivil,
-                    origen:      lugarOrigen,
-                    serie:       serie,
-                    municipio:   municipioSerie,
-                    luhnValido:  esLuhnValido,
-                    jceValido:   validacionJCEExito
-                }, photoBuffer);
-            } catch (errTarjeta) {
-                logger.warn('[CEDULA] No se pudo generar tarjeta visual:', errTarjeta.message);
-            }
+                const resSec = await axios.get(`https://api.directoriornc.com/api/DGII/${rncNum}`, {
+                    timeout: 7000,
+                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                });
 
-            // Enviar tarjeta visual como imagen + texto completo como caption
-            if (tarjetaBuffer) {
-                return await sock.sendMessage(jid, {
-                    image: tarjetaBuffer,
-                    caption
-                }, { quoted: m });
-            } else if (photoBuffer) {
-                return await sock.sendMessage(jid, {
-                    image: photoBuffer,
-                    caption
-                }, { quoted: m });
-            } else {
-                return await sock.sendMessage(jid, {
-                    text: caption
-                }, { quoted: m });
-            }
-        }
+                const d = resSec.data;
+                if (d && (d.nombreCompleto || d.nombreComercial || d.rnc)) {
+                    const msg =
+                        `┏❐ 《 🏢 REGISTRO NACIONAL DE CONTRIBUYENTES (RNC) 》 ❐\n` +
+                        `┃\n` +
+                        `┃├◆ 🏢 *Razón Social:* ${d.nombreCompleto || d.nombreComercial || 'N/A'}\n` +
+                        `┃├◆ 🪪 *RNC:* ${rncNum}\n` +
+                        (d.nombreComercial ? `┃├◆ 🏷️ *Nombre Comercial:* ${d.nombreComercial}\n` : '') +
+                        (d.estado ? `┃├◆ 🟢 *Estado:* ${d.estado}\n` : '') +
+                        (d.actividad ? `┃├◆ 💼 *Actividad:* ${d.actividad}\n` : '') +
+                        (d.categoria ? `┃├◆ 📋 *Categoría:* ${d.categoria}\n` : '') +
+                        (d.regimen ? `┃├◆ ⚖️ *Régimen:* ${d.regimen}\n` : '') +
+                        `┃├◆ 📡 *Fuente:* DGII / DirectorioRNC\n` +
+                        `┃\n` +
+                        `┗❐\n\n` +
+                        `_Unknown Codexツ</>_`;
 
-        // ══════════════════════════════════════════════════════════════
-        // 🇩🇴 CASO 2: RNC DE REPÚBLICA DOMINICANA (9 DÍGITOS - EMPRESAS)
-        // ══════════════════════════════════════════════════════════════
-        if (pais === 'RD_RNC') {
-            const rncFormateado = `${numeroDoc.slice(0, 3)}-${numeroDoc.slice(3, 8)}-${numeroDoc.slice(8)}`;
-            await sock.sendMessage(jid, {
-                text: `🔍 Consultando RNC empresarial *${rncFormateado}* en la base de datos de la DGII...`
-            }, { quoted: m });
-
-            let resRD = null;
-            try {
-                const res = await axios.get(`https://api.directoriornc.com/api/DGII/${numeroDoc}`, { timeout: 6000 });
-                if (res.data?.nombreCompleto) {
-                    resRD = res.data;
+                    return await sock.sendMessage(jid, { text: msg }, { quoted: m });
                 }
             } catch (_) {}
 
-            if (!resRD) {
-                try {
-                    const res2 = await axios.get(`https://api-dgii.dominicantechnology.com/api/rnc/${numeroDoc}`, { timeout: 6000 });
-                    if (res2.data?.name) {
-                        resRD = {
-                            rnc: numeroDoc,
-                            nombreCompleto: res2.data.name,
-                            nombreComercial: res2.data.commercial_name,
-                            actividad: res2.data.activity,
-                            estado: res2.data.status,
-                            categoria: res2.data.payment_regime,
-                            fechaRegistro: res2.data.creation_date
-                        };
-                    }
-                } catch (_) {}
-            }
-
-            if (!resRD) {
-                return await sock.sendMessage(jid, {
-                    text: `❌ RNC *${rncFormateado}* no encontrado en el registro tributario de la DGII.\n\n_Unknown Codexツ</>_`
-                }, { quoted: m });
-            }
-
-            const msg = [
-                '╭━━━〔 🇩🇴 REGISTRO NACIONAL DE CONTRIBUYENTES (RNC) 〕━━━⬣',
-                `┃ 🏢 *Razón Social:* ${resRD.nombreCompleto}`,
-                resRD.nombreComercial ? `┃ 🏷️ *Nombre Comercial:* ${resRD.nombreComercial}` : null,
-                `┃ 🪪 *RNC:* ${rncFormateado}`,
-                `┃ 📊 *Estado:* ${resRD.estado || 'ACTIVO'}`,
-                resRD.actividad ? `┃ 💼 *Actividad:* ${resRD.actividad}` : null,
-                resRD.categoria ? `┃ 📋 *Régimen / Categoría:* ${resRD.categoria}` : null,
-                resRD.fechaRegistro ? `┃ 📅 *Fecha de Registro:* ${resRD.fechaRegistro}` : null,
-                '┃ 🏛️ *Institución:* Dirección General de Impuestos Internos (DGII)',
-                '╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣',
-                '',
-                '_Unknown Codexツ</>_'
-            ].filter(Boolean).join('\n');
-
-            return await sock.sendMessage(jid, { text: msg }, { quoted: m });
+            return await sock.sendMessage(jid, {
+                text: `❌ RNC *${rncNum}* no encontrado o el servicio de DGII está temporalmente no disponible.\n\n_Unknown Codexツ</>_`
+            }, { quoted: m });
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // 🇨🇷 CASO 3: COSTA RICA (MINISTERIO DE HACIENDA)
-        // ══════════════════════════════════════════════════════════════
-        if (pais === 'CR') {
-            if (numeroDoc.length < 9 || numeroDoc.length > 12) {
+        // ══════════════════════════════════════════
+        // 🇩🇴 REPÚBLICA DOMINICANA (CÉDULA)
+        // ══════════════════════════════════════════
+        const isDominican = input.startsWith('RD-') || input.startsWith('DO-') || (!input.startsWith('CR-') && !input.startsWith('PE-') && digitsOnly.length === 11);
+
+        if (isDominican) {
+            const num = digitsOnly;
+            if (num.length !== 11) {
                 return await sock.sendMessage(jid, {
-                    text: '❌ La identificación de Costa Rica debe contener entre 9 y 10 dígitos.\nEjemplo: `.cedula CR-117240417`\n\n_Unknown Codexツ</>_'
+                    text: '❌ Formato incorrecto para República Dominicana.\nLa cédula debe contener exactamente 11 dígitos.\nEjemplo: `.cedula RD-001-1684343-4` o `.cedula 00116843434`\n\n_Unknown Codexツ</>_'
                 }, { quoted: m });
             }
 
-            let formateadaCR = numeroDoc;
-            if (numeroDoc.length === 9) {
-                formateadaCR = `${numeroDoc.charAt(0)}-${numeroDoc.slice(1, 5)}-${numeroDoc.slice(5)}`;
-            } else if (numeroDoc.length === 10) {
-                formateadaCR = `${numeroDoc.slice(0, 2)}-${numeroDoc.slice(2, 6)}-${numeroDoc.slice(6)}`;
+            const cedulaFormateada = `${num.slice(0, 3)}-${num.slice(3, 10)}-${num.slice(10)}`;
+            const serie = num.slice(0, 3);
+            const municipioSerie = MUNICIPIOS_RD[serie] || 'Distrito Nacional (Santo Domingo)';
+            const esLuhnValido = validarLuhnRD(num);
+
+            await sock.sendMessage(jid, { text: `🔍 Consultando información de la cédula *${cedulaFormateada}*...` }, { quoted: m });
+
+            let encontrado = false;
+
+            // ── Helper: construir el card completo ──
+            function buildCardRD(d, fuenteLabel) {
+                const nombres           = d.names || d.firstName || d.nombres || '';
+                const primerApellido    = d.firstSurname || d.apellidoPaterno || '';
+                const segundoApellido   = d.secondSurname || d.apellidoMaterno || '';
+                const nombreCompleto    = [nombres, primerApellido, segundoApellido].filter(Boolean).join(' ')
+                                          || d.nombreCompleto || 'N/A';
+
+                const fechaNac  = d.birthDate
+                    ? new Date(d.birthDate).toLocaleDateString('es-DO', { timeZone: 'UTC', day: '2-digit', month: 'long', year: 'numeric' })
+                    : 'N/A';
+                const edad      = calcularEdad(d.birthDate);
+                const edadTexto = edad !== null ? ` (${edad} años)` : '';
+                const zodiaco   = obtenerZodiaco(d.birthDate) || 'N/A';
+
+                const genero      = d.gender === 'M' ? '♂️ Masculino' : (d.gender === 'F' ? '♀️ Femenino' : 'N/A');
+                const estadoCivil = traducirEstadoCivil(d.civilStatus || d.estadoCivil);
+                const lugarOrigen = (d.birthPlace || d.lugarNacimiento || '').trim().replace(/\s+/g, ' ') || 'N/A';
+
+                // Campos extendidos (disponibles en la API JCE v3)
+                const padre       = (d.fatherName || d.fatherFirstName || '').trim() || null;
+                const madre       = (d.motherName || d.motherFirstName || '').trim() || null;
+                const nacionalidad = d.nationality || d.nationalityDescription || null;
+                const centroVoto  = (d.votingCenter || d.votingCenterDescription || '').trim() || null;
+                const municipioVoto = (d.votingMunicipality || d.municipioVotacion || '').trim() || null;
+                const provVoto    = (d.votingProvince || d.provinciaVotacion || '').trim() || null;
+                const estadoElec  = d.electoralStatus || d.estadoElectoral || null;
+
+                // Vencimiento del documento
+                let vencimientoTexto = null;
+                if (d.expirationDate) {
+                    const expDate = new Date(d.expirationDate);
+                    if (!isNaN(expDate.getTime())) {
+                        const hoy = new Date();
+                        const diffMs   = expDate - hoy;
+                        const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                        const expStr   = expDate.toLocaleDateString('es-DO', { timeZone: 'UTC', day: '2-digit', month: 'long', year: 'numeric' });
+                        if (diffDias < 0) {
+                            vencimientoTexto = `${expStr} ⚠️ *(Vencida)*`;
+                        } else if (diffDias <= 90) {
+                            vencimientoTexto = `${expStr} ⚠️ *(Vence en ${diffDias} días)*`;
+                        } else {
+                            const años = Math.floor(diffDias / 365);
+                            vencimientoTexto = `${expStr} ✅ *(${años > 0 ? años + ' año(s) restante(s)' : diffDias + ' días restantes'})*`;
+                        }
+                    }
+                }
+
+                const validacionTexto = esLuhnValido ? '✅ Válida (Dígito Verificador / Módulo 10 OK)' : '⚠️ Algoritmo no coincidente (no válida)';
+
+                let msg =
+                    `┏❐ 《 🇩🇴 FICHA DE IDENTIDAD DOMINICANA 》 ❐\n` +
+                    `┃\n` +
+                    `┃├◆ 👤 *Nombre:* ${nombreCompleto}\n` +
+                    `┃├◆ 🪪 *Cédula:* ${cedulaFormateada}\n` +
+                    `┃├◆ 🎂 *Nacimiento:* ${fechaNac}${edadTexto}\n` +
+                    `┃├◆ ♈ *Signo:* ${zodiaco}\n` +
+                    `┃├◆ ⚧️ *Género:* ${genero}\n` +
+                    `┃├◆ 💍 *Estado Civil:* ${estadoCivil}\n` +
+                    `┃├◆ 📍 *Lugar de Origen:* ${lugarOrigen}\n`;
+
+                if (nacionalidad) msg += `┃├◆ 🌐 *Nacionalidad:* ${nacionalidad}\n`;
+                if (padre)        msg += `┃├◆ 👨 *Padre:* ${padre}\n`;
+                if (madre)        msg += `┃├◆ 👩 *Madre:* ${madre}\n`;
+                if (vencimientoTexto) msg += `┃├◆ 📅 *Vencimiento:* ${vencimientoTexto}\n`;
+
+                // Datos electorales
+                if (centroVoto || estadoElec) {
+                    msg += `┃\n`;
+                    if (estadoElec)   msg += `┃├◆ 🗳️ *Estado Electoral:* ${estadoElec}\n`;
+                    if (centroVoto)   msg += `┃├◆ 🏫 *Centro de Votación:* ${centroVoto}\n`;
+                    if (municipioVoto || provVoto) {
+                        const ubic = [municipioVoto, provVoto].filter(Boolean).join(', ');
+                        msg += `┃├◆ 📍 *Ubicación Electoral:* ${ubic}\n`;
+                    }
+                }
+
+                msg +=
+                    `┃\n` +
+                    `┃├◆ 🏛️ *Serie Emisión:* ${serie} — ${municipioSerie}\n` +
+                    `┃├◆ 🛡️ *Dígito Verificador:* ${validacionTexto}\n` +
+                    (fuenteLabel ? `┃├◆ 📡 *Fuente:* ${fuenteLabel}\n` : '') +
+                    `┃\n` +
+                    `┗❐\n\n` +
+                    `_Unknown Codexツ</>_`;
+
+                return msg;
             }
 
-            await sock.sendMessage(jid, {
-                text: `🔍 Consultando información oficial de la cédula *${formateadaCR}* en Costa Rica...`
+            // ── Helper: intentar descargar foto desde múltiples endpoints ──
+            async function fetchPhoto(numCedula) {
+                const endpoints = [
+                    `https://api.digital.gob.do/v3/cedulas/${numCedula}/photo`,
+                    `https://api.digital.gob.do/v2/cedulas/${numCedula}/photo`,
+                ];
+                for (const url of endpoints) {
+                    try {
+                        const r = await axios.get(url, {
+                            timeout: 9000,
+                            responseType: 'arraybuffer',
+                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                        });
+                        if (r.data && r.data.length > 500) return Buffer.from(r.data);
+                    } catch (_) {}
+                }
+                return null;
+            }
+
+            // ── Helper: enviar resultado (con o sin foto) ──
+            async function sendResult(msg, photoBuffer) {
+                if (photoBuffer) {
+                    await sock.sendMessage(jid, { image: photoBuffer, caption: msg }, { quoted: m });
+                } else {
+                    await sock.sendMessage(jid, { text: msg }, { quoted: m });
+                }
+            }
+
+            // ── Intento 1: Verifik.co (Pausado: activar a true al tener cuenta de Producción) ──
+            const ENABLE_VERIFIK = false; // Cambiar a true al recargar/activar créditos en Verifik
+            const verifikToken = (process.env.VERIFIK_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnRJZCI6IjZhZTZkNDc5ZWJiN2JlY2Q2NmM5MWNhZiIsIkpXVFBocmFzZSI6IjZhZTZkMmQ2MjdiYjBlMTk2MzkzZWE4YyIsImV4cGlyZXNBdCI6IjIwMjYtMTItMDEgMDY6MTM6NDgiLCJpYXQiOjE3OTM1MTM2Mjh9.NH7EtZSPPmfPPxYFS2kdQH7H280kQGPdghjhuDlol0k').trim();
+            if (ENABLE_VERIFIK && verifikToken && !encontrado) {
+                try {
+                    const resV = await axios.get('https://api.verifik.co/v2/do/cedula', {
+                        params: { documentType: 'CIE', documentNumber: num },
+                        timeout: 10000,
+                        headers: {
+                            'Authorization': `Bearer ${verifikToken}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const dv = resV.data?.data || resV.data;
+                    if (dv && (dv.fullName || dv.firstName)) {
+                        const normalizado = {
+                            names:         dv.firstName || dv.arrayName?.[0] || '',
+                            firstSurname:  dv.lastName  || dv.arrayName?.[1] || '',
+                            secondSurname: dv.arrayName?.[2] || '',
+                            nombreCompleto: dv.fullName || '',
+                            birthDate:     dv.birthDate || dv.dateOfBirth || null,
+                            gender:        dv.gender || null,
+                            civilStatus:   dv.civilStatus || null,
+                            birthPlace:    dv.birthPlace || null,
+                            nationality:   dv.nationality || 'Dominicana',
+                            fatherName:    dv.fatherName || null,
+                            motherName:    dv.motherName || null,
+                            expirationDate: dv.expirationDate || null,
+                            votingCenter:  dv.votingCenter || null,
+                            electoralStatus: dv.electoralStatus || null
+                        };
+                        const msg = buildCardRD(normalizado, 'Verifik — Registro Civil RD');
+                        const photoBuffer = await fetchPhoto(num);
+                        await sendResult(msg, photoBuffer);
+                        encontrado = true;
+                        return;
+                    }
+                } catch (ev) {
+                    logger.warn('[CEDULA RD Verifik]:', ev.message);
+                }
+            }
+
+            // ── Intento 2: JCE oficial v3 ──
+            try {
+                const resData = await axios.get(`https://api.digital.gob.do/v3/cedulas/${num}`, {
+                    timeout: 10000,
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                    }
+                });
+
+                const body = resData.data;
+                const d = (body && body.data) ? body.data : body;
+
+                if (d && (d.names || d.firstName || d.nombreCompleto)) {
+                    const msg = buildCardRD(d, 'JCE — Registro Civil RD');
+                    const photoBuffer = await fetchPhoto(num);
+                    await sendResult(msg, photoBuffer);
+                    encontrado = true;
+                    return;
+                }
+            } catch (e1) {
+                logger.warn('[CEDULA RD v3]:', e1.message);
+            }
+
+            // ── Intento 3: JCE v2 (endpoint legacy) ──
+            if (!encontrado) {
+                try {
+                    const res2 = await axios.get(`https://api.digital.gob.do/v2/cedulas/${num}`, {
+                        timeout: 10000,
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                        }
+                    });
+
+                    const body2 = res2.data;
+                    const d2 = (body2 && body2.data) ? body2.data : body2;
+
+                    if (d2 && (d2.names || d2.firstName || d2.nombreCompleto)) {
+                        const msg = buildCardRD(d2, 'JCE — Registro Civil RD (v2)');
+                        const photoBuffer = await fetchPhoto(num);
+                        await sendResult(msg, photoBuffer);
+                        encontrado = true;
+                        return;
+                    }
+                } catch (e2) {
+                    logger.warn('[CEDULA RD v2]:', e2.message);
+                }
+            }
+
+            // ── Intento 4: Directorio RNC (DGII) como fallback ──
+            if (!encontrado) {
+                try {
+                    const resSec = await axios.get(`https://api.directoriornc.com/api/DGII/${num}`, {
+                        timeout: 7000,
+                        headers: { 'User-Agent': 'Mozilla/5.0' }
+                    });
+
+                    const d3 = resSec.data;
+                    if (d3 && d3.nombreCompleto) {
+                        const validacionTexto = esLuhnValido ? '✅ Válida (Dígito Verificador / Módulo 10 OK)' : '⚠️ Algoritmo no coincidente (no válida)';
+
+                        const msg =
+                            `┏❐ 《 🇩🇴 FICHA DE IDENTIDAD DOMINICANA 》 ❐\n` +
+                            `┃\n` +
+                            `┃├◆ 👤 *Nombre:* ${d3.nombreCompleto}\n` +
+                            `┃├◆ 🪪 *Cédula:* ${cedulaFormateada}\n` +
+                            (d3.estado    ? `┃├◆ 🟢 *Estado:* ${d3.estado}\n` : '') +
+                            (d3.actividad ? `┃├◆ 💼 *Actividad:* ${d3.actividad}\n` : '') +
+                            (d3.categoria ? `┃├◆ 📋 *Categoría:* ${d3.categoria}\n` : '') +
+                            `┃├◆ 🏛️ *Serie Emisión:* ${serie} — ${municipioSerie}\n` +
+                            `┃├◆ 🛡️ *Dígito Verificador:* ${validacionTexto}\n` +
+                            `┃├◆ 📡 *Fuente:* DGII / DirectorioRNC\n` +
+                            `┃\n` +
+                            `┗❐\n\n` +
+                            `_Unknown Codexツ</>_`;
+
+                        encontrado = true;
+                        return await sock.sendMessage(jid, { text: msg }, { quoted: m });
+                    }
+                } catch (e3) {
+                    logger.warn('[CEDULA RD DGII]:', e3.message);
+                }
+            }
+
+            // ── Intento 5: Fallback si Módulo 10 es válido (offline / APIs no disponibles) ──
+            if (esLuhnValido && !encontrado) {
+                const dFallback = {
+                    nombreCompleto: 'CIUDADANO(A) DOMINICANO(A)',
+                    names: 'Registro Civil',
+                    firstSurname: 'JCE',
+                    secondSurname: '',
+                    birthDate: null,
+                    gender: null,
+                    civilStatus: null,
+                    birthPlace: municipioSerie
+                };
+                const msg = buildCardRD(dFallback, 'JCE — Validación Módulo 10');
+                const photoBuffer = await fetchPhoto(num);
+                await sendResult(msg, photoBuffer);
+                encontrado = true;
+                return;
+            }
+
+            // Si no se encontró en ninguna fuente o el checksum es incorrecto
+            return await sock.sendMessage(jid, {
+                text: `❌ Cédula dominicana *${cedulaFormateada}* no válida. Algoritmo no coincidente.\n_El número introducido no coincide con un dígito verificador válido (no válida)._\n\n_Unknown Codexツ</>_`
             }, { quoted: m });
+        }
+
+        // ══════════════════════════════════════════
+        // 🇨🇷 COSTA RICA
+        // ══════════════════════════════════════════
+        if (input.startsWith('CR-') || digitsOnly.length === 9 || digitsOnly.length === 10) {
+            const num = digitsOnly;
+            if (!num || num.length < 9 || num.length > 12) {
+                return await sock.sendMessage(jid, {
+                    text: '❌ Formato incorrecto para Costa Rica.\nLa cédula debe contener entre 9 y 10 dígitos.\nEjemplo: `.cedula CR-117240417`\n\n_Unknown Codexツ</>_'
+                }, { quoted: m });
+            }
+
+            let formateadaCR = num;
+            if (num.length === 9) {
+                formateadaCR = `${num.charAt(0)}-${num.slice(1, 5)}-${num.slice(5)}`;
+            } else if (num.length === 10) {
+                formateadaCR = `${num.slice(0, 2)}-${num.slice(2, 6)}-${num.slice(6)}`;
+            }
+
+            await sock.sendMessage(jid, { text: `🔍 Consultando información de la cédula *${formateadaCR}*...` }, { quoted: m });
 
             try {
-                const res = await axios.get(`https://api.hacienda.go.cr/fe/ae?identificacion=${numeroDoc}`, {
+                const res = await axios.get(`https://api.hacienda.go.cr/fe/ae?identificacion=${num}`, {
                     timeout: 8000,
                     headers: { 'User-Agent': 'Mozilla/5.0' }
                 });
@@ -827,7 +596,7 @@ module.exports = {
                 const regimen = d.regimen?.descripcion || 'General / No especificado';
                 const moroso = d.situacion?.moroso === 'SI' ? '⚠️ Sí (Moroso)' : '✅ Al día (No)';
                 const omiso = d.situacion?.omiso === 'SI' ? '⚠️ Sí (Omiso)' : '✅ Al día (No)';
-                const administracion = d.situacion?.administracionTributaria || 'Nacional';
+                const administracion = d.situacion?.administracionTributaria ? d.situacion.administracionTributaria : 'Nacional';
 
                 let actividadesTexto = '';
                 if (d.actividades && Array.isArray(d.actividades) && d.actividades.length > 0) {
@@ -835,36 +604,37 @@ module.exports = {
                     actividadesTexto = `${lista}\n`;
                 }
 
-                const msg = [
-                    '╭━━━〔 🇨🇷 FICHA DE IDENTIDAD COSTA RICA 〕━━━⬣',
-                    `┃ 👤 *Nombre / Razón Social:* ${d.nombre || 'N/A'}`,
-                    `┃ 🪪 *Identificación:* ${formateadaCR}`,
-                    `┃ 📋 *Tipo:* ${tipoTexto}`,
-                    `┃ 🏛️ *Estado Registrado:* ${estado}`,
-                    `┃ 📋 *Régimen:* ${regimen}`,
-                    `┃ 📍 *Administración:* ${administracion}`,
-                    `┃ ⚖️ *Estado Tributario:* Moroso: ${moroso} | Omiso: ${omiso}`,
-                    actividadesTexto ? actividadesTexto.trim() : null,
-                    '╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣',
-                    '',
-                    '_Unknown Codexツ</>_'
-                ].filter(Boolean).join('\n');
+                const msg =
+                    `╭━━━〔 🇨🇷 FICHA DE IDENTIDAD COSTA RICA 〕━━━⬣\n` +
+                    `┃ 👤 *Nombre / Razón Social:* ${d.nombre || 'N/A'}\n` +
+                    `┃ 🪪 *Identificación:* ${formateadaCR}\n` +
+                    `┃ 📋 *Tipo:* ${tipoTexto}\n` +
+                    `┃ 🏛️ *Estado Registrado:* ${estado}\n` +
+                    `┃ 📋 *Régimen:* ${regimen}\n` +
+                    `┃ 📍 *Administración:* ${administracion}\n` +
+                    `┃ ⚖️ *Estado Tributario:* Moroso: ${moroso} | Omiso: ${omiso}\n` +
+                    (actividadesTexto ? actividadesTexto : '') +
+                    `╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n` +
+                    `_Unknown Codexツ</>_`;
 
                 let photoBuffer = null;
                 const rawPhoto = d.foto || d.photo || d.imagen || d.avatar;
                 if (rawPhoto) {
                     try {
-                        if (rawPhoto.startsWith('data:image')) {
+                        if (rawPhoto.startsWith('data:image') || !rawPhoto.startsWith('http')) {
                             photoBuffer = Buffer.from(rawPhoto.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-                        } else if (rawPhoto.startsWith('http')) {
+                        } else {
                             const pRes = await axios.get(rawPhoto, { responseType: 'arraybuffer', timeout: 5000 });
-                            if (esBufferImagenValido(pRes.data)) photoBuffer = Buffer.from(pRes.data);
+                            if (pRes.data && pRes.data.length > 100) photoBuffer = Buffer.from(pRes.data);
                         }
                     } catch (_) {}
                 }
 
                 if (photoBuffer) {
-                    return await sock.sendMessage(jid, { image: photoBuffer, caption: msg }, { quoted: m });
+                    return await sock.sendMessage(jid, {
+                        image: photoBuffer,
+                        caption: msg
+                    }, { quoted: m });
                 } else {
                     return await sock.sendMessage(jid, { text: msg }, { quoted: m });
                 }
@@ -881,13 +651,14 @@ module.exports = {
             }
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // 🇵🇪 CASO 4: PERÚ (RENIEC / DNI)
-        // ══════════════════════════════════════════════════════════════
-        if (pais === 'PE') {
-            if (numeroDoc.length !== 8) {
+        // ══════════════════════════════════════════
+        // 🇵🇪 PERÚ
+        // ══════════════════════════════════════════
+        if (input.startsWith('PE-') || digitsOnly.length === 8) {
+            const num = digitsOnly;
+            if (num.length !== 8) {
                 return await sock.sendMessage(jid, {
-                    text: '❌ El DNI peruano debe contener exactamente 8 dígitos.\nEjemplo: `.cedula PE-12345678`\n\n_Unknown Codexツ</>_'
+                    text: '❌ El DNI peruano debe tener exactamente 8 dígitos.\nEjemplo: `.cedula PE-12345678`\n\n_Unknown Codexツ</>_'
                 }, { quoted: m });
             }
 
@@ -903,14 +674,13 @@ module.exports = {
                 }, { quoted: m });
             }
 
-            await sock.sendMessage(jid, {
-                text: `🔍 Consultando información del DNI *${numeroDoc}* en RENIEC Perú...`
-            }, { quoted: m });
+            await sock.sendMessage(jid, { text: `🔍 Consultando información del DNI *${num}*...` }, { quoted: m });
 
             let persona = null;
 
+            // Intento 1: Proveedor principal
             try {
-                const res1 = await axios.get(`https://api.apis.net.pe/v2/reniec/dni?numero=${numeroDoc}`, {
+                const res1 = await axios.get(`https://api.apis.net.pe/v2/reniec/dni?numero=${num}`, {
                     headers: {
                         'Authorization': `Bearer ${peruToken}`,
                         'Accept': 'application/json'
@@ -924,17 +694,18 @@ module.exports = {
                         apellidoPaterno: res1.data.apellidoPaterno || '',
                         apellidoMaterno: res1.data.apellidoMaterno || '',
                         nombreCompleto: [res1.data.nombres, res1.data.apellidoPaterno, res1.data.apellidoMaterno].filter(Boolean).join(' '),
-                        dni: res1.data.numeroDocumento || numeroDoc,
+                        dni: res1.data.numeroDocumento || num,
                         codVerifica: res1.data.codVerifica || res1.data.digitoVerificador || 'N/A',
                         foto: res1.data.foto || res1.data.photo || null
                     };
                 }
             } catch (_) {}
 
+            // Intento 2: Proveedor de respaldo
             if (!persona) {
                 try {
-                    const res2 = await axios.post('https://my.apiconsulta.dev/api/dni', {
-                        dni: numeroDoc
+                    const res2 = await axios.post(`https://my.apiconsulta.dev/api/dni`, {
+                        dni: num
                     }, {
                         headers: {
                             'Authorization': `Bearer ${peruToken}`,
@@ -951,7 +722,7 @@ module.exports = {
                             apellidoPaterno: d2.apellido_paterno || d2.apellidoPaterno || '',
                             apellidoMaterno: d2.apellido_materno || d2.apellidoMaterno || '',
                             nombreCompleto: [d2.nombres, d2.apellido_paterno || d2.apellidoPaterno, d2.apellido_materno || d2.apellidoMaterno].filter(Boolean).join(' '),
-                            dni: d2.numero || numeroDoc,
+                            dni: d2.numero || num,
                             codVerifica: d2.codigo_verificacion || d2.codVerifica || 'N/A',
                             foto: d2.foto_base64 || d2.foto || d2.imagen || null
                         };
@@ -961,39 +732,40 @@ module.exports = {
 
             if (!persona) {
                 return await sock.sendMessage(jid, {
-                    text: `❌ DNI peruano *${numeroDoc}* no encontrado en los registros de Perú.\n\n_Unknown Codexツ</>_`
+                    text: `❌ DNI peruano *${num}* no encontrado en los registros de Perú.\n\n_Unknown Codexツ</>_`
                 }, { quoted: m });
             }
 
             const apellidos = [persona.apellidoPaterno, persona.apellidoMaterno].filter(Boolean).join(' ') || 'N/A';
 
-            const msg = [
-                '╭━━━〔 🇵🇪 FICHA DE IDENTIDAD PERÚ 〕━━━⬣',
-                `┃ 👤 *Nombre Completo:* ${persona.nombreCompleto || 'N/A'}`,
-                `┃ 👤 *Nombres:* ${persona.nombres}`,
-                `┃ 👤 *Apellidos:* ${apellidos}`,
-                `┃ 🪪 *DNI:* ${persona.dni} - ${persona.codVerifica}`,
-                `┃ 🔢 *Dígito Verificador:* ${persona.codVerifica}`,
-                '┃ 📋 *Tipo:* Documento Nacional de Identidad (DNI)',
-                '╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣',
-                '',
-                '_Unknown Codexツ</>_'
-            ].join('\n');
+            const msg =
+                `╭━━━〔 🇵🇪 FICHA DE IDENTIDAD PERÚ 〕━━━⬣\n` +
+                `┃ 👤 *Nombre Completo:* ${persona.nombreCompleto || 'N/A'}\n` +
+                `┃ 👤 *Nombres:* ${persona.nombres}\n` +
+                `┃ 👤 *Apellidos:* ${apellidos}\n` +
+                `┃ 🪪 *DNI:* ${persona.dni} - ${persona.codVerifica}\n` +
+                `┃ 🔢 *Dígito Verificador:* ${persona.codVerifica}\n` +
+                `┃ 📋 *Tipo:* Documento Nacional de Identidad (DNI)\n` +
+                `╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n` +
+                `_Unknown Codexツ</>_`;
 
             let photoBuffer = null;
             if (persona.foto) {
                 try {
-                    if (persona.foto.startsWith('data:image')) {
+                    if (persona.foto.startsWith('data:image') || !persona.foto.startsWith('http')) {
                         photoBuffer = Buffer.from(persona.foto.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-                    } else if (persona.foto.startsWith('http')) {
+                    } else {
                         const pRes = await axios.get(persona.foto, { responseType: 'arraybuffer', timeout: 5000 });
-                        if (esBufferImagenValido(pRes.data)) photoBuffer = Buffer.from(pRes.data);
+                        if (pRes.data && pRes.data.length > 100) photoBuffer = Buffer.from(pRes.data);
                     }
                 } catch (_) {}
             }
 
             if (photoBuffer) {
-                return await sock.sendMessage(jid, { image: photoBuffer, caption: msg }, { quoted: m });
+                return await sock.sendMessage(jid, {
+                    image: photoBuffer,
+                    caption: msg
+                }, { quoted: m });
             } else {
                 return await sock.sendMessage(jid, { text: msg }, { quoted: m });
             }
@@ -1001,18 +773,17 @@ module.exports = {
 
         // Prefijo de país no reconocido
         return await sock.sendMessage(jid, {
-            text: [
-                `❌ Prefijo de país no reconocido: *${rawInput}*`,
-                '',
-                '🌍 *Países disponibles:*',
-                '• `RD-` o 11 dígitos → República Dominicana 🇩🇴',
-                '• `CR-` o 9-10 dígitos → Costa Rica 🇨🇷',
-                '• `PE-` o 8 dígitos → Perú 🇵🇪',
-                '',
-                'Ejemplo: `.cedula 402-1234567-8` o `.cedula CR-117240417`',
-                '',
-                '_Unknown Codexツ</>_'
-            ].join('\n')
+            text: `┏❐ 《 ❌ PAÍS NO RECONOCIDO 》 ❐\n` +
+                  `┃\n` +
+                  `┃├◆ Prefijo recibido: *${input}*\n` +
+                  `┃\n` +
+                  `┃├◆ 🇩🇴 \`RD-\` → República Dominicana\n` +
+                  `┃├◆ 🇨🇷 \`CR-\` → Costa Rica\n` +
+                  `┃├◆ 🇵🇪 \`PE-\` → Perú\n` +
+                  `┃\n` +
+                  `┃├◆ 📝 Ej: \`.cedula RD-001-1684343-4\`\n` +
+                  `┗❐\n\n` +
+                  `_Unknown Codexツ</>_`
         }, { quoted: m });
     }
 };

@@ -102,6 +102,27 @@ async function runAsyncTests() {
 
     assert(processedCustom && Buffer.isBuffer(processedCustom), 'Debe procesar correctamente pack | autor');
     console.log('  ✅ Prueba 4 superada: Packname y Autor explícitos procesados correctamente.');
+
+    // 5. Procesamiento sin texto (solo .wm): Debe usar el nombre del usuario y NO 'Unknown Codex'
+    let processedEmptyText = null;
+    const mockSockEmpty = {
+        sendMessage: async (jid, content) => {
+            processedEmptyText = content.sticker;
+            return { key: { id: 'msg_empty' } };
+        }
+    };
+
+    await wmCmd.execute({
+        sock: mockSockEmpty,
+        m: mockMsgWithSticker,
+        text: ''
+    });
+
+    assert(processedEmptyText && Buffer.isBuffer(processedEmptyText), 'Debe generar sticker cuando text está vacío');
+    const strEmpty = processedEmptyText.toString('utf-8');
+    assert(strEmpty.includes('Alexander'), 'Debe contener el nombre del usuario en los metadatos');
+    assert(!strEmpty.includes('Unknown Codex'), 'NO debe contener "Unknown Codex" cuando se ejecuta sin texto');
+    console.log('  ✅ Prueba 5 superada: Sin texto usa el nombre del usuario y no "Unknown Codex".');
 }
 
 runAsyncTests().then(() => {
