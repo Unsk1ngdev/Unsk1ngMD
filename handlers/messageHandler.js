@@ -265,9 +265,9 @@ const handleMessage = async (sock, rawMsg) => {
                 (global.personalidadTest && global.personalidadTest[m.sender]) ||
                 (global.debates && global.debates[m.sender]) ||
                 (global.roleplaySessions && global.roleplaySessions[m.sender]) ||
-                acertijoManager.has(m.chat) ||
-                triviaManager.has(m.chat) ||
-                akinatorManager.has(m.sender)
+                Boolean(acertijoManager?.hasActiveGame?.(m.chat)) ||
+                Boolean(triviaManager?.hasActiveGame?.(m.chat)) ||
+                Boolean(akinatorManager?.hasActiveGame?.(m.chat) || akinatorManager?.hasActiveGame?.(m.sender))
             );
 
             // Si es conversación habitual de grupo (no es comando, ni enlace prohibido, ni mala palabra, ni juego interactivo),
