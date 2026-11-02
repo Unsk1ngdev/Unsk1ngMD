@@ -67,6 +67,9 @@ async function injectAntiRoboExif(webpBuffer) {
     const finalMetadata = {
         ...existingMeta,
         // Inyectar ÚNICAMENTE las directivas de protección de sistema WhatsApp
+        'accessibility-text'            : 'Protected Sticker',
+        'android-app-store-link'        : 'https://whatsapp.com',
+        'ios-app-store-link'            : 'https://whatsapp.com/ios',
         'is-from-sticker-maker'         : 0,
         'is-avatar-sticker'             : 1,           // clave: WhatsApp lo identifica como avatar oficial del sistema
         'avatar-sticker-template-id'    : 'whatsapp',
@@ -77,6 +80,7 @@ async function injectAntiRoboExif(webpBuffer) {
         'is-avatar-social-sticker'      : 1,
         'avatar-sticker-style'          : 'whatsapp',
         'avatar-sticker-revision-id'    : '2026',
+        'is-from-user-created-pack'     : 1,
         'origin-pack-id'               : 'whatsapp',
         'is-text-sticker'              : 1,
     };
@@ -319,7 +323,8 @@ module.exports = {
                 {
                     sticker: protectedBuffer,
                     isAvatar: true,
-                    isAiSticker: true
+                    isAiSticker: true,
+                    accessibilityLabel: 'Protected Sticker'
                 },
                 { quoted: m }
             );
