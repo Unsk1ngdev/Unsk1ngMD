@@ -23,7 +23,7 @@
 
 const crypto = require('crypto');
 const webpmux = require('node-webpmux');
-const sharp = require('sharp');
+const sharp = require('../../lib/sharp');
 const config = require('../../config');
 const logger = require('../../lib/logger');
 const { imageToSticker, videoToSticker } = require('../../lib/media');

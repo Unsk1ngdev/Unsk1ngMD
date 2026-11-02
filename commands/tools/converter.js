@@ -2,7 +2,7 @@
 
 const path = require('path');
 const fs = require('fs-extra');
-const sharp = require('sharp');
+const sharp = require('../../lib/sharp');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 const logger = require('../../lib/logger');
 const { runFfmpeg, isFfmpegAvailable } = require('../../lib/ffmpeg');

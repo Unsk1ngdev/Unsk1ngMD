@@ -1,6 +1,6 @@
 'use strict';
 
-const sharp = require('sharp');
+const sharp = require('../../lib/sharp');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 const logger = require('../../lib/logger');
 const userNames = require('../../lib/userNames');

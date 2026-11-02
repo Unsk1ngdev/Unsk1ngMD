@@ -1,7 +1,7 @@
 'use strict';
 
 const axios = require('axios');
-const sharp = require('sharp');
+const sharp = require('../../lib/sharp');
 const logger = require('../../lib/logger');
 
 // Almacenamiento en memoria de personajes adoptados por usuario: userJid -> Array<Character>

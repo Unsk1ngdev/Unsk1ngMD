@@ -76,7 +76,7 @@ module.exports = {
                     } catch (stkErr) {
                         // Fallback con Sharp a GIF intermedio si FFmpeg no lee los metadatos del sticker WebP
                         try {
-                            const sharp = require('sharp');
+                            const sharp = require('../../lib/sharp');
                             tempGif = createTempPath('gif');
                             const gifBuffer = await sharp(inputPath, { animated: true }).gif().toBuffer();
                             await fs.writeFile(tempGif, gifBuffer);

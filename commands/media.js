@@ -1,5 +1,5 @@
 const fs = require('fs-extra');
-const sharp = require('sharp');
+const sharp = require('../lib/sharp');
 const webpmux = require('node-webpmux');
 const axios = require('axios');
 const FormData = require('form-data');

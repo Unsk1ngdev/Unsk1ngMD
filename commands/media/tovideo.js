@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('fs-extra');
-const sharp = require('sharp');
+const sharp = require('../../lib/sharp');
 const webpmux = require('node-webpmux');
 const { createTempPath, safeUnlink } = require('../../lib/cleaner');
 const { runFfmpeg, isFfmpegAvailable } = require('../../lib/ffmpeg');

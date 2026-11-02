@@ -2,7 +2,7 @@
 
 const axios = require('axios');
 const FormData = require('form-data');
-const sharp = require('sharp');
+const sharp = require('../../lib/sharp');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 const logger = require('../../lib/logger');
 
