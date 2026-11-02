@@ -17,6 +17,7 @@ const converterCmd = require('../commands/tools/converter');
 const colongswCmd = require('../commands/tools/colongsw');
 const faketweetCmd = require('../commands/tools/faketweet');
 const fagsocialCmd = require('../commands/tools/fagsocial');
+const fakevvCmd = require('../commands/tools/fakevv');
 
 function createMockEnv(customSender = '18095551234@s.whatsapp.net', customChat = '123456789-group@g.us') {
     const sentMessages = [];
@@ -62,9 +63,50 @@ async function runTests() {
         download: async () => sampleStickerBuf
     };
     await anticolongCmd.execute({ sock: envAnti2.sock, m: envAnti2.m });
-    assert(envAnti2.sentMessages.some(s => s.content.sticker && s.content.isAvatar === true));
+    const stickerMsg = envAnti2.sentMessages.find(s => s.content.sticker);
+    assert(stickerMsg, 'Debe enviar el sticker protegido');
+    assert.strictEqual(stickerMsg.content.viewOnce, undefined, 'No debe tener viewOnce para permitir descarga y vista');
+    assert.strictEqual(stickerMsg.content.isAvatar, true);
+    assert.strictEqual(stickerMsg.content.isAiSticker, true);
+    // Validar inyección de metadatos EXIF WebP
+    const stickerData = stickerMsg.content.sticker.toString('utf-8');
+    assert(stickerData.includes('is-avatar-sticker') && stickerData.includes('is-ai-sticker'), 'Debe contener los metadatos EXIF de avatar/IA');
     assert(envAnti2.reactions.includes('🛡️'));
-    console.log('  ✅ .anticolong verificado.');
+
+    // Con opción .anticolong vo (modo foto ver una vez)
+    const envAntiVo = createMockEnv();
+    envAntiVo.m.quoted = {
+        type: 'stickerMessage',
+        download: async () => sampleStickerBuf
+    };
+    await anticolongCmd.execute({ sock: envAntiVo.sock, m: envAntiVo.m, args: ['vo'] });
+    const voMsg = envAntiVo.sentMessages.find(s => s.content.image && s.content.viewOnce === true);
+    assert(voMsg, 'Modo vo debe convertir el sticker en foto View Once');
+
+    console.log('  ✅ .anticolong verificado (EXIF Avatar/IA + soporte View Once foto).');
+
+    // ── 1B. FAKEVV ──
+    console.log('  Testing .fakevv...');
+    // Modo broma (sin citar medio)
+    const envFakevv1 = createMockEnv();
+    await fakevvCmd.execute({ sock: envFakevv1.sock, m: envFakevv1.m, args: ['Mira esto jaja'] });
+    assert(envFakevv1.sentMessages.some(s => s.content.image && s.content.viewOnce === true), 'Debe enviar imagen troll con viewOnce');
+    assert(envFakevv1.reactions.includes('👁️'));
+
+    // Modo convertir imagen a View Once
+    const envFakevv2 = createMockEnv();
+    const fakevvImgBuf = await sharp({
+        create: { width: 50, height: 50, channels: 3, background: { r: 0, g: 255, b: 0 } }
+    }).jpeg().toBuffer();
+    envFakevv2.m.quoted = {
+        type: 'imageMessage',
+        download: async () => fakevvImgBuf
+    };
+    await fakevvCmd.execute({ sock: envFakevv2.sock, m: envFakevv2.m, args: ['Foto secreta'] });
+    const vvMediaMsg = envFakevv2.sentMessages.find(s => s.content.image && s.content.viewOnce === true);
+    assert(vvMediaMsg, 'Debe convertir la imagen citada en View Once');
+    assert.strictEqual(vvMediaMsg.content.caption, 'Foto secreta');
+    console.log('  ✅ .fakevv verificado (Modo broma interactiva y conversión real de medios a View Once).');
 
     // ── 2. BINARY ──
     console.log('  Testing .binary...');
